@@ -867,6 +867,15 @@ int init_tk8710_chip(void)
     
     printf("Initializing TK8710 chip...\n");
     
+    /* 首先复位芯片 */
+    printf("Resetting TK8710 chip...\n");
+    ret = TK8710ResetChip(2);  /* 复位状态机+寄存器 */
+    if (ret != TK8710_OK) {
+        printf("TK8710 chip reset failed: %d\n", ret);
+        return ret;
+    }
+    printf("TK8710 chip reset completed\n");
+    
     /* 使用默认配置初始化芯片 */
     TK8710IrqCallback* trmCallback = TRM_GetIrqCallback();
     ret = TK8710Init(&chipConfig, trmCallback);
@@ -1304,7 +1313,7 @@ int main(int argc, char* argv[])
     
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
-    TK8710LogSimpleInit(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
+    TK8710LogSimpleInit(TK8710_LOG_ALL, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
     
     /* 2. 初始化中断系统 */
     ret = init_interrupt_system();
@@ -1325,8 +1334,7 @@ int main(int argc, char* argv[])
         /* 多速率配置示例：使用3种不同的速率模式 */
         uint8_t rateModes[] = {
             TK8710_RATE_MODE_6,    /* 低速率模式 */
-            TK8710_RATE_MODE_7,    /* 中速率模式 */
-            TK8710_RATE_MODE_8     /* 高速率模式 */
+            TK8710_RATE_MODE_7     /* 中速率模式 */
         };
         uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
         
