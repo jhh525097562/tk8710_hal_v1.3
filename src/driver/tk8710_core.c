@@ -492,8 +492,6 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig)
     TK8710_LOG_CORE_DEBUG("Starting RF basic configuration sequence...");
     
     /* 1. RF关闭/复位序列 - 首次上电需要更完整的复位 */
-    TK8710_LOG_CORE_DEBUG("Starting comprehensive RF reset sequence for first power-on...");
-    
     /* 复位序列1: 完全关闭 */
     ret = tk8710_rf_write(rfSel, RF_CMD_CLOSE_0 >> 8, RF_CMD_CLOSE_0 & 0xFF);
     if (ret != TK8710_OK) {
