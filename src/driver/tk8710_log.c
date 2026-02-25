@@ -3,7 +3,7 @@
  * @brief TK8710 Driver 日志系统实现
  */
 
-#include "../inc/common/tk8710_log.h"
+#include "../inc/driver/tk8710_log.h"
 #include "../inc/driver/tk8710.h"
 #include <stdio.h>
 #include <stdarg.h>

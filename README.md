@@ -42,13 +42,13 @@ tk8710_hal_v1.3/
 ├── README.md               # 项目说明文档
 ├── inc/                    # 头文件目录
 │   ├── common/             # 公共模块头文件
-│   │   ├── mempool.h       # 内存池管理
-│   │   └── tk8710_log.h    # 日志系统
+│   │   └── mempool.h       # 内存池管理
 │   ├── driver/             # Driver层头文件
 │   │   ├── tk8710.h        # Driver主接口
 │   │   ├── tk8710_api.h    # Driver API定义
 │   │   ├── tk8710_debug.h  # 调试接口
 │   │   ├── tk8710_internal.h # Driver内部定义
+│   │   ├── tk8710_log.h    # 日志系统
 │   │   ├── tk8710_regs.h   # 寄存器定义
 │   │   ├── tk8710_rf_regs.h # RF寄存器定义
 │   │   └── tk8710_types.h  # 数据类型定义
@@ -60,12 +60,12 @@ tk8710_hal_v1.3/
 │       └── trm_log.h       # TRM日志系统
 ├── src/                    # 源文件目录
 │   ├── common/             # 公共模块实现
-│   │   ├── mempool.c       # 内存池实现
-│   │   └── tk8710_log.c    # 日志系统实现
+│   │   └── mempool.c       # 内存池实现
 │   ├── driver/             # Driver层实现
 │   │   ├── tk8710_config.c # 芯片配置
 │   │   ├── tk8710_core.c   # Driver核心功能
-│   │   └── tk8710_irq.c    # 中断处理
+│   │   ├── tk8710_irq.c    # 中断处理
+│   │   └── tk8710_log.c    # 日志系统实现
 │   └── trm/                # TRM层实现
 │       ├── trm_beam.c      # 波束管理实现
 │       ├── trm_core.c      # TRM核心功能

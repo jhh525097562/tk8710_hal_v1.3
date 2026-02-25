@@ -10,9 +10,7 @@
 
 ---
 
-## TRM模块（对外接口）
-
-TRM（Transmission Resource Management）是HAL的主要**对外接口**，供上层应用调用。
+## TRM模块
 
 ### TRM_Init
 
@@ -23,14 +21,17 @@ int TRM_Init(const TRM_InitConfig* config);
 ```
 
 **参数：**
+
 - `config` - 初始化配置结构体指针
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_PARAM` - 参数错误
 - `TRM_ERR_STATE` - 状态错误（已初始化）
 
 **示例：**
+
 ```c
 TRM_InitConfig config = {0};
 config.beamMode = TRM_BEAM_MODE_FULL_STORE;
@@ -63,6 +64,7 @@ int TRM_Start(void);
 ```
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_STATE` - 状态错误（未初始化或已运行）
 
@@ -77,6 +79,7 @@ int TRM_Stop(void);
 ```
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_STATE` - 状态错误（未运行）
 
@@ -91,17 +94,20 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 ```
 
 **参数：**
+
 - `userId` - 目标用户ID
 - `data` - 数据指针
 - `len` - 数据长度（1-512字节）
 - `txPower` - 发射功率
 
 **返回值：**
+
 - `TRM_OK` - 成功（已加入发送队列）
 - `TRM_ERR_PARAM` - 参数错误
 - `TRM_ERR_QUEUE_FULL` - 发送队列已满
 
 **示例：**
+
 ```c
 uint8_t data[] = {0x01, 0x02, 0x03, 0x04};
 int ret = TRM_SendData(0x12345678, data, sizeof(data), 20);
@@ -118,10 +124,12 @@ int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
 ```
 
 **参数：**
+
 - `userId` - 用户ID
 - `beamInfo` - 波束信息结构体指针
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_PARAM` - 参数错误
 - `TRM_ERR_NO_MEM` - 内存不足（超过最大用户数）
@@ -137,10 +145,12 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 ```
 
 **参数：**
+
 - `userId` - 用户ID
 - `beamInfo` - 输出波束信息
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_PARAM` - 参数错误
 - `TRM_ERR_NO_BEAM` - 波束不存在或已超时
@@ -156,9 +166,11 @@ int TRM_ClearBeamInfo(uint32_t userId);
 ```
 
 **参数：**
+
 - `userId` - 用户ID，`0xFFFFFFFF`表示清除所有
 
 **返回值：**
+
 - `TRM_OK` - 成功
 
 ---
@@ -172,9 +184,11 @@ int TRM_GetStats(TRM_Stats* stats);
 ```
 
 **参数：**
+
 - `stats` - 输出统计信息
 
 **返回值：**
+
 - `TRM_OK` - 成功
 - `TRM_ERR_PARAM` - 参数错误
 
@@ -189,16 +203,13 @@ int TRM_IsRunning(void);
 ```
 
 **返回值：**
+
 - `1` - 运行中
 - `0` - 未运行
 
 ---
 
-## Driver模块（内部接口）
-
-Driver模块是HAL的**内部接口**，供TRM层调用，上层应用一般不直接使用。
-
-> **注意**：以下接口为内部接口，仅供TRM层或特殊调试场景使用。
+## Driver模块
 
 ### TK8710_Init
 
@@ -459,10 +470,12 @@ int TK8710_LogSimpleInit(TK8710_LogLevel level, uint32_t moduleMask);
 ```
 
 **参数：**
+
 - `level` - 日志级别
 - `moduleMask` - 模块掩码
 
 **日志级别：**
+
 - `TK8710_LOG_NONE` - 关闭
 - `TK8710_LOG_ERROR` - 错误
 - `TK8710_LOG_WARN` - 警告
@@ -471,6 +484,7 @@ int TK8710_LogSimpleInit(TK8710_LogLevel level, uint32_t moduleMask);
 - `TK8710_LOG_TRACE` - 跟踪
 
 **模块掩码：**
+
 - `TK8710_LOG_MOD_CORE` - 核心模块
 - `TK8710_LOG_MOD_SPI` - SPI模块
 - `TK8710_LOG_MOD_IRQ` - 中断模块
@@ -480,6 +494,7 @@ int TK8710_LogSimpleInit(TK8710_LogLevel level, uint32_t moduleMask);
 - `TK8710_LOG_MOD_ALL` - 所有模块
 
 **示例：**
+
 ```c
 // 显示INFO及以上级别，所有模块
 TK8710_LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MOD_ALL);
@@ -516,10 +531,12 @@ int TK8710_GetIrqTimeStats(uint8_t irqType, TK8710_IrqTimeStats* stats);
 ```
 
 **参数：**
+
 - `irqType` - 中断类型（0-9）
 - `stats` - 输出统计信息
 
 **中断类型：**
+
 - 0: RX_BCN
 - 1: BRD_UD
 - 2: BRD_DATA
@@ -562,16 +579,16 @@ void TK8710_SetForceProcessAllUsers(uint8_t enable);
 
 ## 错误码
 
-| 错误码 | 值 | 说明 |
-|--------|-----|------|
-| TRM_OK | 0 | 成功 |
-| TRM_ERR_PARAM | -1 | 参数错误 |
-| TRM_ERR_STATE | -2 | 状态错误 |
-| TRM_ERR_TIMEOUT | -3 | 超时 |
-| TRM_ERR_NO_MEM | -4 | 内存不足 |
-| TRM_ERR_NO_BEAM | -5 | 波束不存在 |
-| TRM_ERR_NOT_INIT | -6 | 未初始化 |
-| TRM_ERR_QUEUE_FULL | -7 | 队列已满 |
+| 错误码             | 值 | 说明       |
+| ------------------ | -- | ---------- |
+| TRM_OK             | 0  | 成功       |
+| TRM_ERR_PARAM      | -1 | 参数错误   |
+| TRM_ERR_STATE      | -2 | 状态错误   |
+| TRM_ERR_TIMEOUT    | -3 | 超时       |
+| TRM_ERR_NO_MEM     | -4 | 内存不足   |
+| TRM_ERR_NO_BEAM    | -5 | 波束不存在 |
+| TRM_ERR_NOT_INIT   | -6 | 未初始化   |
+| TRM_ERR_QUEUE_FULL | -7 | 队列已满   |
 
 ---
 

@@ -27,7 +27,7 @@ echo "编译所有模块..."
 
 # 编译公共模块
 echo "编译公共模块..."
-files=("src/common/mempool.c" "src/common/tk8710_log.c")
+files=("src/common/mempool.c" "src/driver/tk8710_log.c")
 for file in "${files[@]}"; do
     echo "编译 $file..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c $file -o ${BUILD_DIR}/$(basename $file .c).o

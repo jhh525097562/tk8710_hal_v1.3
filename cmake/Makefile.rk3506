@@ -24,7 +24,7 @@ BUILD_DIR = build_rk3506
 
 # 源文件
 COMMON_SRC = src/common/mempool.c \
-             src/common/tk8710_log.c
+             src/driver/tk8710_log.c
 DRIVER_SRC = src/driver/tk8710_core.c \
              src/driver/tk8710_spi.c \
              src/driver/tk8710_irq.c \

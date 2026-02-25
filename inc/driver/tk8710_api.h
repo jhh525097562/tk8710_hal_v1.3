@@ -8,7 +8,7 @@
 #define TK8710_API_H
 
 #include "tk8710_types.h"
-#include "../common/tk8710_log.h"
+#include "tk8710_log.h"
 
 #ifdef __cplusplus
 extern "C" {

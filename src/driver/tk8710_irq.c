@@ -17,7 +17,7 @@
 
 #include "../inc/driver/tk8710.h"
 #include "../inc/driver/tk8710_regs.h"
-#include "../inc/common/tk8710_log.h"
+#include "driver/tk8710_log.h"
 #include "../port/tk8710_hal.h"
 #include <string.h>
 #include <stddef.h>

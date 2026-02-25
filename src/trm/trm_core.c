@@ -9,7 +9,7 @@
 #include "../inc/trm/trm_data.h"
 #include "../inc/driver/tk8710.h"
 #include "../port/tk8710_hal.h"
-#include "../inc/common/tk8710_log.h"
+#include "driver/tk8710_log.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -8,7 +8,7 @@
 
 #include "trm/trm.h"
 #include "driver/tk8710_api.h"
-#include "common/tk8710_log.h"
+#include "driver/tk8710_log.h"
 #include "driver/tk8710_types.h"
 #include <stdio.h>
 #include <string.h>

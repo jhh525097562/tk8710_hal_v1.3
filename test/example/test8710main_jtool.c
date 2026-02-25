@@ -13,7 +13,7 @@
 #include "../inc/driver/tk8710_api.h"
 #include "../inc/driver/tk8710_debug.h"
 #include "../inc/driver/tk8710_internal.h"
-#include "../inc/common/tk8710_log.h"
+#include "../inc/driver/tk8710_log.h"
 
 #ifdef _WIN32
 #include <windows.h>

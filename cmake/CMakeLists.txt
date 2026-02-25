@@ -33,7 +33,7 @@ include_directories(
 # 公共源文件
 set(COMMON_SOURCES
     ../src/common/mempool.c
-    ../src/common/tk8710_log.c
+    ../src/driver/tk8710_log.c
 )
 
 # Driver源文件

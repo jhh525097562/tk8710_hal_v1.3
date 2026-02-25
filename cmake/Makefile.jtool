@@ -22,7 +22,7 @@ LDFLAGS = $(JTOOL_DLL)
 BUILD_DIR = build_jtool
 
 # 源文件
-COMMON_SRC = src/common/mempool.c src/common/tk8710_log.c
+COMMON_SRC = src/common/mempool.c src/driver/tk8710_log.c
 DRIVER_SRC = src/driver/tk8710_irq.c src/driver/tk8710_config.c src/driver/tk8710_core.c
 TRM_SRC = src/trm/trm_core.c src/trm/trm_beam.c src/trm/trm_data.c src/trm/trm_slot.c src/trm/trm_freq.c src/trm/trm_power.c
 PORT_SRC = port/jtool/port_jtool.c

@@ -7,7 +7,7 @@
 #include "trm.h"
 #include "trm_config.h"
 #include "tk8710_hal.h"
-#include "../../inc/common/tk8710_log.h"
+#include "../../inc/driver/tk8710_log.h"
 #include <string.h>
 #include <stdlib.h>
 
