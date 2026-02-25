@@ -1324,9 +1324,9 @@ int main(int argc, char* argv[])
     if (use_multi_rate) {
         /* 多速率配置示例：使用3种不同的速率模式 */
         uint8_t rateModes[] = {
-            TK8710_RATE_MODE_8,    /* 高速率模式 */
+            TK8710_RATE_MODE_6,    /* 低速率模式 */
             TK8710_RATE_MODE_7,    /* 中速率模式 */
-            TK8710_RATE_MODE_6     /* 低速率模式 */
+            TK8710_RATE_MODE_8     /* 高速率模式 */
         };
         uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
         
