@@ -491,13 +491,27 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig)
     /* RF基础配置 */
     TK8710_LOG_CORE_DEBUG("Starting RF basic configuration sequence...");
     
-    /* 1. RF关闭/复位序列 */
-    ret = tk8710_rf_write(rfSel, RF_CMD_CLOSE_1 >> 8, RF_CMD_CLOSE_1 & 0xFF);
+    /* 1. RF关闭/复位序列 - 首次上电需要更完整的复位 */
+    TK8710_LOG_CORE_DEBUG("Starting comprehensive RF reset sequence for first power-on...");
+    
+    /* 复位序列1: 完全关闭 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_CLOSE_0 >> 8, RF_CMD_CLOSE_0 & 0xFF);
     if (ret != TK8710_OK) {
-        TK8710_LOG_CORE_ERROR("RF close/reset sequence failed: %d", ret);
+        TK8710_LOG_CORE_ERROR("RF close 0 sequence failed: %d", ret);
         return ret;
     }
-    TK8710_LOG_CORE_DEBUG("RF close/reset sequence completed");
+    TK8710_LOG_CORE_DEBUG("RF close 0 sequence completed");
+    
+    /* 复位序列2: 复位状态 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_CLOSE_1 >> 8, RF_CMD_CLOSE_1 & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("RF close 1 sequence failed: %d", ret);
+        return ret;
+    }
+    TK8710_LOG_CORE_DEBUG("RF close 1 sequence completed");
+    
+    /* 等待复位稳定 */
+    usleep(10000);  /* 10ms等待复位完成 */
 
     /* 2. 采样率配置 (Sampling Rate) */
     ret = tk8710_rf_write(rfSel, RF_CMD_RX_FILTER >> 8, RF_CMD_RX_FILTER & 0xFF);
@@ -616,6 +630,9 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig)
         return ret;
     }
     TK8710_LOG_CORE_DEBUG("RF opened");
+    
+    /* 等待RF打开稳定 */
+    usleep(20000);  /* 20ms等待RF完全打开和稳定 */
 
     /* 12. 打开PA */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_10), (1 << 2));
@@ -624,6 +641,9 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig)
         return ret;
     }
     TK8710_LOG_CORE_DEBUG("PA enabled");
+    
+    /* 等待PA稳定 */
+    usleep(10000);  /* 10ms等待PA稳定 */
     
     /* 13. 配置rx_bcn.acm_ctrl30 (0x78) */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_BCN_BASE + 0x78, 0x1110018);

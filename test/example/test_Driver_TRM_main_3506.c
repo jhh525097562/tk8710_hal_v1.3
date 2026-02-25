@@ -833,17 +833,18 @@ int init_rf_system(void)
         return ret;
     }
     
-    /* 等待RF稳定 */
-    printf("Waiting for RF to stabilize...\n");
-    usleep(10000);  /* 等待10ms */
+    /* 等待RF稳定 - 首次上电需要更长时间 */
+    printf("Waiting for RF to stabilize (first power-on requires longer time)...\n");
+    usleep(50000);  /* 等待50ms，给RF芯片充分的稳定时间 */
     
-    /* 第二次RF初始化确保配置完全生效 */
-    printf("Second RF initialization to ensure proper configuration...\n");
+    /* 第二次RF初始化确保硬件完全就绪 */
+    printf("Second RF initialization to ensure hardware is fully operational...\n");
     ret = TK8710RfInit(&rfConfig);
     if (ret != TK8710_OK) {
         printf("Second RF initialization failed: %d\n", ret);
         return ret;
     }
+    printf("RF dual initialization completed - hardware should be fully operational\n");
     
     printf("RF system initialization completed\n");
     printf("RF type: %d, Frequency: %u Hz\n", rfConfig.rftype, rfConfig.Freq);
