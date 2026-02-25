@@ -28,7 +28,7 @@ Thumbs.db
 # 编译器生成的文件夹
 build/
 dist/
-build_rk3506/
+# build_rk3506/  # 注释掉，允许上传编译结果
 
 # 调试文件
 *.dSYM/
