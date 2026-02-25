@@ -1010,47 +1010,47 @@ static void tk8710_s0_bcn_rotation_process(void)
 }
 
 /**
- * @brief 设置下行发送数据和功率
- * @param userIndex 用户索引 (0-127)
- * @param data 用户数据指针
+ * @brief 设置下行2发送数据和功率
+ * @param downlink2Index 下行2索引 (0-127)
+ * @param data 下行2数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常发送(指定信息模式波束), 1=与Slot1共用波束信息
+ * @param dataType 数据类型: 0=正常下行2(指定信息模式波束), 1=与Slot1共用波束信息
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxUserDataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
+int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
 {
-    if (userIndex >= 128 || data == NULL || dataLen == 0) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, data=%p, dataLen=%d", 
-                            userIndex, data, dataLen);
+    if (downlink2Index >= 128 || data == NULL || dataLen == 0) {
+        TK8710_LOG_IRQ_ERROR("Invalid parameters: downlink2Index=%d, data=%p, dataLen=%d", 
+                            downlink2Index, data, dataLen);
         return TK8710_ERR;
     }
     
     /* 检查是否已存在数据，先释放 */
-    if (g_txBuffers[userIndex].valid && 
-        g_txBuffers[userIndex].data != NULL) {
-        free(g_txBuffers[userIndex].data);
+    if (g_txBuffers[downlink2Index].valid && 
+        g_txBuffers[downlink2Index].data != NULL) {
+        free(g_txBuffers[downlink2Index].data);
     }
     
     /* 分配内存并复制数据 */
     uint8_t* newData = malloc(dataLen);
     if (newData == NULL) {
-        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for user[%d] data", userIndex);
+        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink2[%d] data", downlink2Index);
         return TK8710_ERR;
     }
     
     memcpy(newData, data, dataLen);
     
-    /* 设置发送数据Buffer */
-    g_txBuffers[userIndex].data = newData;
-    g_txBuffers[userIndex].dataLen = dataLen;
-    g_txBuffers[userIndex].valid = 1;
-    g_txBuffers[userIndex].userIndex = userIndex;
-    g_txBuffers[userIndex].txPower = txPower;
-    g_txBuffers[userIndex].dataType = dataType;
+    /* 设置下行2数据Buffer */
+    g_txBuffers[downlink2Index].data = newData;
+    g_txBuffers[downlink2Index].dataLen = dataLen;
+    g_txBuffers[downlink2Index].valid = 1;
+    g_txBuffers[downlink2Index].userIndex = downlink2Index;
+    g_txBuffers[downlink2Index].txPower = txPower;
+    g_txBuffers[downlink2Index].dataType = dataType;
     
-    TK8710_LOG_IRQ_DEBUG("TX user data set: user[%d], len=%d, power=%d, dataType=%d", 
-                        userIndex, dataLen, txPower, dataType);
+    TK8710_LOG_IRQ_DEBUG("Downlink2 TX data set: downlink2[%d], len=%d, power=%d, dataType=%d", 
+                        downlink2Index, dataLen, txPower, dataType);
     return TK8710_OK;
 }
 /**
@@ -1087,47 +1087,47 @@ int TK8710ClearTxUserData(uint8_t userIndex)
 }
 
 /**
- * @brief 设置广播发送数据和功率
- * @param brdIndex 广播用户索引 (0-15)
- * @param data 广播数据指针
+ * @brief 设置下行1发送数据和功率
+ * @param downlink1Index 下行1索引 (0-15)
+ * @param data 下行1数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常广播(Driver自动生成波束), 1=与Slot3共用波束信息
+ * @param dataType 数据类型: 0=正常下行1(Driver自动生成波束), 1=与Slot3共用波束信息
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxBrdDataWithPower(uint8_t brdIndex, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
+int TK8710SetDownlink1DataWithPower(uint8_t downlink1Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
 {
-    if (brdIndex >= 16 || data == NULL || dataLen == 0) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: brdIndex=%d, data=%p, dataLen=%d", 
-                            brdIndex, data, dataLen);
+    if (downlink1Index >= 16 || data == NULL || dataLen == 0) {
+        TK8710_LOG_IRQ_ERROR("Invalid parameters: downlink1Index=%d, data=%p, dataLen=%d", 
+                            downlink1Index, data, dataLen);
         return TK8710_ERR;
     }
     
     /* 检查是否已存在数据，先释放 */
-    if (g_brdBuffers[brdIndex].valid && 
-        g_brdBuffers[brdIndex].data != NULL) {
-        free(g_brdBuffers[brdIndex].data);
+    if (g_brdBuffers[downlink1Index].valid && 
+        g_brdBuffers[downlink1Index].data != NULL) {
+        free(g_brdBuffers[downlink1Index].data);
     }
     
     /* 分配内存并复制数据 */
     uint8_t* newData = malloc(dataLen);
     if (newData == NULL) {
-        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for broadcast[%d] data", brdIndex);
+        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink1[%d] data", downlink1Index);
         return TK8710_ERR;
     }
     
     memcpy(newData, data, dataLen);
     
-    /* 设置广播数据Buffer */
-    g_brdBuffers[brdIndex].data = newData;
-    g_brdBuffers[brdIndex].dataLen = dataLen;
-    g_brdBuffers[brdIndex].valid = 1;
-    g_brdBuffers[brdIndex].brdIndex = brdIndex;
-    g_brdBuffers[brdIndex].txPower = txPower;
-    g_brdBuffers[brdIndex].dataType = dataType;
+    /* 设置下行1数据Buffer */
+    g_brdBuffers[downlink1Index].data = newData;
+    g_brdBuffers[downlink1Index].dataLen = dataLen;
+    g_brdBuffers[downlink1Index].valid = 1;
+    g_brdBuffers[downlink1Index].brdIndex = downlink1Index;
+    g_brdBuffers[downlink1Index].txPower = txPower;
+    g_brdBuffers[downlink1Index].dataType = dataType;
     
-    TK8710_LOG_IRQ_DEBUG("Broadcast TX data set: brd[%d], len=%d, power=%d, dataType=%d", 
-                        brdIndex, dataLen, txPower, dataType);
+    TK8710_LOG_IRQ_DEBUG("Downlink1 TX data set: downlink1[%d], len=%d, power=%d, dataType=%d", 
+                        downlink1Index, dataLen, txPower, dataType);
     return TK8710_OK;
 }
 

@@ -270,8 +270,8 @@ int main(void) {
     uint8_t txData[] = {0xAA, 0xBB, 0xCC};
     uint8_t userIndex = 0;
     
-    // 设置用户数据
-    TK8710SetTxUserDataWithPower(userIndex, txData, sizeof(txData), 20, TK8710_USER_DATA_TYPE_NORMAL);
+    // 设置下行2数据
+    TK8710SetDownlink2DataWithPower(userIndex, txData, sizeof(txData), 20, TK8710_USER_DATA_TYPE_NORMAL);
     
     // 设置用户信息（频率、波束等）
     uint32_t frequency = 2400;
@@ -302,9 +302,9 @@ int main(void) {
 |------|------|------|
 | `TK8710_Init()` | 初始化Driver | SPI、中断、基础配置 |
 | `TK8710_Deinit()` | 反初始化Driver | 清理资源 |
-| `TK8710SetTxUserDataWithPower()` | 设置发送数据 | 直接硬件控制 |
+| `TK8710SetDownlink2DataWithPower()` | 设置下行2数据 | 直接硬件控制 |
 | `TK8710SetTxUserInfo()` | 设置用户信息 | 频率、波束、功率 |
-| `TK8710SetTxBrdDataWithPower()` | 设置广播数据 | 广播发送 |
+| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据 | 下行1发送 |
 | `TK8710_ProcessRxData()` | 处理接收数据 | 手动数据处理 |
 | `TK8710_GetChipStatus()` | 获取芯片状态 | 硬件状态监控 |
 | `TK8710_SetFrequency()` | 设置频率 | 频率控制 |

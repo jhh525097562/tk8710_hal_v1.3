@@ -220,9 +220,9 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
     
     TRM_LOG_DEBUG("TRM发送广播 - 索引=%d, 长度=%d, 功率=%d", brdIndex, len, txPower);
     
-    /* 直接调用Driver发送广播 */
+    /* 直接调用Driver发送下行1 */
     // int ret = TK8710SetTxBrdData(brdIndex, data, len);
-    int ret = TK8710SetTxBrdDataWithPower(brdIndex, data, len, txPower, 0);
+    int ret = TK8710SetDownlink1DataWithPower(brdIndex, data, len, txPower, 0);
     if (ret == TK8710_OK) {
         TRM_LOG_DEBUG("TRM广播发送成功");
     } else {
@@ -287,8 +287,8 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
                 /* 恢复波束检查 */
                 int beamRet = TRM_GetBeamInfo(item->userId, &beam);
                 if (beamRet == TRM_OK) {
-                    /* 设置发送用户数据 - 参考test_Driver_TRM_main_3506.c实现 */
-                    int ret = TK8710SetTxUserDataWithPower(txUserIndex, item->data, item->len, item->power, TK8710_USER_DATA_TYPE_NORMAL);
+                    /* 设置发送下行2数据 - 参考test_Driver_TRM_main_3506.c实现 */
+                    int ret = TK8710SetDownlink2DataWithPower(txUserIndex, item->data, item->len, item->power, TK8710_USER_DATA_TYPE_NORMAL);
                     if (ret != TK8710_OK) {
                         TRM_LOG_ERROR("TRM: Failed to set TX user data for user[%u]: %d", item->userId, ret);
                     } else {

@@ -129,8 +129,8 @@ static int test_auto_downlink_tx_all(const uint8_t* userIndices, const uint8_t* 
             txData[j] = txCounter + j + i;  /* 基于用户索引、计数器和用户序号生成数据 */
         }
         
-        /* 设置自动发送用户数据和功率 */
-        ret = TK8710SetTxUserDataWithPower(userIndex, txData, 26, txPower, TK8710_USER_DATA_TYPE_NORMAL);
+        /* 设置自动发送下行2数据和功率 */
+        ret = TK8710SetDownlink2DataWithPower(userIndex, txData, 26, txPower, TK8710_USER_DATA_TYPE_NORMAL);
         if (ret != TK8710_OK) {
             printf("Failed to set TX user data for user[%d]: %d\n", userIndex, ret);
             return ret;
@@ -160,8 +160,8 @@ int test_broadcast_tx(uint8_t counter)
         brdData[i] = counter + i;  /* 简单的递增数据 */
     }
     
-    /* 使用新的广播发送API设置广播数据 */
-    int ret = TK8710SetTxBrdDataWithPower(0, brdData, 26, 35, TK8710_BRD_DATA_TYPE_NORMAL);  /* 广播用户0，功率35 */
+    /* 使用新的下行1发送API设置下行1数据 */
+    int ret = TK8710SetDownlink1DataWithPower(0, brdData, 26, 35, TK8710_BRD_DATA_TYPE_NORMAL);  /* 下行1用户0，功率35 */
     if (ret == TK8710_OK) {
         printf("Broadcast data set successfully: counter=%d\n", counter);
         return 0;
@@ -198,9 +198,9 @@ static int test_manual_tx_setup(const uint8_t* userIndices, uint8_t userCount)
             txData[j] = i + j;  /* 基于用户序号生成数据 */
         }
         
-        /* 设置发送用户数据 */
+        /* 设置发送下行2数据 */
         uint8_t txUserIndex = i;  /* 从第一个用户开始，依次增加 */
-        ret = TK8710SetTxUserDataWithPower(txUserIndex, txData, 26, 35, TK8710_USER_DATA_TYPE_NORMAL);  /* 使用连续索引，功率35 */
+        ret = TK8710SetDownlink2DataWithPower(txUserIndex, txData, 26, 35, TK8710_USER_DATA_TYPE_NORMAL);  /* 使用连续索引，功率35 */
         if (ret != TK8710_OK) {
             printf("Failed to set TX user data for user[%d]: %d\n", txUserIndex, ret);
             return ret;

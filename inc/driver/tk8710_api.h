@@ -148,15 +148,15 @@ int TK8710EfuseRead(uint16_t start_bit, uint8_t* data_bits, size_t len_bits);
  */
 
 /**
- * @brief 设置下行发送数据和功率
- * @param userIndex 用户索引 (0-127)
- * @param data 用户数据指针
+ * @brief 设置下行2发送数据和功率
+ * @param downlink2Index 下行2索引 (0-127)
+ * @param data 下行2数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常发送(指定信息模式波束), 1=与Slot1共用波束信息
+ * @param dataType 数据类型: 0=正常下行2(指定信息模式波束), 1=与Slot1共用波束信息
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxUserDataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
+int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
 
 /**
  * @brief 设置发送用用户信息 (指定信息发送模式)
@@ -194,15 +194,15 @@ int TK8710ClearTxUserData(uint8_t userIndex);
 
 
 /**
- * @brief 设置广播发送数据和功率
- * @param brdIndex 广播用户索引 (0-15)
- * @param data 广播数据指针
+ * @brief 设置下行1发送数据和功率
+ * @param downlink1Index 下行1索引 (0-15)
+ * @param data 下行1数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常广播(Driver自动生成波束), 1=与Slot3共用波束信息
+ * @param dataType 数据类型: 0=正常下行1(Driver自动生成波束), 1=与Slot3共用波束信息
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxBrdDataWithPower(uint8_t brdIndex, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
+int TK8710SetDownlink1DataWithPower(uint8_t downlink1Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
 
 /* ============================================================================
  * 数据接收API
