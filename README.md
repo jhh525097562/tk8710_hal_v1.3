@@ -38,34 +38,101 @@ TK8710芯片硬件抽象层（Hardware Abstraction Layer），提供分层独立
 
 ```
 tk8710_hal_v1.3/
-├── inc/                    # 头文件
-│   ├── common/             # 公共模块
-│   │   ├── mempool.h       # 内存池
+├── .gitignore              # Git忽略文件配置
+├── README.md               # 项目说明文档
+├── inc/                    # 头文件目录
+│   ├── common/             # 公共模块头文件
+│   │   ├── mempool.h       # 内存池管理
 │   │   └── tk8710_log.h    # 日志系统
-│   ├── driver/             # Driver层
+│   ├── driver/             # Driver层头文件
 │   │   ├── tk8710.h        # Driver主接口
-│   │   ├── tk8710_api.h    # Driver API
+│   │   ├── tk8710_api.h    # Driver API定义
+│   │   ├── tk8710_debug.h  # 调试接口
+│   │   ├── tk8710_internal.h # Driver内部定义
 │   │   ├── tk8710_regs.h   # 寄存器定义
+│   │   ├── tk8710_rf_regs.h # RF寄存器定义
 │   │   └── tk8710_types.h  # 数据类型定义
-│   └── trm/                # TRM层
+│   └── trm/                # TRM层头文件
 │       ├── trm.h           # TRM主接口
 │       ├── trm_beam.h      # 波束管理
+│       ├── trm_config.h    # 配置管理
 │       ├── trm_data.h      # 数据管理
-│       └── trm_config.h    # 配置管理
-├── src/                    # 源文件
+│       └── trm_log.h       # TRM日志系统
+├── src/                    # 源文件目录
 │   ├── common/             # 公共模块实现
+│   │   ├── mempool.c       # 内存池实现
+│   │   └── tk8710_log.c    # 日志系统实现
 │   ├── driver/             # Driver层实现
+│   │   ├── tk8710_config.c # 芯片配置
+│   │   ├── tk8710_core.c   # Driver核心功能
+│   │   └── tk8710_irq.c    # 中断处理
 │   └── trm/                # TRM层实现
+│       ├── trm_beam.c      # 波束管理实现
+│       ├── trm_core.c      # TRM核心功能
+│       ├── trm_data.c      # 数据管理实现
+│       ├── trm_freq.c      # 频率管理
+│       ├── trm_log.c       # TRM日志实现
+│       ├── trm_power.c     # 功率管理
+│       └── trm_slot.c      # 时隙管理
 ├── port/                   # 平台移植层
+│   ├── README_RK3506.md    # RK3506移植说明
+│   ├── tk8710_hal.h        # HAL主接口
 │   ├── tk8710_rk3506.c     # RK3506 Linux实现
-│   └── tk8710_jtool.c      # Windows JTOOL实现
-├── test/                   # 测试用例
+│   ├── tk8710_jtool.c      # Windows JTOOL实现
+│   └── jtool/              # JTOOL相关文件
+│       ├── jtool.dll       # JTOOL动态库
+│       ├── jtool.h         # JTOOL头文件
+│       ├── x64/            # 64位JTOOL库
+│       └── x86/            # 32位JTOOL库
+├── test/                   # 测试用例目录
 │   ├── unit/               # 单元测试
+│   │   ├── test_framework.c # 测试框架
+│   │   ├── test_framework.h # 测试框架头文件
+│   │   ├── test_simple.c   # 简单测试
+│   │   ├── test_trm_beam.c # 波束管理测试
+│   │   ├── test_trm_slot.c # 时隙管理测试
+│   │   ├── test_driver.c   # Driver测试
+│   │   ├── test_rk3506_hal.c # RK3506 HAL测试
+│   │   └── test_boundary.c # 边界测试
 │   ├── integration/        # 集成测试
+│   │   ├── test_irq.c      # 中断测试
+│   │   ├── test_tx_rx.c    # 收发测试
+│   │   └── jtool.dll       # JTOOL测试库
 │   └── example/            # 示例程序
-├── cmake/                  # CMake工具链
-├── build_rk3506/          # 编译输出（RK3506）
-└── docs/                   # 文档
+│       ├── basic_example.c # 基础示例
+│       ├── advanced_example.c # 高级示例
+│       ├── gateway_demo.c  # 网关演示
+│       ├── loopback_test.c # 回环测试
+│       ├── parallel_arch_example.c # 并行架构示例
+│       ├── test8710main_3506.c # 3506主测试程序
+│       ├── test8710main_jtool.c # JTOOL主测试程序
+│       ├── test_Driver_TRM_main_3506.c # Driver+TRM测试
+│       ├── trm_config_example.c # TRM配置示例
+│       ├── trm_tx_validator.c # TRM验证器
+│       ├── trm_tx_validator.h # TRM验证器头文件
+│       ├── validator_example.c # 验证器示例
+│       ├── TRM_TxValidator_Usage.md # 验证器使用说明
+│       └── jtool.dll       # JTOOL示例库
+├── cmake/                  # 构建工具目录
+│   ├── Build.md            # 构建说明
+│   ├── CMakeLists.txt      # CMake配置
+│   ├── Makefile.jtool      # JTOOL Makefile
+│   ├── Makefile.rk3506     # RK3506 Makefile
+│   ├── build_rk3506.sh     # RK3506构建脚本
+│   └── toolchain-rk3506.cmake # RK3506工具链
+├── docs/                   # 文档目录
+│   ├── API_Reference.md    # API参考文档
+│   ├── Porting_Guide.md    # 移植指南
+│   └── trm_driver_callback_integration.md # 回调集成文档
+├── build_jtool/            # JTOOL编译输出
+│   ├── basic_example       # JTOOL基础示例程序
+│   ├── test8710main_jtool  # JTOOL测试程序
+│   └── [其他编译输出文件]
+└── build_rk3506/           # RK3506编译输出
+    ├── basic_example       # RK3506基础示例程序
+    ├── test8710main_3506   # RK3506测试程序
+    ├── test_Driver_TRM_main_3506 # RK3506 Driver+TRM测试
+    └── [其他编译输出文件]
 ```
 
 ## 🚀 快速开始
