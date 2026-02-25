@@ -1000,6 +1000,139 @@ int config_slot_parameters(void)
 }
 
 /**
+ * @brief 配置多速率时隙参数
+ * @param rateCount 速率个数 (1-8)
+ * @param rateModes 速率模式数组
+ * @return 0-成功, 非0-失败
+ */
+int config_multi_rate_slot_parameters(uint8_t rateCount, const uint8_t* rateModes)
+{
+    int ret;
+    slotCfg_t slotCfg;
+    
+    printf("Configuring multi-rate slot parameters...\n");
+    
+    /* 参数检查 */
+    if (rateCount == 0 || rateCount > 8 || rateModes == NULL) {
+        printf("Invalid parameters: rateCount=%d, rateModes=%p\n", rateCount, rateModes);
+        return -1;
+    }
+    
+    /* 清零配置结构 */
+    memset(&slotCfg, 0, sizeof(slotCfg_t));
+    
+    /* 配置基本参数 */
+    slotCfg.msMode = TK8710_MODE_MASTER;        /* 主模式 */
+    slotCfg.plCrcEn = 0;                         /* 使能CRC校验 */
+    slotCfg.rateCount = rateCount;               /* 多速率个数 */
+    slotCfg.brdUserNum = 1;                      /* 广播用户数 */
+    slotCfg.antEn = 0xFF;                        /* 使能所有天线 */
+    slotCfg.rfSel = 0xFF;                        /* 选择所有RF */
+    slotCfg.txAutoMode = 1;                      /* 自动发送模式 */
+    g_txAutoMode = (slotCfg.txAutoMode == 0);  /* 0=自动发送, 1=指定信息发送 */
+    slotCfg.txBcnEn = 0x7f;                         /* 使能BCN发送 */
+    
+    /* 配置BCN轮流发送 */
+    for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
+        slotCfg.bcnRotation[i] = i;  /* 轮流使用所有天线 0,1,2,3,4,5,6,7 */
+    }
+    
+    /* 配置广播频率 */
+    slotCfg.brdFreq[0] = 20000.0;  /* 广播用户0频率: 503.1 MHz */
+    
+    /* 配置时隙参数 */
+    slotCfg.rx_delay = 0;                        /* RX delay */
+    slotCfg.md_agc = 1024;                       /* DATA AGC长度 */
+    
+    /* 配置多速率模式 */
+    for (int i = 0; i < rateCount; i++) {
+        slotCfg.rateModes[i] = rateModes[i];
+        printf("Setting rate[%d] = mode %d\n", i, rateModes[i]);
+        
+        /* 根据每个速率模式设置对应的da_m参数 */
+        switch (rateModes[i]) {
+            case TK8710_RATE_MODE_5:
+                slotCfg.s1Cfg[i].da_m = 21492;    /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 21492;    /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 21492;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_6:
+                slotCfg.s1Cfg[i].da_m = 19728;    /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 19728;    /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 19728;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_7:
+                slotCfg.s1Cfg[i].da_m = 12000;    /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 12000;    /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 12000;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_8:
+                slotCfg.s1Cfg[i].da_m = 5600;     /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 5600;     /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 5600;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_9:
+                slotCfg.s1Cfg[i].da_m = 2800;     /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 2800;     /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 2800;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_10:
+                slotCfg.s1Cfg[i].da_m = 1400;     /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 1400;     /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 1400;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_11:
+            case TK8710_RATE_MODE_18:
+                slotCfg.s1Cfg[i].da_m = 800;      /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 800;      /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 800;      /* da3_m */
+                break;
+            default:
+                printf("Unsupported rate mode %d, using default\n", rateModes[i]);
+                slotCfg.s1Cfg[i].da_m = 12000;    /* da1_m */
+                slotCfg.s2Cfg[i].da_m = 12000;    /* da2_m */
+                slotCfg.s3Cfg[i].da_m = 12000;    /* da3_m */
+                break;
+        }
+        
+        /* 为每个速率配置相同的时隙长度和频点 */
+        slotCfg.s0Cfg[i].byteLen = 0;                  /* S0 (BCN) 时隙长度 */
+        slotCfg.s0Cfg[i].centerFreq = 503100000;          /* S0中心频点 */
+        
+        slotCfg.s1Cfg[i].byteLen = 26;                 /* S1 (FDL) 时隙长度 */
+        slotCfg.s1Cfg[i].centerFreq = 503100000;          /* S1中心频点 */
+        
+        slotCfg.s2Cfg[i].byteLen = 26;                 /* S2 (ADL) 时隙长度 */
+        slotCfg.s2Cfg[i].centerFreq = 503100000;          /* S2中心频点 */
+        
+        slotCfg.s3Cfg[i].byteLen = 26;                 /* S3 (UL) 时隙长度 */
+        slotCfg.s3Cfg[i].centerFreq = 503100000;          /* S3中心频点 */
+    }
+    
+    /* 计算帧时间长度 (由硬件自动计算，这里先设为0) */
+    slotCfg.frameTimeLen = 0;
+    
+    /* 设置时隙配置 */
+    ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);
+    if (ret != TK8710_OK) {
+        printf("Multi-rate slot configuration failed: %d\n", ret);
+        return ret;
+    }
+    
+    printf("Multi-rate slot parameter configuration completed\n");
+    printf("Rate count: %d\n", rateCount);
+    for (int i = 0; i < rateCount; i++) {
+        printf("Rate[%d] = mode %d, da_m: S1=%d, S2=%d, S3=%d\n", 
+               i, slotCfg.rateModes[i], 
+               slotCfg.s1Cfg[i].da_m, slotCfg.s2Cfg[i].da_m, slotCfg.s3Cfg[i].da_m);
+    }
+    printf("Slot length: S1=%d, S2=%d, S3=%d\n", 
+           slotCfg.s1Cfg[0].byteLen, slotCfg.s2Cfg[0].byteLen, slotCfg.s3Cfg[0].byteLen);
+    
+    return TK8710_OK;
+}
+
+/**
  * @brief 启动工作
  * @return 0-成功, 非0-失败
  */
@@ -1108,13 +1241,26 @@ void show_irq_statistics(void)
  */
 int main(int argc, char* argv[])
 {
-
     // Set CPU affinity to core 2
     if (set_cpu_affinity(2) < 0) {
         return 1;
     }
     int ret;
     char input;
+    bool use_multi_rate = false;
+    
+    /* 检查命令行参数 */
+    if (argc > 1) {
+        if (strcmp(argv[1], "--multi-rate") == 0 || strcmp(argv[1], "-m") == 0) {
+            use_multi_rate = true;
+            printf("Multi-rate mode enabled\n");
+        } else if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+            printf("Usage: %s [--multi-rate|-m] [--help|-h]\n", argv[0]);
+            printf("  --multi-rate, -m : Use multi-rate configuration\n");
+            printf("  --help, -h       : Show this help\n");
+            return 0;
+        }
+    }
     
 #ifdef _WIN32
     /* 设置控制台编码为UTF-8 */
@@ -1175,7 +1321,22 @@ int main(int argc, char* argv[])
     }
 
     /* 4. 配置时隙参数 (TK8710_CFG_TYPE_SLOT_CFG) */
-    ret = config_slot_parameters();
+    if (use_multi_rate) {
+        /* 多速率配置示例：使用3种不同的速率模式 */
+        uint8_t rateModes[] = {
+            TK8710_RATE_MODE_8,    /* 高速率模式 */
+            TK8710_RATE_MODE_7,    /* 中速率模式 */
+            TK8710_RATE_MODE_6     /* 低速率模式 */
+        };
+        uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
+        
+        printf("Using multi-rate configuration with %d rates\n", rateCount);
+        ret = config_multi_rate_slot_parameters(rateCount, rateModes);
+    } else {
+        printf("Using single-rate configuration\n");
+        ret = config_slot_parameters();
+    }
+    
     if (ret != TK8710_OK) {
         printf("Slot parameter configuration failed\n");
         return -1;
