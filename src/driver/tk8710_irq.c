@@ -2504,15 +2504,3 @@ int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_
     }
 }
 
-/**
- * @brief 设置广播发送数据 (简化版本)
- * @param brdIndex 广播索引 (0-15)
- * @param data 数据指针
- * @param dataLen 数据长度
- * @return 0-成功, 1-失败
- */
-int TK8710SetTxBrdData(uint8_t brdIndex, const uint8_t* data, uint16_t dataLen)
-{
-    /* 调用完整版本，使用默认功率和数据类型 */
-    return TK8710SetTxBrdDataWithPower(brdIndex, data, dataLen, 35, 0);
-}

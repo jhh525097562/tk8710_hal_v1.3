@@ -192,14 +192,6 @@ int TK8710ClearTxUserInfo(uint8_t userIndex);
  */
 int TK8710ClearTxUserData(uint8_t userIndex);
 
-/**
- * @brief 设置广播发送数据
- * @param brdIndex 广播用户索引 (0-15)
- * @param data 广播数据指针
- * @param dataLen 数据长度
- * @return 0-成功, 1-失败
- */
-int TK8710SetTxBrdData(uint8_t brdIndex, const uint8_t* data, uint16_t dataLen);
 
 /**
  * @brief 设置广播发送数据和功率
