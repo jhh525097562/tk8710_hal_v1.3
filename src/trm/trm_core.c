@@ -442,6 +442,16 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
             currentUser->data = userData;
             currentUser->dataLen = dataLen;
             
+            /* 获取接收用户的速率模式 */
+            uint8_t rxRateMode = 0;
+            if (TK8710GetRxUserRateMode(userIndex, &rxRateMode) == TK8710_OK) {
+                currentUser->rateMode = rxRateMode;
+                TRM_LOG_DEBUG("TRM: User[%d] RX rate mode: %d", userIndex, rxRateMode);
+            } else {
+                currentUser->rateMode = 0;  /* 默认值 */
+                TRM_LOG_WARN("TRM: Failed to get RX rate mode for user[%d], using default", userIndex);
+            }
+            
             /* 获取信号质量信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetSignalInfo实现 */
             uint32_t rssi, freqSignal;
             uint8_t snr;

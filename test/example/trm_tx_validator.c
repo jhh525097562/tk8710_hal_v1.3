@@ -136,6 +136,13 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
         return TRM_OK; /* 无数据，直接返回 */
     }
     
+    /* 检查系统是否配置为多速率模式 */
+    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    uint8_t isMultiRate = (slotCfg && slotCfg->rateCount > 1);
+    
+    TRM_LOG_DEBUG("验证器: 系统配置 - 多速率模式=%s, 速率数量=%d", 
+                 isMultiRate ? "true" : "false", slotCfg ? slotCfg->rateCount : 0);
+    
     /* 自动应答模式 */
     if (g_validatorConfig.enableAutoResponse) {
         for (uint8_t i = 0; i < rxDataList->userCount; i++) {
@@ -161,8 +168,35 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             uint32_t respUserId = GenerateResponseUserId(user->userId);
             uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
             
-            /* 执行发送 */
-            ExecuteSend(respUserId, respData, dataLen, targetFrame);
+            /* 执行发送 - 根据系统配置选择发送方式 */
+            if (isMultiRate) {
+                /* 多速率模式：使用接收到的速率模式作为发送的目标速率模式 */
+                uint8_t targetRateMode = user->rateMode;
+                
+                TRM_LOG_DEBUG("验证器: 多速率发送 - 用户ID=0x%08X, 接收速率=%d, 目标速率=%d", 
+                             user->userId, user->rateMode, targetRateMode);
+                
+                /* 使用带速率模式的发送接口 */
+                int ret = TRM_SendDataWithRateMode(respUserId, respData, dataLen, 
+                                                  g_validatorConfig.txPower, targetFrame, targetRateMode);
+                
+                /* 更新统计信息 */
+                g_validatorStats.totalTriggerCount++;
+                if (ret == TRM_OK) {
+                    g_validatorStats.successSendCount++;
+                    g_validatorStats.lastErrorCode = 0;
+                    TRM_LOG_DEBUG("验证多速率发送成功: 用户ID=0x%08X, 速率模式=%d, 帧号=%u, 长度=%d", 
+                                 respUserId, targetRateMode, targetFrame, dataLen);
+                } else {
+                    g_validatorStats.failedSendCount++;
+                    g_validatorStats.lastErrorCode = ret;
+                    TRM_LOG_WARN("验证多速率发送失败: 用户ID=0x%08X, 错误码=%d", respUserId, ret);
+                }
+            } else {
+                /* 单速率模式：使用原有的发送方式 */
+                TRM_LOG_DEBUG("验证器: 单速率发送 - 用户ID=0x%08X", user->userId);
+                ExecuteSend(respUserId, respData, dataLen, targetFrame);
+            }
         }
     }
     
@@ -176,12 +210,41 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             GenerateTestData(periodicData, sizeof(periodicData), 
                            g_validatorStats.currentUserId, rxDataList->frameNo);
             
-            /* 计算目标帧 */
             uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
             
-            /* 执行发送 */
-            ExecuteSend(g_validatorStats.currentUserId, periodicData, 
-                       sizeof(periodicData), targetFrame);
+            /* 执行发送 - 根据系统配置选择发送方式 */
+            if (isMultiRate) {
+                /* 多速率模式：使用当前帧的速率模式 */
+                uint8_t currentRateIndex = rxDataList->frameNo % slotCfg->rateCount;
+                uint8_t targetRateMode = slotCfg->rateModes[currentRateIndex];
+                
+                TRM_LOG_DEBUG("验证器: 多速率周期发送 - 用户ID=0x%08X, 帧=%u, 速率索引=%d, 目标速率=%d", 
+                             g_validatorStats.currentUserId, rxDataList->frameNo, currentRateIndex, targetRateMode);
+                
+                /* 使用带速率模式的发送接口 */
+                int ret = TRM_SendDataWithRateMode(g_validatorStats.currentUserId, periodicData, 
+                                                  sizeof(periodicData), g_validatorConfig.txPower, 
+                                                  targetFrame, targetRateMode);
+                
+                /* 更新统计信息 */
+                g_validatorStats.totalTriggerCount++;
+                if (ret == TRM_OK) {
+                    g_validatorStats.successSendCount++;
+                    g_validatorStats.lastErrorCode = 0;
+                    TRM_LOG_DEBUG("验证多速率周期发送成功: 用户ID=0x%08X, 速率模式=%d", 
+                                 g_validatorStats.currentUserId, targetRateMode);
+                } else {
+                    g_validatorStats.failedSendCount++;
+                    g_validatorStats.lastErrorCode = ret;
+                    TRM_LOG_WARN("验证多速率周期发送失败: 用户ID=0x%08X, 错误码=%d", 
+                                 g_validatorStats.currentUserId, ret);
+                }
+            } else {
+                /* 单速率模式：使用原有的发送方式 */
+                TRM_LOG_DEBUG("验证器: 单速率周期发送 - 用户ID=0x%08X", g_validatorStats.currentUserId);
+                ExecuteSend(g_validatorStats.currentUserId, periodicData, 
+                           sizeof(periodicData), targetFrame);
+            }
             
             /* 更新用户ID和最后发送帧 */
             g_validatorStats.currentUserId++;

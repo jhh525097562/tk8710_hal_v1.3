@@ -81,6 +81,7 @@ typedef struct {
     uint32_t userId;            /* 用户ID */
     uint8_t  slotIndex;         /* 时隙索引 */
     uint8_t  dataLen;           /* 数据长度 */
+    uint8_t  rateMode;          /* 接收速率模式 (5-11,18) */
     int16_t  rssi;              /* 信号强度 */
     uint8_t  snr;               /* 信噪比 */
     uint8_t  reserved;
