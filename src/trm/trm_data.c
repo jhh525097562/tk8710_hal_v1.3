@@ -316,8 +316,12 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     TK8710EnterCritical();
         
     uint8_t txUserIndex = 0;
-    while (g_txQueue.count > 0 && sentCount < maxUserCount) {
+    uint8_t futureFrameCount = 0;  /* 跟踪未来帧号的用户数量 */
+    uint8_t processedCount = 0;    /* 跟踪已处理的用户数量 */
+    
+    while (g_txQueue.count > 0 && sentCount < maxUserCount && processedCount < g_txQueue.count) {
         TxItem* item = &g_txQueue.items[g_txQueue.head];
+        processedCount++;
         
         if (item->valid) {
             uint8_t shouldSend = 0;
@@ -352,6 +356,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         /* 未来帧号，跳过当前用户，继续处理下一个 */
                         TRM_LOG_DEBUG("TRM: Future frame - user=%u, target_frame=%u, current_frame=%u, skipping", 
                                      item->userId, item->frameNo, g_trmCurrentFrame);
+                        futureFrameCount++;
                         continue;
                     }
                 } else {
@@ -426,8 +431,14 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     
     TK8710ExitCritical();
     
-    TRM_LOG_DEBUG("TRM: ProcessTxSlot completed - sentCount=%d, queueCount=%u, multiRate=%s", 
-                 sentCount, g_txQueue.count, isMultiRate ? "true" : "false");
+    /* 记录未来帧号的情况 */
+    if (futureFrameCount > 0) {
+        TRM_LOG_DEBUG("TRM: ProcessTxSlot found %u users with future frames, current_frame=%u", 
+                     futureFrameCount, g_trmCurrentFrame);
+    }
+    
+    TRM_LOG_DEBUG("TRM: ProcessTxSlot completed - sentCount=%d, queueCount=%u, multiRate=%s, processed=%u", 
+                 sentCount, g_txQueue.count, isMultiRate ? "true" : "false", processedCount);
     
     return sentCount;
 }
