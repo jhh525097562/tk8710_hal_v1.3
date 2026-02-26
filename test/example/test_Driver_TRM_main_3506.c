@@ -1359,6 +1359,10 @@ int main(int argc, char* argv[])
             TK8710_RATE_MODE_7,    /* 速率模式7 */
             TK8710_RATE_MODE_8     /* 速率模式8 */
         };
+        // uint8_t rateModes[] = {
+        //     TK8710_RATE_MODE_7,    /* 速率模式7 */
+        //     TK8710_RATE_MODE_8     /* 速率模式8 */
+        // };
         uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
         
         printf("Using multi-rate configuration with %d rates\n", rateCount);
