@@ -381,7 +381,7 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
     /* 获取当前速率模式 - 直接从Driver中断结果中获取 */
     uint8_t currentRateMode = 0;
     const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-    if (slotCfg && slotCfg->rateCount > 0 && irqResult && irqResult->signalInfoValid) {
+    if (slotCfg && slotCfg->rateCount > 0 && irqResult) {
         /* 使用Driver提供的当前速率索引获取速率模式 */
         uint8_t currentRateIndex = irqResult->currentRateIndex;
         if (currentRateIndex < slotCfg->rateCount) {

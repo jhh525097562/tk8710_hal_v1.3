@@ -538,7 +538,7 @@ int init_trm_system(void)
     
     /* 初始化TRM日志系统 */
     printf("Initializing TRM logging system...\n");
-    TRM_LogInit(TRM_LOG_INFO);//TRM_LOG_INFO TRM_LOG_DEBUG
+    TRM_LogInit(TRM_LOG_DEBUG);//TRM_LOG_INFO TRM_LOG_DEBUG
     TRM_LOG_INFO("测试程序开始初始化TRM系统");
     
     /* 配置TRM参数 */

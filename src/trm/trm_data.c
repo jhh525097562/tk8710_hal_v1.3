@@ -335,7 +335,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                                  item->targetRateMode, nextRateMode, item->userId);
                 }
             } else {
-                /* 单速率模式：检查目标速率模式或帧号 */
+                /* 单速率模式：只检查帧号匹配 */
                 if (item->targetRateMode == 0) {
                     /* 使用帧号匹配（原有逻辑） */
                     if (item->frameNo == g_trmCurrentFrame) {
@@ -353,15 +353,13 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         break;
                     }
                 } else {
-                    /* 单速率模式下指定了速率模式，检查是否匹配当前速率 */
-                    if (item->targetRateMode == currentRateMode) {
-                        shouldSend = 1;
-                        TRM_LOG_DEBUG("TRM: Single-rate rate match - userRate=%d, currentRate=%d, user=%u", 
-                                     item->targetRateMode, currentRateMode, item->userId);
-                    } else {
-                        TRM_LOG_DEBUG("TRM: Single-rate rate skip - userRate=%d, currentRate=%d, user=%u", 
-                                     item->targetRateMode, currentRateMode, item->userId);
-                    }
+                    /* 单速率模式下指定了速率模式，不支持，直接丢弃 */
+                    TRM_LOG_WARN("TRM: Single-rate mode does not support rate mode specification, discarding data - user=%u, targetRate=%d", 
+                               item->userId, item->targetRateMode);
+                    item->valid = 0;
+                    g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
+                    g_txQueue.count--;
+                    continue;
                 }
             }
             
