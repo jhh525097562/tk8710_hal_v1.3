@@ -381,7 +381,7 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
     /* 获取当前速率模式 - 直接从Driver中断结果中获取 */
     uint8_t currentRateMode = 0;
     const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-    if (slotCfg && slotCfg->rateCount > 0 && irqResult->signalInfoValid) {
+    if (slotCfg && slotCfg->rateCount > 0 && irqResult && irqResult->signalInfoValid) {
         /* 使用Driver提供的当前速率索引获取速率模式 */
         uint8_t currentRateIndex = irqResult->currentRateIndex;
         if (currentRateIndex < slotCfg->rateCount) {
@@ -397,7 +397,12 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
             TRM_LOG_WARN("TRM: Invalid rate index %u, using default rate mode", currentRateIndex);
             currentRateMode = slotCfg->rateModes[0];  /* 使用第一个速率模式 */
         }
+    } else if (slotCfg && slotCfg->rateCount > 0) {
+        /* 信号信息无效但配置有效，使用第一个速率模式 */
+        TRM_LOG_DEBUG("TRM: Signal info invalid, using first configured rate mode");
+        currentRateMode = slotCfg->rateModes[0];
     } else {
+        /* 配置无效，使用默认速率模式 */
         TRM_LOG_WARN("TRM: Failed to get rate info from Driver, using default rate mode");
         currentRateMode = TK8710_RATE_MODE_8;  /* 默认速率模式 */
     }
