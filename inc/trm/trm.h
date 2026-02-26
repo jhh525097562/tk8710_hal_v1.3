@@ -189,8 +189,23 @@ int TRM_Reset(void);
  * @param len 数据长度
  * @param txPower 发射功率
  * @param frameNo 目标发送帧号
- * @return TRM_OK成功，其他失? */
+ * @return TRM_OK成功，其他失败
+ */
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo);
+
+/**
+ * @brief 发送用户数据（缓存到发送队列，支持速率模式）
+ * @param userId 用户ID
+ * @param data 数据
+ * @param len 数据长度
+ * @param txPower 发射功率
+ * @param frameNo 目标发送帧号（多速率模式下作为备用）
+ * @param targetRateMode 目标速率模式 (0=使用帧号, 5-11,18=使用速率模式)
+ * @return TRM_OK成功，其他失败
+ * @note 单速率模式：targetRateMode=0时使用帧号匹配，非0时匹配当前速率
+ * @note 多速率模式：targetRateMode=0时匹配下一帧，非0时匹配下一帧速率模式
+ */
+int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode);
 
 /**
  * @brief 发送广播数? * @param brdIndex 广播索引

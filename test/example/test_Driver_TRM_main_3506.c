@@ -538,7 +538,7 @@ int init_trm_system(void)
     
     /* 初始化TRM日志系统 */
     printf("Initializing TRM logging system...\n");
-    TRM_LogInit(TRM_LOG_INFO);//TRM_LOG_INFO TRM_LOG_DEBUG
+    TRM_LogInit(TRM_LOG_DEBUG);//TRM_LOG_INFO TRM_LOG_DEBUG
     TRM_LOG_INFO("测试程序开始初始化TRM系统");
     
     /* 配置TRM参数 */
@@ -1327,7 +1327,7 @@ int main(int argc, char* argv[])
     
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
-    TK8710LogSimpleInit(TK8710_LOG_ALL, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
+    TK8710LogSimpleInit(TK8710_LOG_NONE, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
     
     /* 2. 初始化中断系统 */
     ret = init_interrupt_system();

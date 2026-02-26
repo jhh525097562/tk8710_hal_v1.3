@@ -30,8 +30,9 @@ typedef struct {
     uint16_t len;
     uint8_t  power;
     uint8_t  valid;
+    uint8_t  targetRateMode;  /**< 目标发送速率模式 (0=使用帧号, 5-11,18=使用速率模式) */
     uint32_t timestamp;
-    uint32_t frameNo;      /* 目标发送帧号 */
+    uint32_t frameNo;      /**< 目标发送帧号 */
 } TxItem;
 
 /* 发送队列 */
@@ -169,8 +170,20 @@ void TRM_ProcessBeamRamReleases(void)
 
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo)
 {
+    /* 调用带速率模式的接口，使用默认帧号模式 */
+    return TRM_SendDataWithRateMode(userId, data, len, txPower, frameNo, 0);
+}
+
+int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode)
+{
     if (data == NULL || len == 0 || len > TX_DATA_MAX_LEN) {
         TRM_LOG_ERROR("TRM发送数据失败: 参数错误 - data=%p, len=%d", data, len);
+        return TRM_ERR_PARAM;
+    }
+    
+    /* 检查速率模式有效性 */
+    if (targetRateMode != 0 && (targetRateMode < 5 || targetRateMode > 11) && targetRateMode != 18) {
+        TRM_LOG_ERROR("TRM发送数据失败: 无效的速率模式 - targetRateMode=%d", targetRateMode);
         return TRM_ERR_PARAM;
     }
     
@@ -196,6 +209,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     item->frameNo = frameNo;  /* 使用原始帧号 */
     item->len = len;
     item->power = txPower;
+    item->targetRateMode = targetRateMode;  /* 设置目标速率模式 */
     item->valid = 1;
     memcpy(item->data, data, len);
     item->timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
@@ -205,8 +219,13 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     
     TK8710ExitCritical();
     
-    TRM_LOG_DEBUG("TRM数据入队成功 - 用户ID=0x%08X, 长度=%d, 功率=%d, 目标帧=%u, 队列数=%u", 
-                  userId, len, txPower, frameNo, g_txQueue.count);
+    if (targetRateMode == 0) {
+        TRM_LOG_DEBUG("TRM数据入队成功 - 用户ID=0x%08X, 长度=%d, 功率=%d, 目标帧=%u, 队列数=%u", 
+                      userId, len, txPower, frameNo, g_txQueue.count);
+    } else {
+        TRM_LOG_DEBUG("TRM数据入队成功(速率模式) - 用户ID=0x%08X, 长度=%d, 功率=%d, 目标速率=%d, 队列数=%u", 
+                      userId, len, txPower, targetRateMode, g_txQueue.count);
+    }
     
     return TRM_OK;
 }
@@ -261,6 +280,24 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
     /* 首先处理波束RAM延时释放 */
     TRM_ProcessBeamRamReleases();
     
+    /* 获取当前时隙配置以判断是否为多速率模式 */
+    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    uint8_t isMultiRate = (slotCfg->rateCount > 1);
+    uint8_t currentRateMode = 0;
+    uint8_t nextRateMode = 0;
+    
+    if (isMultiRate) {
+        /* 多速率模式：获取当前速率模式和下一帧速率模式 */
+        currentRateMode = slotCfg->rateModes[g_trmCurrentFrame % slotCfg->rateCount];
+        nextRateMode = slotCfg->rateModes[(g_trmCurrentFrame + 1) % slotCfg->rateCount];
+        TRM_LOG_DEBUG("TRM: Multi-rate mode - currentFrame=%u, currentRate=%d, nextRate=%d", 
+                     g_trmCurrentFrame, currentRateMode, nextRateMode);
+    } else {
+        /* 单速率模式：获取当前速率模式 */
+        currentRateMode = slotCfg->rateModes[0];
+        TRM_LOG_DEBUG("TRM: Single-rate mode - currentFrame=%u, rate=%d", g_trmCurrentFrame, currentRateMode);
+    }
+    
     TK8710EnterCritical();
     
     uint8_t txUserIndex = 0;
@@ -268,8 +305,60 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
         TxItem* item = &g_txQueue.items[g_txQueue.head];
         
         if (item->valid) {
-            /* 检查帧号是否匹配当前帧 */
-            if (item->frameNo == g_trmCurrentFrame) {
+            uint8_t shouldSend = 0;
+            
+            if (isMultiRate) {
+                /* 多速率模式：检查目标速率模式是否匹配下一帧速率模式 */
+                if (item->targetRateMode == nextRateMode) {
+                    /* 速率模式匹配下一帧，可以发送 */
+                    shouldSend = 1;
+                    TRM_LOG_DEBUG("TRM: Multi-rate send match - userRate=%d, nextRate=%d, user=%u", 
+                                 item->targetRateMode, nextRateMode, item->userId);
+                } else if (item->targetRateMode == 0) {
+                    /* 兼容性：如果targetRateMode为0，检查帧号是否匹配下一帧 */
+                    uint32_t nextFrame = g_trmCurrentFrame + 1;
+                    if (item->frameNo == nextFrame) {
+                        shouldSend = 1;
+                        TRM_LOG_DEBUG("TRM: Multi-rate frame fallback match - userFrame=%u, nextFrame=%u, user=%u", 
+                                     item->frameNo, nextFrame, item->userId);
+                    }
+                } else {
+                    /* 速率模式不匹配，跳过 */
+                    TRM_LOG_DEBUG("TRM: Multi-rate send skip - userRate=%d, nextRate=%d, user=%u", 
+                                 item->targetRateMode, nextRateMode, item->userId);
+                }
+            } else {
+                /* 单速率模式：检查目标速率模式或帧号 */
+                if (item->targetRateMode == 0) {
+                    /* 使用帧号匹配（原有逻辑） */
+                    if (item->frameNo == g_trmCurrentFrame) {
+                        shouldSend = 1;
+                    } else if (item->frameNo < g_trmCurrentFrame) {
+                        /* 过期的帧号，直接丢弃 */
+                        TRM_LOG_WARN("TRM: Discarding expired data - user=%u, target_frame=%u, current_frame=%u", 
+                                   item->userId, item->frameNo, g_trmCurrentFrame);
+                        item->valid = 0;
+                        g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
+                        g_txQueue.count--;
+                        continue;
+                    } else {
+                        /* 未来帧号，跳过本次处理 */
+                        break;
+                    }
+                } else {
+                    /* 单速率模式下指定了速率模式，检查是否匹配当前速率 */
+                    if (item->targetRateMode == currentRateMode) {
+                        shouldSend = 1;
+                        TRM_LOG_DEBUG("TRM: Single-rate rate match - userRate=%d, currentRate=%d, user=%u", 
+                                     item->targetRateMode, currentRateMode, item->userId);
+                    } else {
+                        TRM_LOG_DEBUG("TRM: Single-rate rate skip - userRate=%d, currentRate=%d, user=%u", 
+                                     item->targetRateMode, currentRateMode, item->userId);
+                    }
+                }
+            }
+            
+            if (shouldSend) {
                 /* 查询波束 */
                 TRM_BeamInfo beam;
                 TRM_LOG_DEBUG("TRM: Querying beam info for user ID=0x%08X", item->userId);
@@ -297,7 +386,8 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
                         if (ret != TK8710_OK) {
                             TRM_LOG_ERROR("TRM: Failed to set TX user info for user[%u]: %d", item->userId, ret);
                         } else {
-                            TRM_LOG_DEBUG("TRM: Driver send setup successful for user[%u] with txIndex=%u", item->userId, txUserIndex);
+                            TRM_LOG_DEBUG("TRM: Driver send setup successful for user[%u] with txIndex=%u, targetRate=%d", 
+                                        item->userId, txUserIndex, item->targetRateMode);
                             sentCount++;
                             
                             /* 使用完波束后，延时20个帧周期释放波束RAM */
@@ -319,16 +409,6 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
                 item->valid = 0;
                 g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
                 g_txQueue.count--;
-            } else if (item->frameNo < g_trmCurrentFrame) {
-                /* 过期的帧号，直接丢弃 */
-                TRM_LOG_WARN("TRM: Discarding expired data - user=%u, target_frame=%u, current_frame=%u\n", 
-                       item->userId, item->frameNo, g_trmCurrentFrame);
-                item->valid = 0;
-                g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
-                g_txQueue.count--;
-            } else {
-                /* 未来帧号，跳过本次处理 */
-                break;
             }
         } else {
             /* 无效项，直接跳过 */
@@ -338,6 +418,9 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
     }
     
     TK8710ExitCritical();
+    
+    TRM_LOG_DEBUG("TRM: ProcessTxSlot completed - sentCount=%d, queueCount=%u, multiRate=%s", 
+                 sentCount, g_txQueue.count, isMultiRate ? "true" : "false");
     
     return sentCount;
 }
