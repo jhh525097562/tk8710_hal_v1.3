@@ -390,17 +390,8 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
                                         item->userId, txUserIndex, item->targetRateMode);
                             sentCount++;
                             
-                            /* 多速率模式下，根据速率配置动态调整波束RAM释放延时 */
-                            uint32_t releaseDelay = 16;  /* 默认16帧 */
-                            if (isMultiRate && slotCfg->rateCount > 1) {
-                                /* 多速率模式：延时调整为速率周期的整数倍 */
-                                releaseDelay = slotCfg->rateCount * 8;  /* 8个速率周期 */
-                                if (releaseDelay < 16) releaseDelay = 16;  /* 最小16帧 */
-                                if (releaseDelay > 64) releaseDelay = 64;  /* 最大64帧 */
-                                TRM_LOG_DEBUG("TRM: Multi-rate beam RAM release delay adjusted to %u frames (rateCount=%u)", 
-                                             releaseDelay, slotCfg->rateCount);
-                            }
-                            TRM_ScheduleBeamRamRelease(item->userId, releaseDelay);
+                            /* 使用完波束后，延时20个帧周期释放波束RAM */
+                            TRM_ScheduleBeamRamRelease(item->userId, 16);//16
                         }
                     }
                     

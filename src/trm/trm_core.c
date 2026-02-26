@@ -460,18 +460,8 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
             /* 存储波束信息 */
             int ret = TRM_SetBeamInfo(beam.userId, &beam);
             if (ret == TRM_OK) {
-                /* 创建波束后，根据系统配置动态调整波束RAM释放延时 */
-                uint32_t releaseDelay = 30;  /* 默认30帧 */
-                const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-                if (slotCfg && slotCfg->rateCount > 1) {
-                    /* 多速率模式：延时调整为速率周期的整数倍 */
-                    releaseDelay = slotCfg->rateCount * 10;  /* 10个速率周期 */
-                    if (releaseDelay < 30) releaseDelay = 30;  /* 最小30帧 */
-                    if (releaseDelay > 120) releaseDelay = 120;  /* 最大120帧 */
-                    TRM_LOG_DEBUG("TRM: Multi-rate RX beam RAM release delay adjusted to %u frames (rateCount=%u)", 
-                                 releaseDelay, slotCfg->rateCount);
-                }
-                TRM_ScheduleBeamRamRelease(beam.userId, releaseDelay);
+                /* 创建波束后，延时30个帧周期释放波束RAM */
+                TRM_ScheduleBeamRamRelease(beam.userId, 30);
                 TRM_LOG_DEBUG("TRM: Beam info stored successfully for user ID=0x%08X", beam.userId);
             } else {
                 TRM_LOG_WARN("TRM: Failed to store beam info for user ID=0x%08X, error=%d", beam.userId, ret);
