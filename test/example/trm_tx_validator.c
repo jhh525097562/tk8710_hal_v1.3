@@ -182,22 +182,11 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 uint32_t respUserId = GenerateResponseUserId(user->userId);
                 uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
                 
-                /* 计算目标帧对应的速率模式 */
-                uint8_t targetRateMode = 0;
-                if (slotCfg && slotCfg->rateCount > 1) {
-                    /* 多速率模式：计算目标帧的速率模式 */
-                    targetRateMode = slotCfg->rateModes[targetFrame % slotCfg->rateCount];
-                    TRM_LOG_DEBUG("TRM验证器: 目标帧%u的速率模式=%d", targetFrame, targetRateMode);
-                } else {
-                    /* 单速率模式：使用帧匹配 */
-                    targetRateMode = 0;
-                }
+                /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
+                ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
                 
-                /* 执行发送 - 使用目标帧对应的速率模式 */
-                ExecuteSend(respUserId, respData, dataLen, targetFrame, targetRateMode);
-                
-                TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 目标帧=%u, 下行速率=%d", 
-                             user->userId, user->rateMode, targetFrame, targetRateMode);
+                TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
+                             user->userId, user->rateMode, user->rateMode);
             }
         }
     } else {

@@ -308,20 +308,12 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
             uint8_t shouldSend = 0;
             
             if (isMultiRate) {
-                /* 多速率模式：检查目标速率模式是否匹配下一帧速率模式 */
+                /* 多速率模式：只检查目标速率模式是否匹配下一帧速率模式 */
                 if (item->targetRateMode == nextRateMode) {
                     /* 速率模式匹配下一帧，可以发送 */
                     shouldSend = 1;
                     TRM_LOG_DEBUG("TRM: Multi-rate send match - userRate=%d, nextRate=%d, user=%u", 
                                  item->targetRateMode, nextRateMode, item->userId);
-                } else if (item->targetRateMode == 0) {
-                    /* 兼容性：如果targetRateMode为0，检查帧号是否匹配下一帧 */
-                    uint32_t nextFrame = g_trmCurrentFrame + 1;
-                    if (item->frameNo == nextFrame) {
-                        shouldSend = 1;
-                        TRM_LOG_DEBUG("TRM: Multi-rate frame fallback match - userFrame=%u, nextFrame=%u, user=%u", 
-                                     item->frameNo, nextFrame, item->userId);
-                    }
                 } else {
                     /* 速率模式不匹配，跳过 */
                     TRM_LOG_DEBUG("TRM: Multi-rate send skip - userRate=%d, nextRate=%d, user=%u", 
