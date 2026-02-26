@@ -19,9 +19,9 @@ extern uint64_t TK8710GetTimeUs(void);
  * 私有定义
  *============================================================================*/
 
-#define TX_QUEUE_SIZE   1024      /* 发送队列大小 */
+#define TX_QUEUE_SIZE   512      /* 发送队列大小 */
 #define TX_DATA_MAX_LEN 512     /* 最大发送数据长度 */
-#define BEAM_RELEASE_QUEUE_SIZE 1024  /* 波束RAM释放队列大小 */
+#define BEAM_RELEASE_QUEUE_SIZE 512  /* 波束RAM释放队列大小 */
 
 /* 发送数据项 */
 typedef struct {

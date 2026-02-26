@@ -1352,10 +1352,12 @@ int main(int argc, char* argv[])
 
     /* 4. 配置时隙参数 (TK8710_CFG_TYPE_SLOT_CFG) */
     if (use_multi_rate) {
-        /* 多速率配置示例：使用3种不同的速率模式 */
+        /* 多速率配置示例：使用4种不同的速率模式 */
         uint8_t rateModes[] = {
-            TK8710_RATE_MODE_6,    /* 低速率模式 */
-            TK8710_RATE_MODE_7     /* 中速率模式 */
+            TK8710_RATE_MODE_5,    /* 速率模式5 */
+            TK8710_RATE_MODE_6,    /* 速率模式6 */
+            TK8710_RATE_MODE_7,    /* 速率模式7 */
+            TK8710_RATE_MODE_8     /* 速率模式8 */
         };
         uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
         
