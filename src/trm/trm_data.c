@@ -19,9 +19,9 @@ extern uint64_t TK8710GetTimeUs(void);
  * 私有定义
  *============================================================================*/
 
-#define TX_QUEUE_SIZE   512      /* 发送队列大小 */
+#define TX_QUEUE_SIZE   1024      /* 发送队列大小 */
 #define TX_DATA_MAX_LEN 512     /* 最大发送数据长度 */
-#define BEAM_RELEASE_QUEUE_SIZE 512  /* 波束RAM释放队列大小 */
+#define BEAM_RELEASE_QUEUE_SIZE 1024  /* 波束RAM释放队列大小 */
 
 /* 发送数据项 */
 typedef struct {
@@ -317,7 +317,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
         
     uint8_t txUserIndex = 0;
     uint8_t futureFrameCount = 0;  /* 跟踪未来帧号的用户数量 */
-    uint8_t processedCount = 0;    /* 跟踪已处理的用户数量 */
+    uint16_t processedCount = 0;    /* 跟踪已处理的用户数量 */
     
     while (g_txQueue.count > 0 && sentCount < maxUserCount && processedCount < g_txQueue.count) {
         TxItem* item = &g_txQueue.items[g_txQueue.head];

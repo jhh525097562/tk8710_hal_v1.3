@@ -155,6 +155,25 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
     if (isMultiRate) {
         TRM_LOG_DEBUG("TRM验证器: 多速率模式，速率数量=%u", slotCfg->rateCount);
         
+        /* 计算下一帧的速率模式用于发送 */
+        uint8_t nextRateMode = 0;
+        if (slotCfg->rateCount > 1) {
+            /* 找到当前接收速率模式在配置中的索引，然后计算下一个 */
+            uint8_t currentRateIndex = 0;
+            for (uint8_t i = 0; i < slotCfg->rateCount; i++) {
+                if (slotCfg->rateModes[i] == rxDataList->users[0].rateMode) {
+                    currentRateIndex = i;
+                    break;
+                }
+            }
+            uint8_t nextRateIndex = (currentRateIndex + 1) % slotCfg->rateCount;
+            nextRateMode = slotCfg->rateModes[nextRateIndex];
+            TRM_LOG_DEBUG("TRM验证器: 多速率模式 - 当前速率=%d(索引%u), 下一帧速率=%d(索引%u)", 
+                         rxDataList->users[0].rateMode, currentRateIndex, nextRateMode, nextRateIndex);
+        } else {
+            nextRateMode = rxDataList->users[0].rateMode;
+        }
+        
         /* 多速率模式：只为与接收速率模式匹配的目标速率模式生成发送数据 */
         for (uint8_t i = 0; i < rxDataList->userCount; i++) {
             TRM_RxUserData* user = &rxDataList->users[i];
@@ -179,11 +198,11 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             uint32_t respUserId = GenerateResponseUserId(user->userId);
             uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
             
-            /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
-            ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
+            /* 执行发送 - 使用下一帧的速率模式作为下行速率模式 */
+            ExecuteSend(respUserId, respData, dataLen, targetFrame, nextRateMode);
             
             TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
-                         user->userId, user->rateMode, user->rateMode);
+                         user->userId, user->rateMode, nextRateMode);
         }
     } else {
         TRM_LOG_DEBUG("TRM验证器: 单速率模式");
