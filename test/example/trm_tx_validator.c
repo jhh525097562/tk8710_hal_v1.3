@@ -154,39 +154,38 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
     if (isMultiRate) {
         TRM_LOG_DEBUG("TRM验证器: 多速率模式，速率数量=%u", slotCfg->rateCount);
         
-        /* 多速率模式：为每个速率模式生成发送数据 */
-        for (uint8_t rateIdx = 0; rateIdx < slotCfg->rateCount; rateIdx++) {
-            uint8_t targetRateMode = slotCfg->rateModes[rateIdx];
+        /* 多速率模式：只为与接收速率模式匹配的目标速率模式生成发送数据 */
+        for (uint8_t i = 0; i < rxDataList->userCount; i++) {
+            TRM_RxUserData* user = &rxDataList->users[i];
             
-            /* 为每个接收用户生成对应速率模式的应答 */
-            for (uint8_t i = 0; i < rxDataList->userCount; i++) {
-                TRM_RxUserData* user = &rxDataList->users[i];
-                
-                /* 生成应答数据 - 使用配置的数据长度 */
-                uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
-                uint16_t dataLen = g_validatorConfig.responseDataLength;
-                
-                /* 限制最大长度 */
-                if (dataLen > 64) dataLen = 64;
-                if (dataLen == 0) dataLen = 12;  /* 默认长度 */
-                
-                GenerateTestData(respData, dataLen, user->userId, rxDataList->frameNo);
-                
-                /* 如果接收到了数据，复制部分数据作为应答 */
-                if (user->data != NULL && user->dataLen > 0) {
-                    uint16_t copyLen = (user->dataLen > 8) ? 8 : user->dataLen;
-                    memcpy(&respData[4], user->data, copyLen);
-                }
-                
-                /* 计算应答用户ID和目标帧 */
-                uint32_t respUserId = GenerateResponseUserId(user->userId);
-                uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
-                
-                /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
-                ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
-                
-                TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
-                             user->userId, user->rateMode, user->rateMode);
+            /* 使用接收到的速率模式作为目标速率模式 */
+            uint8_t targetRateMode = user->rateMode;
+            
+            /* 生成应答数据 - 使用配置的数据长度 */
+            uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
+            uint16_t dataLen = g_validatorConfig.responseDataLength;
+            
+            /* 限制最大长度 */
+            if (dataLen > 64) dataLen = 64;
+            if (dataLen == 0) dataLen = 12;  /* 默认长度 */
+            
+            GenerateTestData(respData, dataLen, user->userId, rxDataList->frameNo);
+            
+            /* 如果接收到了数据，复制部分数据作为应答 */
+            if (user->data != NULL && user->dataLen > 0) {
+                uint16_t copyLen = (user->dataLen > 8) ? 8 : user->dataLen;
+                memcpy(&respData[4], user->data, copyLen);
+            }
+            
+            /* 计算应答用户ID和目标帧 */
+            uint32_t respUserId = GenerateResponseUserId(user->userId);
+            uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
+            
+            /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
+            ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
+            
+            TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
+                         user->userId, user->rateMode, user->rateMode);
             }
         }
     } else {
