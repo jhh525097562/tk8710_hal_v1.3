@@ -273,33 +273,48 @@ int TRM_ClearTxData(uint32_t userId)
 }
 
 /* 内部函数 - 在发送时隙回调中调用 */
-int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
+int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult)
 {
     uint8_t sentCount = 0;
     
     /* 首先处理波束RAM延时释放 */
     TRM_ProcessBeamRamReleases();
-    
+        
     /* 获取当前时隙配置以判断是否为多速率模式 */
     const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-    uint8_t isMultiRate = (slotCfg->rateCount > 1);
+    uint8_t isMultiRate = (slotCfg && slotCfg->rateCount > 1);
     uint8_t currentRateMode = 0;
     uint8_t nextRateMode = 0;
-    
-    if (isMultiRate) {
-        /* 多速率模式：获取当前速率模式和下一帧速率模式 */
-        currentRateMode = slotCfg->rateModes[g_trmCurrentFrame % slotCfg->rateCount];
-        nextRateMode = slotCfg->rateModes[(g_trmCurrentFrame + 1) % slotCfg->rateCount];
-        TRM_LOG_DEBUG("TRM: Multi-rate mode - currentFrame=%u, currentRate=%d, nextRate=%d", 
-                     g_trmCurrentFrame, currentRateMode, nextRateMode);
-    } else {
-        /* 单速率模式：获取当前速率模式 */
+        
+    if (isMultiRate && irqResult && irqResult->signalInfoValid) {
+        /* 多速率模式：使用Driver提供的当前速率索引 */
+        uint8_t currentRateIndex = irqResult->currentRateIndex;
+        if (currentRateIndex < slotCfg->rateCount) {
+            currentRateMode = slotCfg->rateModes[currentRateIndex];
+            /* 计算下一帧的速率模式 */
+            uint8_t nextRateIndex = (currentRateIndex + 1) % slotCfg->rateCount;
+            nextRateMode = slotCfg->rateModes[nextRateIndex];
+            TRM_LOG_DEBUG("TRM: Multi-rate mode - currentIndex=%u, currentRate=%d, nextIndex=%u, nextRate=%d", 
+                         currentRateIndex, currentRateMode, nextRateIndex, nextRateMode);
+        } else {
+            TRM_LOG_WARN("TRM: Invalid rate index %u, using default rate mode", currentRateIndex);
+            currentRateMode = slotCfg->rateModes[0];
+            nextRateMode = slotCfg->rateModes[0];
+        }
+    } else if (slotCfg && slotCfg->rateCount > 0) {
+        /* 单速率模式或信号信息无效：使用第一个速率模式 */
         currentRateMode = slotCfg->rateModes[0];
-        TRM_LOG_DEBUG("TRM: Single-rate mode - currentFrame=%u, rate=%d", g_trmCurrentFrame, currentRateMode);
+        nextRateMode = slotCfg->rateModes[0];
+        TRM_LOG_DEBUG("TRM: Single-rate mode - rate=%d", currentRateMode);
+    } else {
+        /* 配置无效：使用默认速率模式 */
+        currentRateMode = TK8710_RATE_MODE_8;
+        nextRateMode = TK8710_RATE_MODE_8;
+        TRM_LOG_WARN("TRM: Failed to get slot configuration, using default rate mode");
     }
-    
+        
     TK8710EnterCritical();
-    
+        
     uint8_t txUserIndex = 0;
     while (g_txQueue.count > 0 && sentCount < maxUserCount) {
         TxItem* item = &g_txQueue.items[g_txQueue.head];

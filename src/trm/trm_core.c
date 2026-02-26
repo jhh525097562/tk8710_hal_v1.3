@@ -51,7 +51,7 @@ uint32_t g_trmMaxFrameCount = 100;
  *============================================================================*/
 
 static void TRM_OnDriverSlotEnd(uint8_t slotType, uint8_t slotIndex, uint32_t frameNo);
-static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount);
+static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
 static void TRM_OnDriverError(int errorCode);
 
 /* Driver中断回调 */
@@ -120,7 +120,7 @@ static void TRM_DriverIrqCallback(TK8710IrqResult irqResult)
             /* 处理发送截止 */
             if (g_trmCtx.state == TRM_STATE_RUNNING) {
                 /* 调用发送截止处理函数 */
-                TRM_OnDriverTxSlot(1, 128);  /* S1时隙，最大128用户 */
+                TRM_OnDriverTxSlot(1, 128, &irqResult);  /* S1时隙，最大128用户 */
             }
             break;
             
@@ -564,12 +564,12 @@ static void TRM_OnDriverSlotEnd(uint8_t slotType, uint8_t slotIndex, uint32_t fr
     }
 }
 
-static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount)
+static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult)
 {
     TRM_LOG_DEBUG("TRM: TxSlot: slot=%d, maxUsers=%d\n", slotIndex, maxUserCount);
     
     /* 从发送队列取数据，查询波束，调用Driver发送 */
-    int sentCount = TRM_ProcessTxSlot(slotIndex, maxUserCount);
+    int sentCount = TRM_ProcessTxSlot(slotIndex, maxUserCount, irqResult);
     
     if (sentCount > 0) {
         g_trmCtx.stats.txCount += sentCount;
