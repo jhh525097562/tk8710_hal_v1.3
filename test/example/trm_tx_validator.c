@@ -159,6 +159,29 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
         for (uint8_t i = 0; i < rxDataList->userCount; i++) {
             TRM_RxUserData* user = &rxDataList->users[i];
             
+            /* 计算下一帧的速率模式作为目标速率模式 */
+            uint8_t targetRateMode = 0;
+            if (slotCfg && slotCfg->rateCount > 1) {
+                /* 多速率模式：计算下一帧的速率模式 */
+                uint8_t currentRateIndex = 0;
+                /* 找到当前速率模式在配置中的索引 */
+                for (uint8_t idx = 0; idx < slotCfg->rateCount; idx++) {
+                    if (slotCfg->rateModes[idx] == user->rateMode) {
+                        currentRateIndex = idx;
+                        break;
+                    }
+                }
+                /* 下一帧的速率索引 */
+                uint8_t nextRateIndex = (currentRateIndex + 1) % slotCfg->rateCount;
+                targetRateMode = slotCfg->rateModes[nextRateIndex];
+                
+                TRM_LOG_DEBUG("TRM验证器: 多速率预测 - 当前速率=%d(index=%u), 下一帧速率=%d(index=%u)", 
+                             user->rateMode, currentRateIndex, targetRateMode, nextRateIndex);
+            } else {
+                /* 单速率模式：使用当前速率模式 */
+                targetRateMode = user->rateMode;
+            }
+            
             /* 生成应答数据 - 使用配置的数据长度 */
             uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
             uint16_t dataLen = g_validatorConfig.responseDataLength;
@@ -179,11 +202,11 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             uint32_t respUserId = GenerateResponseUserId(user->userId);
             uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
             
-            /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
-            ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
+            /* 执行发送 - 使用预测的下一帧速率模式作为下行速率模式 */
+            ExecuteSend(respUserId, respData, dataLen, targetFrame, targetRateMode);
             
             TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
-                         user->userId, user->rateMode, user->rateMode);
+                         user->userId, user->rateMode, targetRateMode);
         }
     } else {
         TRM_LOG_DEBUG("TRM验证器: 单速率模式");
