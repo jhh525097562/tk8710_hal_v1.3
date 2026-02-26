@@ -58,7 +58,7 @@ static void TRM_OnDriverError(int errorCode);
 static void TRM_DriverIrqCallback(TK8710IrqResult irqResult);
 
 /* 内部函数声明 */
-static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults);
+static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults, TK8710IrqResult* irqResult);
 
 /*==============================================================================
  * 私有函数实现
