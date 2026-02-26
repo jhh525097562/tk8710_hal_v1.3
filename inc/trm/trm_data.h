@@ -63,9 +63,10 @@ void TRM_DataDeinit(void);
  * @brief 处理发送时隙（内部函数）
  * @param slotIndex 时隙索引
  * @param maxUserCount 最大用户数
+ * @param irqResult Driver中断结果，用于获取当前速率信息
  * @return 实际发送的用户数
  */
-int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount);
+int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
 
 #ifdef __cplusplus
 }
