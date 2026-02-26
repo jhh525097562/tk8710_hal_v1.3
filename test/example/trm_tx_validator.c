@@ -5,7 +5,6 @@
 
 #include "trm_tx_validator.h"
 #include "trm/trm_log.h"
-#include "trm/trm_data.h"
 #include <string.h>
 
 /* ============================================================================
@@ -185,16 +184,6 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 
                 /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
                 ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
-                
-                /* 多速率模式下，为验证器发送的数据调度波束RAM释放 */
-                if (isMultiRate) {
-                    uint32_t releaseDelay = slotCfg->rateCount * 6;  /* 6个速率周期 */
-                    if (releaseDelay < 12) releaseDelay = 12;  /* 最小12帧 */
-                    if (releaseDelay > 48) releaseDelay = 48;  /* 最大48帧 */
-                    TRM_ScheduleBeamRamRelease(respUserId, releaseDelay);
-                    TRM_LOG_DEBUG("TRM验证器: 调度波束RAM释放 - 用户ID=0x%08X, 延时=%u帧", 
-                                 respUserId, releaseDelay);
-                }
                 
                 TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
                              user->userId, user->rateMode, user->rateMode);
