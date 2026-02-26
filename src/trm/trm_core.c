@@ -99,7 +99,7 @@ static void TRM_DriverIrqCallback(TK8710IrqResult irqResult)
                 
                 /* 批量处理所有CRC正确的用户 */
                 if (validUserCount > 0) {
-                    TRM_ProcessRxUserDataBatch(validUserIndices, validUserCount, irqResult.crcResults);
+                    TRM_ProcessRxUserDataBatch(validUserIndices, validUserCount, irqResult.crcResults, &irqResult);
                 }
             } else {
                 TRM_LOG_DEBUG("TRM: MD_DATA interrupt but mdDataValid=0, skipping");
@@ -363,9 +363,10 @@ int TRM_GetSlotConfig(TRM_SlotConfig* config)
  * @param userIndices 用户索引数组
  * @param userCount 用户数量
  * @param crcResults CRC结果数组
+ * @param irqResult Driver中断结果
  * @return 0-成功, 其他-失败
  */
-static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults)
+static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults, TK8710IrqResult* irqResult)
 {
     /* 创建用户数据存储数组 */
     static TRM_RxUserData userStorage[128];  /* 静态存储用户数据数组 */
@@ -377,22 +378,27 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
     
     TRM_LOG_DEBUG("TRM: Processing %d valid users in batch", userCount);
     
-    /* 获取当前速率模式 - 从Driver中断结果中获取 */
+    /* 获取当前速率模式 - 直接从Driver中断结果中获取 */
     uint8_t currentRateMode = 0;
     const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-    if (slotCfg && slotCfg->rateCount > 0) {
-        if (slotCfg->rateCount > 1) {
-            /* 多速率模式：根据当前帧号获取速率模式 */
-            currentRateMode = slotCfg->rateModes[rxDataList.frameNo % slotCfg->rateCount];
-            TRM_LOG_DEBUG("TRM: Multi-rate mode - frame=%u, rateMode=%d", 
-                         rxDataList.frameNo, currentRateMode);
+    if (slotCfg && slotCfg->rateCount > 0 && irqResult->signalInfoValid) {
+        /* 使用Driver提供的当前速率索引获取速率模式 */
+        uint8_t currentRateIndex = irqResult->currentRateIndex;
+        if (currentRateIndex < slotCfg->rateCount) {
+            currentRateMode = slotCfg->rateModes[currentRateIndex];
+            if (slotCfg->rateCount > 1) {
+                TRM_LOG_DEBUG("TRM: Multi-rate mode - rateIndex=%u, rateMode=%d", 
+                             currentRateIndex, currentRateMode);
+            } else {
+                TRM_LOG_DEBUG("TRM: Single-rate mode - rateIndex=%u, rateMode=%d", 
+                             currentRateIndex, currentRateMode);
+            }
         } else {
-            /* 单速率模式：使用唯一的速率模式 */
-            currentRateMode = slotCfg->rateModes[0];
-            TRM_LOG_DEBUG("TRM: Single-rate mode - rateMode=%d", currentRateMode);
+            TRM_LOG_WARN("TRM: Invalid rate index %u, using default rate mode", currentRateIndex);
+            currentRateMode = slotCfg->rateModes[0];  /* 使用第一个速率模式 */
         }
     } else {
-        TRM_LOG_WARN("TRM: Failed to get slot configuration, using default rate mode");
+        TRM_LOG_WARN("TRM: Failed to get rate info from Driver, using default rate mode");
         currentRateMode = TK8710_RATE_MODE_8;  /* 默认速率模式 */
     }
     
