@@ -386,6 +386,8 @@ int TRM_Reset(void);
 
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo);
 
+int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode);
+
 
 
 /**
