@@ -5,6 +5,7 @@
 
 #include "trm_tx_validator.h"
 #include "trm/trm_log.h"
+#include "driver/tk8710.h"
 #include <string.h>
 
 /* ============================================================================
@@ -158,9 +159,6 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
         for (uint8_t i = 0; i < rxDataList->userCount; i++) {
             TRM_RxUserData* user = &rxDataList->users[i];
             
-            /* 使用接收到的速率模式作为目标速率模式 */
-            uint8_t targetRateMode = user->rateMode;
-            
             /* 生成应答数据 - 使用配置的数据长度 */
             uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
             uint16_t dataLen = g_validatorConfig.responseDataLength;
@@ -186,7 +184,6 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             
             TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
                          user->userId, user->rateMode, user->rateMode);
-            }
         }
     } else {
         TRM_LOG_DEBUG("TRM验证器: 单速率模式");
