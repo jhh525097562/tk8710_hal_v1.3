@@ -377,26 +377,50 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
     
     TRM_LOG_DEBUG("TRM: Processing %d valid users in batch", userCount);
     
-    /* 批量处理所有用户数据 */
-    for (uint8_t idx = 0; idx < userCount; idx++) {
-        uint8_t userIndex = userIndices[idx];
-        TK8710CrcResult* crcResult = &crcResults[userIndex];
-        TRM_RxUserData* currentUser = &userStorage[idx];
+    /* 获取当前速率模式 - 从Driver中断结果中获取 */
+    uint8_t currentRateMode = 0;
+    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    if (slotCfg && slotCfg->rateCount > 0) {
+        if (slotCfg->rateCount > 1) {
+            /* 多速率模式：根据当前帧号获取速率模式 */
+            currentRateMode = slotCfg->rateModes[rxDataList.frameNo % slotCfg->rateCount];
+            TRM_LOG_DEBUG("TRM: Multi-rate mode - frame=%u, rateMode=%d", 
+                         rxDataList.frameNo, currentRateMode);
+        } else {
+            /* 单速率模式：使用唯一的速率模式 */
+            currentRateMode = slotCfg->rateModes[0];
+            TRM_LOG_DEBUG("TRM: Single-rate mode - rateMode=%d", currentRateMode);
+        }
+    } else {
+        TRM_LOG_WARN("TRM: Failed to get slot configuration, using default rate mode");
+        currentRateMode = TK8710_RATE_MODE_8;  /* 默认速率模式 */
+    }
+    
+    /* 批量处理用户数据 */
+    for (uint8_t i = 0; i < userCount; i++) {
+        uint8_t userIndex = userIndices[i];
+        TRM_RxUserData* currentUser = &userStorage[i];
         
-        /* 创建虚拟波束信息 */
-        TRM_BeamInfo beam;
-        beam.userId = crcResult->userIndex;  // TODO: 后面id需要从获取的数据中提取
+        TRM_LOG_DEBUG("TRM: Processing user[%d] with CRC result", userIndex);
+        
+        /* 初始化用户数据结构 */
+        memset(currentUser, 0, sizeof(TRM_RxUserData));
+        currentUser->userId = userIndex;  /* 默认用户ID */
+        currentUser->slotIndex = rxDataList.slotIndex;
+        currentUser->rateMode = currentRateMode;  /* 设置接收速率模式 */  // TODO: 后面id需要从获取的数据中提取
         
         /* 从接收数据中提取用户信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetRxUserInfo实现 */
         uint32_t freq;
         uint32_t ahData[16];
         uint64_t pilotPower;
+        TRM_BeamInfo beam;
+        memset(&beam, 0, sizeof(beam));
         
         /* 调用TK8710GetRxUserInfo获取实际的用户信息 */
-        int ret = TK8710GetRxUserInfo(crcResult->userIndex, &freq, ahData, &pilotPower);
+        int ret = TK8710GetRxUserInfo(userIndex, &freq, ahData, &pilotPower);
         if (ret != TK8710_OK) {
             /* 如果获取失败，使用默认值 */
-            TRM_LOG_WARN("TRM: Failed to get RX user info for user[%d]: %d, using defaults", beam.userId, ret);
+            TRM_LOG_WARN("TRM: Failed to get RX user info for user[%d]: %d, using defaults", userIndex, ret);
             freq = 20000;  /* 默认频率 */
             for (int j = 0; j < 16; j++) {
                 ahData[j] = 8192 + j;  /* 默认AH值 */
@@ -441,16 +465,6 @@ static int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, T
             currentUser->userId = beam.userId;
             currentUser->data = userData;
             currentUser->dataLen = dataLen;
-            
-            /* 获取接收用户的速率模式 */
-            uint8_t rxRateMode = 0;
-            if (TK8710GetRxUserRateMode(userIndex, &rxRateMode) == TK8710_OK) {
-                currentUser->rateMode = rxRateMode;
-                TRM_LOG_DEBUG("TRM: User[%d] RX rate mode: %d", userIndex, rxRateMode);
-            } else {
-                currentUser->rateMode = 0;  /* 默认值 */
-                TRM_LOG_WARN("TRM: Failed to get RX rate mode for user[%d], using default", userIndex);
-            }
             
             /* 获取信号质量信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetSignalInfo实现 */
             uint32_t rssi, freqSignal;

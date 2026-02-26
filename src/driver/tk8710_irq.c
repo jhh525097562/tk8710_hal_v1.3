@@ -55,7 +55,6 @@ typedef struct {
     uint32_t freq;        /* 频率 */
     uint32_t ahData[16];  /* AH数据 (8天线 × 2 = 16个32位) */
     uint64_t pilotPower;  /* Pilot功率 */
-    uint8_t  rateMode;    /* 接收速率模式 (5-11,18) */
     uint8_t  valid;       /* 数据有效性 */
 } TK8710UserInfoBuffer;
 
@@ -1258,29 +1257,9 @@ int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uin
     
     // TK8710_LOG_IRQ_DEBUG("RX user info retrieved: user[%d], freq=%u (raw), freqHz=%d, pilotPower=%llu", 
     //                     userIndex, *freq, freqValue/128, *pilotPower);
-    
     return TK8710_OK;
 }
 
-int TK8710GetRxUserRateMode(uint8_t userIndex, uint8_t* rateMode)
-{
-    if (userIndex >= 128 || rateMode == NULL) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, rateMode=%p", userIndex, rateMode);
-        return TK8710_ERR;
-    }
-    
-    if (!g_userInfoRxBuffers[userIndex].valid) {
-        TK8710_LOG_IRQ_ERROR("RX user info not valid for user[%d]", userIndex);
-        return TK8710_ERR;
-    }
-    
-    /* 获取接收用户速率模式 */
-    *rateMode = g_userInfoRxBuffers[userIndex].rateMode;
-    
-    TK8710_LOG_IRQ_DEBUG("RX user rate mode retrieved: user[%d], rateMode=%d", userIndex, *rateMode);
-    
-    return TK8710_OK;
-}
 
 /**
  * @brief 处理S1时隙结束中断

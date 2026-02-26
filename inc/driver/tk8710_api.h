@@ -169,22 +169,14 @@ int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data,
 int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint32_t* ahData, uint64_t pilotPower);
 
 /**
- * @brief 获取接收用户信息
+ * @brief 获取发送用用户信息
  * @param userIndex 用户索引 (0-127)
  * @param freq 输出频率指针
  * @param ahData 输出AH数据数组 (16个32位数据)
  * @param pilotPower 输出Pilot功率指针
  * @return 0-成功, 1-失败
  */
-int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uint64_t* pilotPower);
-
-/**
- * @brief 获取接收用户速率模式
- * @param userIndex 用户索引 (0-127)
- * @param rateMode 输出速率模式指针 (5-11,18)
- * @return 0-成功, 1-失败
- */
-int TK8710GetRxUserRateMode(uint8_t userIndex, uint8_t* rateMode);
+int TK8710GetTxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uint64_t* pilotPower);
 
 /**
  * @brief 清除发送用用户信息
