@@ -19,7 +19,7 @@ extern void TRM_BeamInit(uint32_t maxUsers, uint32_t timeoutMs);
 extern void TRM_BeamDeinit(void);
 extern void TRM_DataInit(void);
 extern void TRM_DataDeinit(void);
-extern int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount);
+extern int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
 
 /*==============================================================================
  * 私有定义
