@@ -286,7 +286,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     uint8_t currentRateMode = 0;
     uint8_t nextRateMode = 0;
         
-    if (isMultiRate && irqResult && irqResult->signalInfoValid) {
+    if (isMultiRate && irqResult) {
         /* 多速率模式：使用Driver提供的当前速率索引 */
         uint8_t currentRateIndex = irqResult->currentRateIndex;
         if (currentRateIndex < slotCfg->rateCount) {

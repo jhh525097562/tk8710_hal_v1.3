@@ -179,19 +179,11 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             uint32_t respUserId = GenerateResponseUserId(user->userId);
             uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
             
-            /* 计算下一帧的速率模式用于下行发送 */
-            uint8_t nextRateMode = 0;
-            if (slotCfg && slotCfg->rateCount > 0) {
-                /* 使用当前帧号计算下一帧的速率模式 */
-                uint8_t nextRateIndex = (rxDataList->frameNo + 1) % slotCfg->rateCount;
-                nextRateMode = slotCfg->rateModes[nextRateIndex];
-            }
-            
-            /* 执行发送 - 使用下一帧的速率模式作为下行速率模式 */
-            ExecuteSend(respUserId, respData, dataLen, targetFrame, nextRateMode);
+            /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
+            ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
             
             TRM_LOG_DEBUG("TRM验证器: 多速率应答 - 用户ID=0x%08X, 上行速率=%d, 下行速率=%d", 
-                         user->userId, user->rateMode, nextRateMode);
+                         user->userId, user->rateMode, user->rateMode);
         }
     } else {
         TRM_LOG_DEBUG("TRM验证器: 单速率模式");

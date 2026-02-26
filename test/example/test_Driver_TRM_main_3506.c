@@ -246,6 +246,13 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     printf("时隙: %d, 用户数: %d, 帧号: %u\n", 
            rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
     
+    /* 打印第一个用户的速率模式信息（如果有用户数据） */
+    if (rxDataList->userCount > 0 && rxDataList->users) {
+        TRM_RxUserData* firstUser = &rxDataList->users[0];
+        printf("第一个用户信息: ID=0x%08X, 速率模式=%d, 数据长度=%u\n", 
+               firstUser->userId, firstUser->rateMode, firstUser->dataLen);
+    }
+    
     g_trmRxCount += rxDataList->userCount;
     
     // for (uint8_t i = 0; i < rxDataList->userCount; i++) {
@@ -538,7 +545,7 @@ int init_trm_system(void)
     
     /* 初始化TRM日志系统 */
     printf("Initializing TRM logging system...\n");
-    TRM_LogInit(TRM_LOG_DEBUG);//TRM_LOG_INFO TRM_LOG_DEBUG
+    TRM_LogInit(TRM_LOG_INFO);//TRM_LOG_INFO TRM_LOG_DEBUG
     TRM_LOG_INFO("测试程序开始初始化TRM系统");
     
     /* 配置TRM参数 */
