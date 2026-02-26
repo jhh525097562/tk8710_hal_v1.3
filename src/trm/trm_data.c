@@ -349,8 +349,10 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         g_txQueue.count--;
                         continue;
                     } else {
-                        /* 未来帧号，跳过本次处理 */
-                        break;
+                        /* 未来帧号，跳过当前用户，继续处理下一个 */
+                        TRM_LOG_DEBUG("TRM: Future frame - user=%u, target_frame=%u, current_frame=%u, skipping", 
+                                     item->userId, item->frameNo, g_trmCurrentFrame);
+                        continue;
                     }
                 } else {
                     /* 单速率模式下指定了速率模式，不支持，直接丢弃 */
