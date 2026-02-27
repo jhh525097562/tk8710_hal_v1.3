@@ -47,9 +47,6 @@ static const ChipConfig g_defaultChipConfig = {
     .irq_ctrl1   = 0,
 };
 
-/* 全局中断回调函数 */
-static TK8710IrqCallback g_irqCallback = NULL;
-
 /* 注：工作类型、速率模式、天线使能、RF选择、广播用户数均已迁移到g_slotCfg中 */
 
 /**
@@ -236,10 +233,7 @@ int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallbac
     
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
-    /* 保存中断回调函数 */
-    if (irqCallback != NULL) {
-        g_irqCallback = *irqCallback;
-    }
+    /* 注意：中断回调由TK8710IrqInit设置，这里不需要重复设置 */
 
     /* 配置 init_0: bcn_agc, interval, tx_freq_dly */
     init0.data = 0;
