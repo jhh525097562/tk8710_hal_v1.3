@@ -380,6 +380,17 @@ int TRM_Reset(void);
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 
 /**
+ * @brief 发送广播数据
+ * @param brdIndex 广播索引
+ * @param data 广播数据
+ * @param len 数据长度
+ * @param txPower 发射功率
+ * @param dataType 数据类型 (TK8710_BRD_DATA_TYPE_NORMAL 或 TK8710_BRD_DATA_TYPE_SLOT3)
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
+
+/**
  * @brief 清除发送数据
  * @param userId 用户ID，0xFFFFFFFF表示清除所有
  * @return TRM_OK成功，其他失败
@@ -417,22 +428,22 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 
 
 /**
-
  * @brief 清除波束信息
-
- * @param userId 用户ID?xFFFFFFFF表示清除所有 * @return TRM_OK成功，其他失? */
+ * @param userId 用户ID，0xFFFFFFFF表示清除所有
+ * @return TRM_OK成功，其他失败
+ */
 
 int TRM_ClearBeamInfo(uint32_t userId);
 
 /**
  * @brief 设置波束超时时间
  * @param timeoutMs 超时时间(毫秒)
+ */
+void TRM_SetBeamTimeout(uint32_t timeoutMs);
+
 /**
-
  * @brief 设置当前系统帧号
-
  * @param frameNo 帧号
-
  */
 
 void TRM_SetCurrentFrame(uint32_t frameNo);
@@ -475,6 +486,19 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
  */
 
 TK8710IrqCallback* TRM_GetIrqCallback(void);
+
+/**
+ * @brief 获取TRM运行状态
+ * @return 1表示运行中，0表示未运行
+ */
+int TRM_IsRunning(void);
+
+/**
+ * @brief 获取TRM统计信息
+ * @param stats 统计信息输出
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_GetStats(TRM_Stats* stats);
 
 
 

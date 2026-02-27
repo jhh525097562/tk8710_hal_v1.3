@@ -453,8 +453,8 @@ int init_tk8710_chip(void)
     printf("Initializing TK8710 chip...\n");
     
     /* 使用默认配置初始化芯片 */
-    const TK8710IrqCallback callback = app_irq_handler;
-    ret = TK8710Init(&chipConfig, &callback);
+    /* 注意：中断回调通过TK8710IrqInit设置 */
+    ret = TK8710Init(&chipConfig);
     if (ret != TK8710_OK) {
         printf("TK8710 chip initialization failed: %d\n", ret);
         return ret;
