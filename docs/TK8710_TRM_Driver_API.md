@@ -581,9 +581,9 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
 - `dataType`: 数据类型 (TK8710_BRD_DATA_TYPE_NORMAL 或 TK8710_BRD_DATA_TYPE_SLOT3)
 - **返回值**: TRM_OK成功，其他失败
 
-### 3. TRM回调函数
+### 3. TRM回调函数类型定义
 
-TRM提供上层回调接口，用于通知应用层接收数据、发送完成和错误事件。
+TRM提供上层回调接口，用于通知应用层接收数据和发送完成事件。
 
 #### `TRM_OnRxData`
 
