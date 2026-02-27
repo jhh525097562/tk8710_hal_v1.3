@@ -168,13 +168,8 @@ void TRM_ProcessBeamRamReleases(void)
  * 公共函数实现
  *============================================================================*/
 
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo)
-{
-    /* 调用带速率模式的接口，使用默认帧号模式 */
-    return TRM_SendDataWithRateMode(userId, data, len, txPower, frameNo, 0);
-}
 
-int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode)
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode)
 {
     if (data == NULL || len == 0 || len > TX_DATA_MAX_LEN) {
         TRM_LOG_ERROR("TRM发送数据失败: 参数错误 - data=%p, len=%d", data, len);
@@ -230,18 +225,18 @@ int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len,
     return TRM_OK;
 }
 
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower)
+int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType)
 {
     if (data == NULL || len == 0) {
         TRM_LOG_ERROR("TRM发送广播失败: 参数错误 - data=%p, len=%d", data, len);
         return TRM_ERR_PARAM;
     }
     
-    TRM_LOG_DEBUG("TRM发送广播 - 索引=%d, 长度=%d, 功率=%d", brdIndex, len, txPower);
+    TRM_LOG_DEBUG("TRM发送广播 - 索引=%d, 长度=%d, 功率=%d, 数据类型=%d", brdIndex, len, txPower, dataType);
     
     /* 直接调用Driver发送下行1 */
     // int ret = TK8710SetTxBrdData(brdIndex, data, len);
-    int ret = TK8710SetDownlink1DataWithPower(brdIndex, data, len, txPower, 0);
+    int ret = TK8710SetDownlink1DataWithPower(brdIndex, data, len, txPower, dataType);
     if (ret == TK8710_OK) {
         TRM_LOG_DEBUG("TRM广播发送成功");
     } else {

@@ -384,28 +384,6 @@ int TRM_Reset(void);
 
  * @return TRM_OK成功，其他失? */
 
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo);
-
-int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode);
-
-
-
-/**
-
- * @brief 发送广播数? * @param brdIndex 广播索引
-
- * @param data 数据
-
- * @param len 数据长度
-
- * @param txPower 发射功率
-
- * @return TRM_OK成功，其他失? */
-
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower);
-
-
-
 /**
 
  * @brief 清除发送数? * @param userId 用户ID?xFFFFFFFF表示清除所有 * @return TRM_OK成功，其他失? */

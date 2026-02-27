@@ -161,7 +161,7 @@ int test_broadcast_tx(uint8_t counter)
     }
     
     /* 使用TRM广播发送接口 */
-    int ret = TRM_SendBroadcast(0, brdData, 26, 35);  /* 下行1用户0，功率35 */
+    int ret = TRM_SendBroadcast(0, brdData, 26, 35, TK8710_BRD_DATA_TYPE_NORMAL);  /* 下行1用户0，功率35，正常数据类型 */
     if (ret == TRM_OK) {
         printf("Broadcast data set successfully: counter=%d\n", counter);
         return 0;
