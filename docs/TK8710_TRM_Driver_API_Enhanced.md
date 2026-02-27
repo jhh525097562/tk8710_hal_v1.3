@@ -323,9 +323,9 @@ const slotCfg_t* TK8710GetSlotCfg(void);
 
 **说明**: TRM和其他业务模块通过此接口获取完整的slot配置信息，包括速率模式配置等
 
-### 6. 中断处理
+### 6. Driver回调函数
 
-中断系统使用新的多回调架构，通过 `TK8710RegisterCallbacks` 函数注册多个专用回调函数。
+Driver层提供完整的多回调架构，支持为不同中断类型注册专用回调函数，提供灵活的事件处理机制。
 
 #### `TK8710RegisterCallbacks`
 
@@ -359,12 +359,26 @@ typedef struct {
 - `onSlotEnd`: 当时隙结束时调用
 - `onError`: 当发生错误中断时调用
 
+**中断类型说明**:
+
+- `TK8710_IRQ_RX_BCN`: 接收信标中断
+- `TK8710_IRQ_BRD_UD`: 广播用户数据中断
+- `TK8710_IRQ_BRD_DATA`: 广播数据中断
+- `TK8710_IRQ_MD_UD`: 主数据用户中断（用户波束信息）
+- `TK8710_IRQ_MD_DATA`: 主数据中断（用户数据）
+- `TK8710_IRQ_S0`: 时隙0中断
+- `TK8710_IRQ_S1`: 时隙1中断
+- `TK8710_IRQ_S2`: 时隙2中断
+- `TK8710_IRQ_S3`: 时隙3中断
+- `TK8710_IRQ_ACM`: 自适应调制中断
+
 **说明**:
 
 - 替代了原有的单一回调接口 `TK8710IrqInit`
 - 支持为不同中断类型注册专用回调函数
 - 所有回调都使用统一的 `TK8710IrqResult*` 参数
 - 提供更灵活的中断处理机制
+- `TK8710_IRQ_MD_UD` 中断类型已定义但暂未实现具体回调处理
 
 #### `TK8710GpioInit`
 
@@ -389,6 +403,12 @@ int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void*
 - `userData`: 用户数据指针
   **返回值**: 0-成功, 1-失败, 2-超时
 
+```c
+typedef void (*TK8710GpioIrqCallback)(void* user);
+```
+
+**说明**: GPIO中断使用独立的回调类型，与Driver回调分离
+
 #### `TK8710GpioIrqEnable`
 
 ```c
@@ -400,9 +420,114 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 
 - `gpioPin`: GPIO引脚号
 - `enable`: 使能标志 (1=使能, 0=禁用)
-  **返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 其他-失败
 
-### 7. 日志系统
+#### Driver回调使用示例
+
+```c
+// 定义Driver回调函数
+void OnDriverRxData(TK8710IrqResult* irqResult)
+{
+    printf("接收到MD_DATA中断: 用户数=%d, CRC正确=%d\n", 
+           irqResult->crcValidCount, irqResult->crcValidCount);
+    
+    // 处理接收数据
+    for (uint8_t i = 0; i < irqResult->crcValidCount; i++) {
+        if (irqResult->crcResults[i].crcValid) {
+            printf("用户[%d]: 数据有效\n", i);
+        }
+    }
+}
+
+void OnDriverTxSlot(TK8710IrqResult* irqResult)
+{
+    printf("S1时隙发送完成: 自动发送用户数=%d\n", irqResult->autoTxCount);
+    // 处理发送完成逻辑
+}
+
+void OnDriverSlotEnd(TK8710IrqResult* irqResult)
+{
+    printf("时隙结束: 中断类型=%d\n", irqResult->irq_type);
+    // 时隙结束处理
+}
+
+void OnDriverError(TK8710IrqResult* irqResult)
+{
+    printf("Driver错误: 中断类型=%d\n", irqResult->irq_type);
+    // 错误处理逻辑
+}
+
+// 注册Driver回调
+TK8710DriverCallbacks driverCallbacks = {
+    .onRxData = OnDriverRxData,
+    .onTxSlot = OnDriverTxSlot,
+    .onSlotEnd = OnDriverSlotEnd,
+    .onError = OnDriverError
+};
+
+TK8710RegisterCallbacks(&driverCallbacks);
+
+// 初始化GPIO中断
+void GpioIrqHandler(void* user)
+{
+    printf("GPIO中断触发\n");
+    // GPIO中断处理
+}
+
+TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
+TK8710GpioIrqEnable(0, 1);
+```
+
+#### Driver回调最佳实践
+
+**回调函数设计原则**:
+
+1. **快速处理**: 回调函数应尽快执行，避免阻塞中断处理
+2. **错误处理**: 检查参数有效性，处理异常情况
+3. **资源管理**: 及时释放资源，避免内存泄漏
+4. **线程安全**: 注意多线程环境下的数据同步
+
+**使用建议**:
+
+- 将复杂处理逻辑移到应用层，回调中只做必要的数据收集
+- 使用队列或缓冲区在中断和主线程间传递数据
+- 为不同的中断类型设置合适的处理优先级
+- 定期检查回调函数的执行性能
+
+### 7. 中断处理
+
+中断处理系统负责处理硬件中断事件，并将事件分发到相应的Driver回调函数。
+
+**中断处理流程**:
+
+1. **硬件中断触发**: TK8710芯片产生硬件中断信号
+2. **GPIO中断响应**: GPIO中断回调函数被调用
+3. **Driver层处理**: Driver层解析中断类型和状态
+4. **回调分发**: 根据中断类型调用相应的Driver回调函数
+5. **应用层处理**: 应用层在回调函数中处理具体事件
+
+**中断类型与回调映射**:
+
+- `TK8710_IRQ_MD_DATA` → `onRxData` 回调
+- `TK8710_IRQ_S1` → `onTxSlot` 回调
+- `TK8710_IRQ_S0/S2/S3` → `onSlotEnd` 回调
+- `其他中断类型` → `onError` 回调
+
+**中断处理特点**:
+
+- **异步处理**: 中断处理在独立的中断上下文中执行
+- **快速分发**: Driver层快速将中断分发到相应的回调函数
+- **统一接口**: 所有回调都使用 `TK8710IrqResult*` 参数
+- **灵活扩展**: 支持为新的中断类型添加专用回调
+
+**性能考虑**:
+
+- 回调函数应尽快执行，避免阻塞中断处理
+- 复杂的处理逻辑应移到应用层主线程中
+- 使用队列或缓冲区在中断和主线程间传递数据
+- 注意多线程环境下的数据同步问题
+
+### 8. 日志系统
 
 #### `TK8710LogSimpleInit`
 
