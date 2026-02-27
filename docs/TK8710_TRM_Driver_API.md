@@ -8,7 +8,123 @@
 
 ## Driver API接口
 
-### 1. Driver API接口 (5大类，17+函数)
+### 1. Driver API典型工作流程
+
+Driver API的使用遵循标准的硬件操作流程。以下是完整的典型工作流程，展示了所有Driver API接口的使用顺序。
+
+#### 1.1 系统初始化流程
+
+```c
+// 1. 芯片初始化
+ChipConfig chipConfig = {0};
+chipConfig.interval = 32;
+chipConfig.ant_en = 0xFF;
+int ret = TK8710Init(&chipConfig);
+
+// 2. 射频初始化
+ChiprfConfig rfConfig = {0};
+rfConfig.rftype = RF_TYPE_SX1257;
+rfConfig.Freq = 2400000000;
+ret = TK8710RfInit(&rfConfig);
+
+// 3. 启动工作模式
+ret = TK8710Startwork(1, 1);  // Master模式，连续工作
+```
+
+#### 1.2 回调系统配置
+
+```c
+// 1. 注册Driver回调
+TK8710DriverCallbacks callbacks = {
+    .onRxData = OnRxData,
+    .onTxSlot = OnTxSlot,
+    .onSlotEnd = NULL,
+    .onError = OnError
+};
+TK8710RegisterCallbacks(&callbacks);
+
+// 2. 配置GPIO中断
+TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
+TK8710GpioIrqEnable(0, 1);
+```
+
+#### 1.3 数据操作流程
+
+```c
+// 发送数据
+uint8_t userData[32];
+TK8710SetDownlink2Data(userIndex, userData, sizeof(userData), 35, TK8710_USER_DATA_TYPE_NORMAL);
+
+// 接收数据（在回调中）
+void OnRxData(TK8710IrqResult* irqResult) {
+    for (uint8_t i = 0; i < 128; i++) {
+        if (irqResult->crcResults[i].crcValid) {
+            uint8_t* data;
+            uint16_t len;
+            TK8710GetRxData(i, &data, &len);
+            // 处理数据...
+            TK8710ReleaseRxData(i);
+        }
+    }
+}
+```
+
+#### 1.4 配置管理
+
+```c
+// 获取配置
+const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+
+// 设置配置
+uint8_t power = 25;
+TK8710SetConfig(TK8710_CFG_TYPE_TX_POWER, &power);
+
+// 获取芯片信息
+TK8710ChipInfo chipInfo;
+TK8710GetChipInfo(&chipInfo);
+```
+
+#### 1.5 系统维护
+
+```c
+// 系统复位
+TK8710ResetChip(TK8710_RST_ALL);
+
+// 重新初始化
+TK8710Init(&chipConfig);
+TK8710RfInit(&rfConfig);
+```
+
+### 2. Driver API接口分类
+
+#### 初始化阶段：
+- `TK8710Init()` - 芯片初始化
+- `TK8710RfInit()` - 射频初始化
+- `TK8710Startwork()` - 启动工作
+- `TK8710RegisterCallbacks()` - 注册回调
+- `TK8710GpioInit()` - GPIO中断
+
+#### 数据操作阶段：
+- `TK8710SetDownlink2Data()` - 设置发送数据
+- `TK8710SetTxUserInfo()` - 设置用户信息
+- `TK8710SetBrdData()` - 设置广播数据
+- `TK8710GetRxData()` - 获取接收数据
+- `TK8710GetSignalInfo()` - 获取信号质量
+- `TK8710GetRxUserInfo()` - 获取用户信息
+- `TK8710ReleaseRxData()` - 释放缓冲区
+
+#### 配置管理阶段：
+- `TK8710GetSlotCfg()` - 获取时隙配置
+- `TK8710SetConfig()` - 设置配置
+- `TK8710GetConfig()` - 获取配置
+- `TK8710GetChipInfo()` - 获取芯片信息
+- `TK8710GetWorkState()` - 获取工作状态
+
+#### 系统维护阶段：
+- `TK8710ResetChip()` - 系统复位
+- `TK8710GpioIrqEnable()` - 中断控制
+
+### 3. Driver API接口 (5大类，17+函数)
 
 ### 1. 芯片初始化与控制
 
