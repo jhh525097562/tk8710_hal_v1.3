@@ -36,7 +36,6 @@ typedef enum {
     TK8710_LOG_MODULE_CONFIG   = 0x02,  /* 配置模块 */
     TK8710_LOG_MODULE_IRQ      = 0x04,  /* 中断模块 */
     TK8710_LOG_MODULE_HAL      = 0x08,  /* HAL层模块 */
-    TK8710_LOG_MODULE_TRM      = 0x10,  /* TRM模块 */
     TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
 } TK8710LogModule;
 
@@ -190,12 +189,6 @@ const char* TK8710LogGetLevelName(TK8710LogLevel level);
 #define TK8710_LOG_HAL_INFO(fmt, ...)     TK8710_LOG_INFO(TK8710_LOG_MODULE_HAL, fmt, ##__VA_ARGS__)
 #define TK8710_LOG_HAL_DEBUG(fmt, ...)    TK8710_LOG_DEBUG(TK8710_LOG_MODULE_HAL, fmt, ##__VA_ARGS__)
 #define TK8710_LOG_HAL_TRACE(fmt, ...)    TK8710_LOG_TRACE(TK8710_LOG_MODULE_HAL, fmt, ##__VA_ARGS__)
-
-#define TK8710_LOG_TRM_ERROR(fmt, ...)    TK8710_LOG_ERROR(TK8710_LOG_MODULE_TRM, fmt, ##__VA_ARGS__)
-#define TK8710_LOG_TRM_WARN(fmt, ...)     TK8710_LOG_WARN(TK8710_LOG_MODULE_TRM, fmt, ##__VA_ARGS__)
-#define TK8710_LOG_TRM_INFO(fmt, ...)     TK8710_LOG_INFO(TK8710_LOG_MODULE_TRM, fmt, ##__VA_ARGS__)
-#define TK8710_LOG_TRM_DEBUG(fmt, ...)    TK8710_LOG_DEBUG(TK8710_LOG_MODULE_TRM, fmt, ##__VA_ARGS__)
-#define TK8710_LOG_TRM_TRACE(fmt, ...)    TK8710_LOG_TRACE(TK8710_LOG_MODULE_TRM, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

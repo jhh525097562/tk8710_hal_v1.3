@@ -25,7 +25,6 @@ static const char* g_moduleNames[] = {
     [TK8710_LOG_MODULE_CONFIG] = "CONFIG",
     [TK8710_LOG_MODULE_IRQ]    = "IRQ",
     [TK8710_LOG_MODULE_HAL]    = "HAL",
-    [TK8710_LOG_MODULE_TRM]    = "TRM",
     [TK8710_LOG_MODULE_ALL]    = "ALL"
 };
 
