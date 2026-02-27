@@ -22,10 +22,9 @@ extern "C" {
 /**
  * @brief 初始化TK8710芯片
  * @param initConfig 初始化配置参数，为NULL时使用默认配置
- * @param irqCallback 中断回调函数指针
  * @return 0-成功, 1-失败, 2-超时
  */
-int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallback);
+int TK8710Init(const ChipConfig* initConfig);
 
 /**
  * @brief 芯片进入收发状态

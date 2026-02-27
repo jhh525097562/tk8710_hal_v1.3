@@ -899,7 +899,7 @@ int init_tk8710_chip(void)
     
     /* 使用默认配置初始化芯片 */
     /* 注意：TRM回调已在init_interrupt_system()中通过TK8710IrqInit设置 */
-    ret = TK8710Init(&chipConfig, NULL);  /* 传入NULL，回调已设置 */
+    ret = TK8710Init(&chipConfig);  /* 中断回调参数已移除 */
     if (ret != TK8710_OK) {
         printf("TK8710 chip initialization failed: %d\n", ret);
         return ret;

@@ -15,7 +15,7 @@
 #### `TK8710Init`
 
 ```c
-int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallback);
+int TK8710Init(const ChipConfig* initConfig);
 ```
 
 **功能**: 初始化TK8710芯片

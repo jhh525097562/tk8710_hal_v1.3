@@ -302,8 +302,11 @@ int main(void)
     /* 3. 建立平行连接 - 直接使用Driver API */
     TK8710IrqCallback* trmIrqCallback = TRM_GetIrqCallback();
     
+    /* 初始化中断系统 */
+    TK8710IrqInit(trmIrqCallback);  /* 设置TRM回调 */
+    
     /* 初始化Driver芯片 */
-    ret = TK8710Init(&chipConfig, trmIrqCallback);
+    ret = TK8710Init(&chipConfig);
     if (ret != TK8710_OK) {
         printf("TK8710Init failed: %d\n", ret);
         TRM_Deinit();
