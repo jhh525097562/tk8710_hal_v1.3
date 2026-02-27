@@ -160,9 +160,9 @@ int test_broadcast_tx(uint8_t counter)
         brdData[i] = counter + i;  /* 简单的递增数据 */
     }
     
-    /* 使用新的下行1发送API设置下行1数据 */
-    int ret = TK8710SetDownlink1DataWithPower(0, brdData, 26, 35, TK8710_BRD_DATA_TYPE_NORMAL);  /* 下行1用户0，功率35 */
-    if (ret == TK8710_OK) {
+    /* 使用TRM广播发送接口 */
+    int ret = TRM_SendBroadcast(0, brdData, 26, 35);  /* 下行1用户0，功率35 */
+    if (ret == TRM_OK) {
         printf("Broadcast data set successfully: counter=%d\n", counter);
         return 0;
     } else {
@@ -713,7 +713,7 @@ int test_trm_send_data(uint32_t userId, const uint8_t* testData, uint16_t dataLe
     printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
     
     /* 发送数据 */
-    ret = TRM_SendData(userId, testData, dataLen, 20, currentFrame + 1);
+    ret = TRM_SendData(userId, testData, dataLen, 20, currentFrame + 1, 0);
     if (ret == TRM_OK) {
         TRM_LOG_INFO("TRM发送成功 - 用户ID=0x%08X", userId);
         printf("TRM发送成功\n");
@@ -762,7 +762,7 @@ int test_trm_batch_send(uint8_t userCount)
         printf("用户ID: 0x%08X, 数据长度: %d\n", userId, sizeof(testData));
         printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
         
-        ret = TRM_SendData(userId, testData, sizeof(testData), 20, currentFrame + 1);
+        ret = TRM_SendData(userId, testData, sizeof(testData), 20, currentFrame + 1, 0);
         if (ret == TRM_OK) {
             TRM_LOG_DEBUG("批量发送[%d/%d]成功 - 用户ID=0x%08X", i+1, userCount, userId);
             printf("TRM发送成功\n");
@@ -1334,7 +1334,7 @@ int main(int argc, char* argv[])
     
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
-    TK8710LogSimpleInit(TK8710_LOG_NONE, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
+    TK8710LogSimpleInit(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
     
     /* 2. 初始化中断系统 */
     ret = init_interrupt_system();
