@@ -528,7 +528,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
     switch (type) {
         case TK8710_CFG_TYPE_CHIP_INFO:
             /* 配置芯片参数，调用TK8710Init */
-            return TK8710Init((const ChipConfig*)params, NULL);
+            return TK8710Init((const ChipConfig*)params);
         
         case TK8710_CFG_TYPE_SLOT_CFG:
         {
