@@ -424,64 +424,9 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 
 int TRM_ClearBeamInfo(uint32_t userId);
 
-
-
 /**
-
  * @brief 设置波束超时时间
-
  * @param timeoutMs 超时时间(毫秒)
-
- * @return TRM_OK成功，其他失? */
-
-int TRM_SetBeamTimeout(uint32_t timeoutMs);
-
-
-
-/**
-
- * @brief 设置时隙配置
-
- * @param config 时隙配置
-
- * @return TRM_OK成功，其他失? */
-
-int TRM_SetSlotConfig(const TRM_SlotConfig* config);
-
-
-
-/**
-
- * @brief 获取时隙配置
-
- * @param config 时隙配置输出
-
- * @return TRM_OK成功，其他失? */
-
-int TRM_GetSlotConfig(TRM_SlotConfig* config);
-
-
-
-/**
-
- * @brief 检查TRM是否运行? * @return 1运行中，0未运? */
-
-int TRM_IsRunning(void);
-
-
-
-/**
-
- * @brief 获取统计信息
-
- * @param stats 统计信息输出
-
- * @return TRM_OK成功，其他失? */
-
-int TRM_GetStats(TRM_Stats* stats);
-
-
-
 /**
 
  * @brief 设置当前系统帧号

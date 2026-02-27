@@ -332,28 +332,6 @@ void TRM_SetMaxFrameCount(uint32_t maxCount)
     g_trmMaxFrameCount = maxCount;
 }
 
-int TRM_SetSlotConfig(const TRM_SlotConfig* config)
-{
-    if (config == NULL) {
-        return TRM_ERR_PARAM;
-    }
-    
-    /* TODO: 更新Driver配置 */
-    
-    return TRM_OK;
-}
-
-int TRM_GetSlotConfig(TRM_SlotConfig* config)
-{
-    if (config == NULL) {
-        return TRM_ERR_PARAM;
-    }
-    
-    /* TODO: 从Driver获取配置 */
-    
-    return TRM_OK;
-}
-
 /*==============================================================================
  * 内部函数实现
  *============================================================================*/
