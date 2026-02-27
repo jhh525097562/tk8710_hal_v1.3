@@ -365,22 +365,14 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 
 ### 7. 日志系统
 
-#### `TK8710LogInit`
+#### `TK8710LogSimpleInit`
 ```c
-int TK8710LogInit(const TK8710LogConfig* config);
+int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
 ```
-**功能**: 初始化日志系统
+**功能**: 简化初始化日志系统
 **参数**:
-- `config`: 日志配置
+- `level`: 日志级别
   ```c
-  typedef struct {
-      TK8710LogLevel level;           /* 当前日志级别 */
-      uint32_t module_mask;           /* 模块掩码 */
-      TK8710LogCallback callback;     /* 日志输出回调 */
-      uint8_t enable_timestamp;       /* 是否启用时间戳 */
-      uint8_t enable_module_name;     /* 是否启用模块名 */
-  } TK8710LogConfig;
-  
   typedef enum {
       TK8710_LOG_ERROR = 0,  /* 错误级别 */
       TK8710_LOG_WARN  = 1,  /* 警告级别 */
@@ -389,7 +381,9 @@ int TK8710LogInit(const TK8710LogConfig* config);
       TK8710_LOG_TRACE = 4,  /* 跟踪级别 */
       TK8710_LOG_ALL   = 5   /* 所有级别 */
   } TK8710LogLevel;
-  
+  ```
+- `module_mask`: 模块掩码
+  ```c
   typedef enum {
       TK8710_LOG_MODULE_CORE     = 0x01,  /* 核心模块 */
       TK8710_LOG_MODULE_DRIVER   = 0x02,  /* Driver模块 */
@@ -397,76 +391,8 @@ int TK8710LogInit(const TK8710LogConfig* config);
       TK8710_LOG_MODULE_TRM      = 0x08,  /* TRM模块 */
       TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
   } TK8710LogModule;
-  
-  typedef void (*TK8710LogCallback)(TK8710LogLevel level, TK8710LogModule module, 
-                                    const char* file, int line, const char* func, 
-                                    const char* fmt, ...);
   ```
 **返回值**: 0-成功, 1-失败
-
-#### `TK8710LogSimpleInit`
-```c
-int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
-```
-**功能**: 简化初始化日志系统
-**参数**:
-- `level`: 日志级别
-- `module_mask`: 模块掩码
-**返回值**: 0-成功, 1-失败
-
-#### `TK8710LogSetLevel`
-```c
-void TK8710LogSetLevel(TK8710LogLevel level);
-```
-**功能**: 设置日志级别
-**参数**:
-- `level`: 日志级别
-
-#### `TK8710LogGetLevel`
-```c
-TK8710LogLevel TK8710LogGetLevel(void);
-```
-**功能**: 获取当前日志级别
-**返回值**: 当前日志级别
-
-#### `TK8710LogSetModuleMask`
-```c
-void TK8710LogSetModuleMask(uint32_t module_mask);
-```
-**功能**: 设置模块掩码
-**参数**:
-- `module_mask`: 模块掩码
-
-#### `TK8710LogGetModuleMask`
-```c
-uint32_t TK8710LogGetModuleMask(void);
-```
-**功能**: 获取当前模块掩码
-**返回值**: 当前模块掩码
-
-#### `TK8710LogSetCallback`
-```c
-void TK8710LogSetCallback(TK8710LogCallback callback);
-```
-**功能**: 设置日志回调函数
-**参数**:
-- `callback`: 回调函数指针
-
-#### `TK8710LogEnableTimestamp`
-```c
-void TK8710LogEnableTimestamp(uint8_t enable);
-```
-**功能**: 启用/禁用时间戳
-**参数**:
-- `enable`: 是否启用时间戳
-
-#### `TK8710LogEnableModuleName`
-```c
-void TK8710LogEnableModuleName(uint8_t enable);
-```
-**功能**: 启用/禁用模块名
-**参数**:
-- `enable`: 是否启用模块名
 
 #### `TK8710_LOG_*` 宏
 ```c
@@ -482,6 +408,12 @@ TK8710_LOG_DRIVER_WARN(fmt, ...);    // Driver模块警告日志
 TK8710_LOG_HAL_INFO(fmt, ...);        // HAL层信息日志
 TK8710_LOG_TRM_DEBUG(fmt, ...);       // TRM模块调试日志
 ```
+**功能**: 输出日志信息
+**参数**:
+- `module`: 模块类型 (TK8710_LOG_MODULE_*)
+- `fmt`: 格式化字符串
+- `...`: 可变参数
+**说明**: 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 
 ### 8. 调试接口
 
@@ -745,7 +677,7 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
 
 ### 日志系统使用示例
 ```c
-// 1. 简化初始化日志系统
+// 1. 初始化日志系统
 TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 
 // 2. 使用日志宏输出日志
@@ -754,28 +686,12 @@ TK8710_LOG_DRIVER_WARN("发送队列接近满载: %d/64", queued);
 TK8710_LOG_HAL_INFO("芯片初始化完成");
 TK8710_LOG_TRM_DEBUG("波束信息更新: 用户ID=0x%08X", userId);
 
-// 3. 动态调整日志级别
-TK8710LogSetLevel(TK8710_LOG_DEBUG);  // 设置为调试级别
-TK8710LogSetModuleMask(TK8710_LOG_MODULE_DRIVER | TK8710_LOG_MODULE_TRM);  // 只显示Driver和TRM日志
-
-// 4. 自定义日志回调
-void CustomLogCallback(TK8710LogLevel level, TK8710LogModule module, 
-                      const char* file, int line, const char* func, 
-                      const char* fmt, ...) {
-    // 自定义日志处理逻辑
-    printf("[%s][%s] %s:%d %s(): ", 
-           TK8710LogGetLevelName(level),
-           TK8710LogGetModuleName(module),
-           file, line, func);
-    
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf("\n");
-}
-
-TK8710LogSetCallback(CustomLogCallback);
+// 3. 不同级别和模块的日志示例
+TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "严重错误: %s", error_msg);
+TK8710_LOG_WARN(TK8710_LOG_MODULE_DRIVER, "警告: 连接超时");
+TK8710_LOG_INFO(TK8710_LOG_MODULE_HAL, "信息: 芯片温度正常");
+TK8710_LOG_DEBUG(TK8710_LOG_MODULE_TRM, "调试: 处理用户数据");
+TK8710_LOG_TRACE(TK8710_LOG_MODULE_ALL, "跟踪: 函数进入");
 ```
 
 ### 调试接口使用示例
@@ -833,9 +749,8 @@ if (ret == 0) {
 5. **错误处理**: 所有API调用都需要检查返回值
 6. **线程安全**: 在多线程环境下需要注意临界区保护
 7. **日志系统**: 
-   - 日志系统应在系统初始化时尽早设置
-   - 生产环境中建议设置为INFO或WARN级别以减少性能影响
-   - 自定义日志回调函数应避免阻塞操作
+   - 使用`TK8710LogSimpleInit`快速初始化日志系统
+   - 生产环境建议设置为INFO或WARN级别以减少性能影响
    - 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 8. **调试接口**:
    - 测试接口（ForceProcessAllUsers、ForceMaxUsersTx）仅用于开发测试，生产环境应禁用
