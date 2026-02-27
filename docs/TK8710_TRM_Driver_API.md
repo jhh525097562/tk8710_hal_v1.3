@@ -371,7 +371,21 @@ TK8710RegisterCallbacks(&driverCallbacks);
 
 Driver API的使用遵循标准的硬件操作流程。以下是完整的典型工作流程，展示了所有Driver API接口的使用顺序。
 
-#### 2.1 系统初始化流程
+#### 2.1 GPIO中断配置
+
+```c
+// GPIO中断处理函数
+void GpioIrqHandler(void* user) {
+    printf("GPIO interrupt triggered\n");
+    // GPIO中断处理
+}
+
+// 初始化GPIO中断
+TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
+TK8710GpioIrqEnable(0, 1);
+```
+
+#### 2.2 系统初始化流程
 
 ```c
 // 1. 芯片初始化
@@ -390,7 +404,7 @@ ret = TK8710RfInit(&rfConfig);
 ret = TK8710Startwork(1, 1);  // Master模式，连续工作
 ```
 
-#### 2.2 回调系统配置
+#### 2.3 回调系统配置
 
 ```c
 // 1. 注册Driver回调
@@ -407,7 +421,7 @@ TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
 TK8710GpioIrqEnable(0, 1);
 ```
 
-#### 2.3 数据接收操作
+#### 2.4 数据接收操作
 
 ```c
 // 接收数据（在回调中）
@@ -424,7 +438,7 @@ void OnRxData(TK8710IrqResult* irqResult) {
 }
 ```
 
-#### 2.4 数据发送操作
+#### 2.5 数据发送操作
 
 ```c
 // 发送数据
@@ -434,7 +448,7 @@ TK8710SetTxUserInfo(userIndex, freq, ahData, pilotPower);
 TK8710SetBrdData(0, brdData, sizeof(brdData), 35, TK8710_BRD_DATA_TYPE_NORMAL);
 ```
 
-#### 2.5 配置管理
+#### 2.6 配置管理
 
 ```c
 // 获取配置
@@ -449,7 +463,7 @@ TK8710ChipInfo chipInfo;
 TK8710GetChipInfo(&chipInfo);
 ```
 
-#### 2.6 系统维护
+#### 2.7 系统维护
 
 ```c
 // 系统复位
@@ -460,14 +474,14 @@ TK8710Init(&chipConfig);
 TK8710RfInit(&rfConfig);
 ```
 
-#### 2.7 工作流程总结
+#### 2.8 工作流程总结
 
 **初始化阶段**：
+- `TK8710GpioInit()` - GPIO中断
 - `TK8710Init()` - 芯片初始化
 - `TK8710RfInit()` - 射频初始化
 - `TK8710Startwork()` - 启动工作
 - `TK8710RegisterCallbacks()` - 注册回调
-- `TK8710GpioInit()` - GPIO中断
 
 **数据操作阶段**：
 - `TK8710SetDownlink2Data()` - 设置发送数据

@@ -607,9 +607,24 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
 
 Driver API的使用遵循标准的硬件操作流程：初始化 → 配置 → 数据操作 → 控制管理。以下是完整的典型工作流程，展示了所有Driver API接口的使用顺序和依赖关系。
 
-#### 6.1 系统初始化流程
+#### 6.1 GPIO中断配置
 
-**第一步：芯片基础初始化**
+**第一步：配置GPIO中断**
+```c
+// GPIO中断处理函数
+void GpioIrqHandler(void* user) {
+    printf("GPIO interrupt triggered\n");
+    // GPIO中断处理
+}
+
+// 初始化GPIO中断
+TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
+TK8710GpioIrqEnable(0, 1);
+```
+
+#### 6.2 系统初始化流程
+
+**第二步：芯片基础初始化**
 ```c
 // 1. 配置芯片参数
 ChipConfig chipConfig = {0};
@@ -626,7 +641,7 @@ if (ret != TK8710_OK) {
 }
 ```
 
-**第二步：射频子系统初始化**
+**第三步：射频子系统初始化**
 ```c
 // 1. 配置射频参数
 ChiprfConfig rfConfig = {0};
@@ -643,7 +658,7 @@ if (ret != TK8710_OK) {
 }
 ```
 
-**第三步：启动工作模式**
+**第四步：启动工作模式**
 ```c
 // 启动芯片进入收发状态
 ret = TK8710Startwork(1, 1);  // Master模式，连续工作
@@ -653,9 +668,9 @@ if (ret != TK8710_OK) {
 }
 ```
 
-#### 6.2 回调系统配置
+#### 6.3 回调系统配置
 
-**第四步：注册Driver回调函数**
+**第五步：注册Driver回调函数**
 ```c
 // 1. 定义回调函数
 void OnRxData(TK8710IrqResult* irqResult) {
@@ -684,20 +699,7 @@ TK8710DriverCallbacks callbacks = {
 TK8710RegisterCallbacks(&callbacks);
 ```
 
-**第五步：配置GPIO中断**
-```c
-// GPIO中断处理函数
-void GpioIrqHandler(void* user) {
-    printf("GPIO interrupt triggered\n");
-    // GPIO中断处理
-}
-
-// 初始化GPIO中断
-TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
-TK8710GpioIrqEnable(0, 1);
-```
-
-#### 6.3 数据接收操作
+#### 6.4 数据接收操作
 
 **第六步：在中断回调中处理接收数据**
 ```c
@@ -733,7 +735,7 @@ void OnRxData(TK8710IrqResult* irqResult) {
 }
 ```
 
-#### 6.4 数据发送操作
+#### 6.5 数据发送操作
 
 **第七步：配置发送数据**
 ```c
@@ -761,7 +763,7 @@ if (ret != TK8710_OK) {
 }
 ```
 
-#### 6.5 运行时配置管理
+#### 6.6 运行时配置管理
 
 **第八步：动态配置调整**
 ```c
@@ -786,7 +788,7 @@ if (ret == TK8710_OK) {
 }
 ```
 
-#### 6.6 系统控制与维护
+#### 6.7 系统控制与维护
 
 **第九步：系统状态监控**
 ```c
@@ -825,14 +827,14 @@ ret = TK8710Init(&chipConfig);
 ret = TK8710RfInit(&rfConfig);
 ```
 
-#### 6.7 完整工作流程总结
+#### 6.8 完整工作流程总结
 
 **初始化阶段**：
-1. `TK8710Init()` - 芯片数字初始化
-2. `TK8710RfInit()` - 射频硬件初始化  
-3. `TK8710Startwork()` - 启动工作模式
-4. `TK8710RegisterCallbacks()` - 注册回调函数
-5. `TK8710GpioInit()` - 配置GPIO中断
+1. `TK8710GpioInit()` - 配置GPIO中断
+2. `TK8710Init()` - 芯片数字初始化
+3. `TK8710RfInit()` - 射频硬件初始化  
+4. `TK8710Startwork()` - 启动工作模式
+5. `TK8710RegisterCallbacks()` - 注册回调函数
 
 **数据操作阶段**：
 6. `TK8710SetDownlink2Data()` - 设置发送数据
