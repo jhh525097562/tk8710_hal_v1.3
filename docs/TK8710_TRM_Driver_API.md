@@ -369,9 +369,9 @@ TK8710RegisterCallbacks(&driverCallbacks);
 
 ### 2. Driver API典型工作流程
 
-Driver API的使用遵循标准的硬件操作流程。以下是完整的典型工作流程，展示了所有Driver API接口的使用顺序。
+Driver API的使用遵循标准的硬件操作流程。以下是精简的典型工作流程，展示了所有Driver API接口的使用顺序。
 
-#### 2.1 GPIO中断配置
+#### 2.1 GPIO中断初始化配置
 
 ```c
 // GPIO中断处理函数
@@ -385,7 +385,7 @@ TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
 TK8710GpioIrqEnable(0, 1);
 ```
 
-#### 2.2 系统初始化流程
+#### 2.2 TK8710初始化与日志系统
 
 ```c
 // 1. 芯片初始化
@@ -400,11 +400,11 @@ rfConfig.rftype = RF_TYPE_SX1257;
 rfConfig.Freq = 2400000000;
 ret = TK8710RfInit(&rfConfig);
 
-// 3. 启动工作模式
-ret = TK8710Startwork(1, 1);  // Master模式，连续工作
+// 3. 日志系统初始化
+TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 ```
 
-#### 2.3 回调系统配置
+#### 2.3 注册Driver回调
 
 ```c
 // 1. 注册Driver回调
@@ -415,13 +415,23 @@ TK8710DriverCallbacks callbacks = {
     .onError = OnError
 };
 TK8710RegisterCallbacks(&callbacks);
-
-// 2. 配置GPIO中断
-TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
-TK8710GpioIrqEnable(0, 1);
 ```
 
-#### 2.4 数据接收操作
+#### 2.4 TK8710配置与启动工作
+
+```c
+// 1. 获取配置
+const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+
+// 2. 设置配置
+uint8_t power = 25;
+TK8710SetConfig(TK8710_CFG_TYPE_TX_POWER, &power);
+
+// 3. 启动工作模式
+TK8710Startwork(1, 1);  // Master模式，连续工作
+```
+
+#### 2.5 数据接收操作
 
 ```c
 // 接收数据（在回调中）
@@ -431,14 +441,26 @@ void OnRxData(TK8710IrqResult* irqResult) {
             uint8_t* data;
             uint16_t len;
             TK8710GetRxData(i, &data, &len);
-            // 处理数据...
+            
+            // 获取信号质量
+            uint32_t rssi, freq;
+            uint8_t snr;
+            TK8710GetSignalInfo(i, &rssi, &snr, &freq);
+            
+            // 获取用户信息
+            uint32_t userFreq;
+            uint32_t ahData[16];
+            uint64_t pilotPower;
+            TK8710GetRxUserInfo(i, &userFreq, ahData, &pilotPower);
+            
+            // 释放缓冲区
             TK8710ReleaseRxData(i);
         }
     }
 }
 ```
 
-#### 2.5 数据发送操作
+#### 2.6 数据发送操作
 
 ```c
 // 发送数据
@@ -448,24 +470,17 @@ TK8710SetTxUserInfo(userIndex, freq, ahData, pilotPower);
 TK8710SetBrdData(0, brdData, sizeof(brdData), 35, TK8710_BRD_DATA_TYPE_NORMAL);
 ```
 
-#### 2.6 配置管理
+#### 2.7 系统控制与维护
 
 ```c
-// 获取配置
-const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-
-// 设置配置
-uint8_t power = 25;
-TK8710SetConfig(TK8710_CFG_TYPE_TX_POWER, &power);
-
 // 获取芯片信息
 TK8710ChipInfo chipInfo;
 TK8710GetChipInfo(&chipInfo);
-```
 
-#### 2.7 系统维护
+// 获取工作状态
+uint8_t workState;
+TK8710GetWorkState(&workState);
 
-```c
 // 系统复位
 TK8710ResetChip(TK8710_RST_ALL);
 
@@ -476,32 +491,15 @@ TK8710RfInit(&rfConfig);
 
 #### 2.8 工作流程总结
 
-**初始化阶段**：
-- `TK8710GpioInit()` - GPIO中断
-- `TK8710Init()` - 芯片初始化
-- `TK8710RfInit()` - 射频初始化
-- `TK8710Startwork()` - 启动工作
-- `TK8710RegisterCallbacks()` - 注册回调
+**7个主要步骤**：
 
-**数据操作阶段**：
-- `TK8710SetDownlink2Data()` - 设置发送数据
-- `TK8710SetTxUserInfo()` - 设置用户信息
-- `TK8710SetBrdData()` - 设置广播数据
-- `TK8710GetRxData()` - 获取接收数据
-- `TK8710GetSignalInfo()` - 获取信号质量
-- `TK8710GetRxUserInfo()` - 获取用户信息
-- `TK8710ReleaseRxData()` - 释放缓冲区
-
-**配置管理阶段**：
-- `TK8710GetSlotCfg()` - 获取时隙配置
-- `TK8710SetConfig()` - 设置配置
-- `TK8710GetConfig()` - 获取配置
-- `TK8710GetChipInfo()` - 获取芯片信息
-- `TK8710GetWorkState()` - 获取工作状态
-
-**系统维护阶段**：
-- `TK8710ResetChip()` - 系统复位
-- `TK8710GpioIrqEnable()` - 中断控制
+1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
+2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfInit()`, `TK8710LogSimpleInit()`
+3. **注册Driver回调** - `TK8710RegisterCallbacks()`
+4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Startwork()`
+5. **数据接收操作** - `TK8710GetRxData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
+6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
+7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
 
 ---
 

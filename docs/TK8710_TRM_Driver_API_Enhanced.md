@@ -605,11 +605,11 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
 
 ### 6. Driver API典型工作流程
 
-Driver API的使用遵循标准的硬件操作流程：初始化 → 配置 → 数据操作 → 控制管理。以下是完整的典型工作流程，展示了所有Driver API接口的使用顺序和依赖关系。
+Driver API的使用遵循标准的硬件操作流程。以下是精简的典型工作流程，展示了所有Driver API接口的使用顺序。
 
-#### 6.1 GPIO中断配置
+#### 6.1 GPIO中断初始化配置
 
-**第一步：配置GPIO中断**
+**第一步：配置GPIO中断系统**
 ```c
 // GPIO中断处理函数
 void GpioIrqHandler(void* user) {
@@ -622,55 +622,43 @@ TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
 TK8710GpioIrqEnable(0, 1);
 ```
 
-#### 6.2 系统初始化流程
+#### 6.2 TK8710初始化与日志系统
 
-**第二步：芯片基础初始化**
+**第二步：芯片初始化和日志配置**
 ```c
-// 1. 配置芯片参数
+// 1. 芯片基础初始化
 ChipConfig chipConfig = {0};
 chipConfig.interval = 32;           // 时隙间隔
 chipConfig.ant_en = 0xFF;           // 天线使能
 chipConfig.conti_mode = 1;          // 连续工作模式
 chipConfig.tx_bcn_en = 1;           // 发送BCN使能
 
-// 2. 初始化芯片数字部分
 int ret = TK8710Init(&chipConfig);
 if (ret != TK8710_OK) {
     printf("Chip initialization failed: %d\n", ret);
     return ret;
 }
-```
 
-**第三步：射频子系统初始化**
-```c
-// 1. 配置射频参数
+// 2. 射频子系统初始化
 ChiprfConfig rfConfig = {0};
 rfConfig.rftype = RF_TYPE_SX1257;   // 射频芯片类型
 rfConfig.Freq = 2400000000;         // 中心频率 2.4GHz
 rfConfig.rxgain = 1;                // 接收增益
 rfConfig.txgain = 1;                // 发送增益
 
-// 2. 初始化射频硬件
 ret = TK8710RfInit(&rfConfig);
 if (ret != TK8710_OK) {
     printf("RF initialization failed: %d\n", ret);
     return ret;
 }
+
+// 3. 日志系统初始化
+TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 ```
 
-**第四步：启动工作模式**
-```c
-// 启动芯片进入收发状态
-ret = TK8710Startwork(1, 1);  // Master模式，连续工作
-if (ret != TK8710_OK) {
-    printf("Start work failed: %d\n", ret);
-    return ret;
-}
-```
+#### 6.3 注册Driver回调
 
-#### 6.3 回调系统配置
-
-**第五步：注册Driver回调函数**
+**第三步：注册Driver回调函数**
 ```c
 // 1. 定义回调函数
 void OnRxData(TK8710IrqResult* irqResult) {
@@ -699,9 +687,31 @@ TK8710DriverCallbacks callbacks = {
 TK8710RegisterCallbacks(&callbacks);
 ```
 
-#### 6.4 数据接收操作
+#### 6.4 TK8710配置与启动工作
 
-**第六步：在中断回调中处理接收数据**
+**第四步：时隙配置和启动工作模式**
+```c
+// 1. 获取当前时隙配置
+const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+printf("Current slot configuration: rate=%d, users=%d\n", 
+       slotCfg->rateMode, slotCfg->maxUsers);
+
+// 2. 动态调整配置（可选）
+TK8710ConfigType configType = TK8710_CFG_TYPE_TX_POWER;
+uint8_t newPower = 25;
+ret = TK8710SetConfig(configType, &newPower);
+
+// 3. 启动芯片进入收发状态
+ret = TK8710Startwork(1, 1);  // Master模式，连续工作
+if (ret != TK8710_OK) {
+    printf("Start work failed: %d\n", ret);
+    return ret;
+}
+```
+
+#### 6.5 数据接收操作
+
+**第五步：在中断回调中处理接收数据**
 ```c
 void OnRxData(TK8710IrqResult* irqResult) {
     // 1. 遍历所有有效用户
@@ -719,7 +729,6 @@ void OnRxData(TK8710IrqResult* irqResult) {
                 uint32_t rssi, freq;
                 uint8_t snr;
                 TK8710GetSignalInfo(i, &rssi, &snr, &freq);
-                printf("RSSI: %d dBm, SNR: %d, Freq: %u Hz\n", rssi, snr, freq);
                 
                 // 5. 获取用户波束信息（TRM层使用）
                 uint32_t userFreq;
@@ -735,9 +744,9 @@ void OnRxData(TK8710IrqResult* irqResult) {
 }
 ```
 
-#### 6.5 数据发送操作
+#### 6.6 数据发送操作
 
-**第七步：配置发送数据**
+**第六步：配置发送数据**
 ```c
 // 1. 设置下行用户数据
 uint8_t userData[32] = {0x01, 0x02, 0x03, ...};
@@ -763,34 +772,9 @@ if (ret != TK8710_OK) {
 }
 ```
 
-#### 6.6 运行时配置管理
-
-**第八步：动态配置调整**
-```c
-// 1. 获取当前时隙配置
-const slotCfg_t* slotCfg = TK8710GetSlotCfg();
-printf("Current slot configuration: rate=%d, users=%d\n", 
-       slotCfg->rateMode, slotCfg->maxUsers);
-
-// 2. 动态调整配置
-TK8710ConfigType configType = TK8710_CFG_TYPE_TX_POWER;
-uint8_t newPower = 25;
-ret = TK8710SetConfig(configType, &newPower);
-if (ret != TK8710_OK) {
-    printf("Set config failed: %d\n", ret);
-}
-
-// 3. 获取配置状态
-uint8_t currentPower;
-ret = TK8710GetConfig(configType, &currentPower);
-if (ret == TK8710_OK) {
-    printf("Current TX power: %d\n", currentPower);
-}
-```
-
 #### 6.7 系统控制与维护
 
-**第九步：系统状态监控**
+**第七步：系统状态监控和维护**
 ```c
 // 1. 获取芯片信息
 TK8710ChipInfo chipInfo;
@@ -806,77 +790,36 @@ ret = TK8710GetWorkState(&workState);
 if (ret == TK8710_OK) {
     printf("Work state: %d\n", workState);
 }
-```
 
-**第十步：错误恢复与重置**
-```c
-// 1. 软件复位（仅复位状态机）
-ret = TK8710ResetChip(TK8710_RST_STATE_MACHINE);
-if (ret != TK8710_OK) {
-    printf("Soft reset failed: %d\n", ret);
-}
-
-// 2. 硬件复位（复位状态机+寄存器）
+// 3. 错误恢复与重置（必要时）
 ret = TK8710ResetChip(TK8710_RST_ALL);
 if (ret != TK8710_OK) {
-    printf("Hard reset failed: %d\n", ret);
+    printf("Reset failed: %d\n", ret);
 }
 
-// 3. 重新初始化
+// 4. 重新初始化（必要时）
 ret = TK8710Init(&chipConfig);
 ret = TK8710RfInit(&rfConfig);
 ```
 
-#### 6.8 完整工作流程总结
+#### 6.8 工作流程总结
 
-**初始化阶段**：
-1. `TK8710GpioInit()` - 配置GPIO中断
-2. `TK8710Init()` - 芯片数字初始化
-3. `TK8710RfInit()` - 射频硬件初始化  
-4. `TK8710Startwork()` - 启动工作模式
-5. `TK8710RegisterCallbacks()` - 注册回调函数
+**7个主要步骤**：
 
-**数据操作阶段**：
-6. `TK8710SetDownlink2Data()` - 设置发送数据
-7. `TK8710SetTxUserInfo()` - 设置用户信息
-8. `TK8710SetBrdData()` - 设置广播数据
-9. `TK8710GetRxData()` - 获取接收数据
-10. `TK8710GetSignalInfo()` - 获取信号质量
-11. `TK8710GetRxUserInfo()` - 获取用户波束信息
-12. `TK8710ReleaseRxData()` - 释放数据缓冲区
+1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
+2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfInit()`, `TK8710LogSimpleInit()`
+3. **注册Driver回调** - `TK8710RegisterCallbacks()`
+4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Startwork()`
+5. **数据接收操作** - `TK8710GetRxData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
+6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
+7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
 
-**配置管理阶段**：
-13. `TK8710GetSlotCfg()` - 获取时隙配置
-14. `TK8710SetConfig()` - 设置配置参数
-15. `TK8710GetConfig()` - 获取配置参数
-16. `TK8710GetChipInfo()` - 获取芯片信息
-17. `TK8710GetWorkState()` - 获取工作状态
+**最佳实践**：
 
-**系统维护阶段**：
-18. `TK8710ResetChip()` - 系统复位
-19. `TK8710GpioIrqEnable()` - 中断控制
-
-#### 6.8 最佳实践建议
-
-**初始化顺序**：
-- 必须先调用`TK8710Init()`再调用`TK8710RfInit()`
-- 回调注册应在启动工作模式之前完成
-- GPIO中断配置应在所有初始化完成后进行
-
-**错误处理**：
-- 每个API调用都应检查返回值
-- RF初始化失败时可尝试重新初始化
-- 严重错误时使用`TK8710ResetChip()`进行恢复
-
-**性能优化**：
-- 在回调函数中尽快处理数据，避免阻塞中断
-- 及时调用`TK8710ReleaseRxData()`释放缓冲区
-- 批量处理用户数据以提高效率
-
-**资源管理**：
-- 合理配置天线使能和射频选择
-- 定期检查系统状态和芯片信息
-- 在系统空闲时进行配置调整
+- **初始化顺序**: GPIO中断 → 芯片初始化 → 回调注册 → 配置启动
+- **错误处理**: 每个API调用都应检查返回值
+- **资源管理**: 及时释放接收数据缓冲区
+- **系统监控**: 定期检查芯片状态和工作状态
 
 ---
 
