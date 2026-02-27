@@ -963,21 +963,6 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
 
 ### 6. 回调函数管理
 
-#### `TRM_RegisterDriverCallback`
-
-```c
-int TRM_RegisterDriverCallback(TK8710IrqCallback* driverIrqCallback);
-```
-
-**功能**: 注册Driver中断回调函数
-**参数**:
-
-- `driverIrqCallback`: Driver中断回调函数指针
-  **返回值**:
-- `TRM_OK`: 注册成功
-- `TRM_ERR_PARAM`: 参数错误
-- 其他: 注册失败
-
 #### `TRM_GetIrqCallback`
 
 ```c

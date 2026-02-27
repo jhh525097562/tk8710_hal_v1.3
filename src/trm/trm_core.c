@@ -575,19 +575,6 @@ static void TRM_OnDriverError(int errorCode)
  * 新增：Driver回调管理API
  *============================================================================*/
 
-/* Driver回调函数指针 */
-static TK8710IrqCallback* g_driverIrqCallback = NULL;
-
-int TRM_RegisterDriverCallback(TK8710IrqCallback* driverIrqCallback)
-{
-    if (driverIrqCallback == NULL) {
-        return TRM_ERR_PARAM;
-    }
-    
-    g_driverIrqCallback = driverIrqCallback;
-    return TRM_OK;
-}
-
 TK8710IrqCallback* TRM_GetIrqCallback(void)
 {
     static TK8710IrqCallback callback = TRM_DriverIrqCallback;

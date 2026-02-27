@@ -463,21 +463,6 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
 
 
 
-/**
-
- * @brief 注册Driver中断回调函数
-
- * @note 此函数用于建立TRM与Driver的平行连接
-
- * @param driverIrqCallback Driver中断回调函数指针
-
- * @return TRM_OK成功，其他失败
-
- */
-
-int TRM_RegisterDriverCallback(TK8710IrqCallback* driverIrqCallback);
-
-
 
 /**
 
