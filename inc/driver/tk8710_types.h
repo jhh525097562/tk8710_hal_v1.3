@@ -139,8 +139,6 @@ typedef enum {
 /* 配置类型枚举 */
 typedef enum {
     TK8710_CFG_TYPE_CHIP_INFO,
-    TK8710_CFG_TYPE_FIX_INFO_LIST,
-    TK8710_CFG_TYPE_DL_USER_POWER,
     TK8710_CFG_TYPE_SLOT_CFG,
     TK8710_CFG_TYPE_ADDTL,
 } TK8710ConfigType;

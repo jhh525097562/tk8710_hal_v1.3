@@ -163,14 +163,12 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 **参数**:
 - `type`: 配置类型
   ```c
-  typedef enum {
-      TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */
-      TK8710_CFG_TYPE_FIX_INFO_LIST,    /* 固定信息列表配置 */
-      TK8710_CFG_TYPE_DL_USER_POWER,    /* 下行用户功率配置 */
-      TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
-      TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
-  } TK8710ConfigType;
-  ```
+typedef enum {
+    TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */
+    TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
+    TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
+} TK8710ConfigType;
+```
 - `params`: 配置参数指针，具体类型根据type决定
 **返回值**: 0-成功, 1-失败, 2-超时
 
