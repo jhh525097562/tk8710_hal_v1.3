@@ -346,7 +346,7 @@ const slotCfg_t* TK8710GetSlotCfg(void);
 
 **说明**: TRM和其他业务模块通过此接口获取完整的slot配置信息，包括速率模式配置等
 
-### 6. TRM Driver回调注册
+### 6. Driver上层回调接口
 
 Driver层提供完整的多回调架构，支持为不同中断类型注册专用回调函数，提供灵活的事件处理机制。
 
@@ -729,18 +729,18 @@ void OnRxData(TK8710IrqResult* irqResult) {
             if (ret == TK8710_OK) {
                 // 3. 处理数据
                 printf("User[%d] received %d bytes\n", i, dataLen);
-          
+        
                 // 4. 获取信号质量信息
                 uint32_t rssi, freq;
                 uint8_t snr;
                 TK8710GetSignalInfo(i, &rssi, &snr, &freq);
-          
+        
                 // 5. 获取用户波束信息（TRM层使用）
                 uint32_t userFreq;
                 uint32_t ahData[16];
                 uint64_t pilotPower;
                 TK8710GetRxUserInfo(i, &userFreq, ahData, &pilotPower);
-          
+        
                 // 6. 释放数据缓冲区
                 TK8710ReleaseRxData(i);
             }
@@ -1293,7 +1293,7 @@ int TRM_RegisterDriverCallbacks(void);
 - `TRM_ERR_NOT_INIT`: TRM未初始化
 - 其他: 注册失败
 
-**说明**: 此函数将TRM的回调适配函数注册到Driver的多回调系统中
+**说明**: 此函数将TRM的回调适配函数注册到Driver的回调系统中
 
 ### 7. TRM日志系统
 
@@ -1430,28 +1430,243 @@ typedef struct {
 
 ## 使用示例
 
-### 基本初始化流程
+### 完整系统初始化示例
 
 ```c
-// 1. 初始化Driver
-ChipConfig chipConfig = {0};
-ret = TK8710Init(&chipConfig);
+#include "tk8710_api.h"
+#include "trm.h"
 
-// 2. 初始化TRM
-TRM_InitConfig trmConfig = {
-    .beamMode = TRM_BEAM_MODE_FULL_STORE,
-    .beamMaxUsers = 3000,
-    .beamTimeoutMs = 10000,
-    // ... 其他配置
-};
-ret = TRM_Init(&trmConfig);
+int main(void) {
+    int ret;
+    
+    // 1. GPIO中断初始化配置
+    ret = TK8710GpioInit();
+    if (ret != TK8710_OK) {
+        printf("GPIO初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 2. 8710芯片初始化（数字/MAC层）
+    ChipConfig chipConfig = {
+        .bcn_agc = 32,           // BCN AGC长度
+        .interval = 32,          // Intval长度
+        .tx_dly = 1,             // 下行发送时延
+        .tx_fix_info = 0,        // TX固定频点
+        .offset_adj = 0,        // BCN sync窗口微调
+        .tx_pre = 0,             // 发送数据窗口调整
+        .conti_mode = 1,         // 连续工作模式
+        .bcn_scan = 0,           // BCN SCAN模式
+        .ant_en = 0xFF,          // 天线使能
+        .rf_sel = 0xFF,          // 射频使能
+        .tx_bcn_en = 1,          // 发送BCN使能
+        .ts_sync = 0,            // 本地同步
+        .rf_model = 2,           // 射频芯片型号: 2=SX1257
+        .bcnbits = 0x1F,         // 信标标识位
+        .anoiseThe1 = 0,         // 用户检测门限
+        .power2rssi = 0,         // RSSI换算
+        .irq_ctrl0 = 0xFFFFFFFF,  // 中断使能
+        .irq_ctrl1 = 0           // 中断清理
+    };
+    
+    ret = TK8710Init(&chipConfig);
+    if (ret != TK8710_OK) {
+        printf("芯片初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 3. 8710射频初始化
+    ChiprfConfig rfConfig = {
+        .rftype = TK8710_RF_TYPE_1257_32M,  // SX1257 32MHz
+        .Freq = 2400000000,                  // 2.4GHz
+        .rxgain = 1,                         // 接收增益
+        .txgain = 20,                        // 发送增益
+        .txadc = {
+            {.i = 0, .q = 0},  // 天线1直流校准
+            {.i = 0, .q = 0},  // 天线2直流校准
+            // ... 其他天线
+        }
+    };
+    
+    ret = TK8710RfInit(&rfConfig);
+    if (ret != TK8710_OK) {
+        printf("射频初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 4. 日志系统初始化
+    ret = TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
+    if (ret != TK8710_OK) {
+        printf("日志系统初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 5. 注册Driver回调函数
+    TK8710DriverCallbacks driverCallbacks = {
+        .onRxData = OnDriverRxData,
+        .onTxSlot = OnDriverTxSlot,
+        .onSlotEnd = OnDriverSlotEnd,
+        .onError = OnDriverError
+    };
+    TK8710RegisterCallbacks(&driverCallbacks);
+    
+    // 6. 初始化TRM系统
+    TRM_InitConfig trmConfig = {
+        .beamMode = TRM_BEAM_MODE_FULL_STORE,
+        .beamMaxUsers = 3000,
+        .beamTimeoutMs = 10000,
+        .callbacks = {
+            .onRxData = OnTrmRxData,
+            .onTxComplete = OnTrmTxComplete
+        },
+        .platformConfig = NULL
+    };
+    
+    ret = TRM_Init(&trmConfig);
+    if (ret != TRM_OK) {
+        printf("TRM初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 7. 8710配置（时隙配置、启动工作）
+    // 配置时隙参数
+    TK8710SetConfig(TK8710_CONFIG_TYPE_SLOT, &slotConfig);
+    
+    // 启动芯片工作
+    ret = TK8710Startwork(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    if (ret != TK8710_OK) {
+        printf("芯片启动失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 8. 启动TRM系统
+    ret = TRM_Start();
+    if (ret != TRM_OK) {
+        printf("TRM启动失败: %d\n", ret);
+        return -1;
+    }
+    
+    // 9. 启用GPIO中断
+    ret = TK8710GpioIrqEnable();
+    if (ret != TK8710_OK) {
+        printf("GPIO中断使能失败: %d\n", ret);
+        return -1;
+    }
+    
+    printf("系统初始化完成\n");
+    return 0;
+}
+```
 
-// 3. 注册TRM到Driver的回调函数
-ret = TRM_RegisterDriverCallbacks();
+### TRM上层回调接口示例
 
-// 4. 启动系统
-ret = TK8710Startwork(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
-ret = TRM_Start();
+```c
+// TRM上层回调接口实现 - TRM调用上层应用
+void OnTrmRxData(const TRM_RxDataList* rxDataList) {
+    // 数据处理流程简述：
+    // 1. 验证接收数据有效性
+    // 2. 提取用户数据和业务信息
+    // 3. 更新业务状态和统计信息
+    // 4. 触发相应的业务逻辑处理
+    
+    printf("TRM回调: 接收到数据 - 时隙=%d, 用户数=%d, 帧号=%u\n", 
+           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    
+    // 业务数据处理逻辑（具体实现根据应用需求）
+    for (int i = 0; i < rxDataList->userCount; i++) {
+        TRM_RxUserData* user = &rxDataList->users[i];
+        printf("处理用户数据: ID=0x%08X, 长度=%u\n", user->userId, user->dataLen);
+        // ... 具体的业务处理
+    }
+}
+
+void OnTrmTxComplete(uint32_t userId, TRM_TxResult result) {
+    // 发送完成处理流程简述：
+    // 1. 检查发送结果状态
+    // 2. 更新发送统计信息
+    // 3. 处理重发或确认逻辑
+    // 4. 释放相关资源
+    
+    printf("TRM回调: 发送完成 - 用户ID=0x%08X, 结果=%s\n", 
+           userId, result == TRM_TX_SUCCESS ? "成功" : "失败");
+    
+    if (result == TRM_TX_SUCCESS) {
+        // 发送成功处理
+    } else {
+        // 发送失败处理（可能需要重发）
+    }
+}
+```
+
+### Driver回调注册示例
+
+```c
+// Driver回调函数实现 - Driver调用TRM
+void OnDriverRxData(TK8710IrqResult* irqResult) {
+    // Driver中断数据处理流程简述：
+    // 1. 验证中断结果有效性
+    // 2. 提取硬件状态信息
+    // 3. 调用TRM核心处理函数
+    // 4. 更新内部状态和统计
+    
+    printf("Driver回调: 接收数据中断 - 类型=%d, 用户数=%d\n", 
+           irqResult->irqType, irqResult->userCount);
+    
+    // 调用TRM核心处理函数
+    TRM_ProcessDriverIrq(irqResult);
+}
+
+void OnDriverTxSlot(TK8710IrqResult* irqResult) {
+    // 发送时隙中断处理流程简述：
+    // 1. 检查发送时隙状态
+    // 2. 更新发送统计信息
+    // 3. 触发TRM发送逻辑
+    // 4. 准备下一时隙数据
+    
+    printf("Driver回调: 发送时隙中断 - 时隙=%d\n", irqResult->slotIndex);
+    
+    // 通知TRM发送完成
+    TRM_NotifyTxSlotComplete(irqResult);
+}
+
+void OnDriverSlotEnd(TK8710IrqResult* irqResult) {
+    // 时隙结束中断处理流程简述：
+    // 1. 清理当前时隙资源
+    // 2. 准备下一时隙配置
+    // 3. 更新系统状态
+    // 4. 触发时隙切换逻辑
+    
+    printf("Driver回调: 时隙结束中断 - 时隙=%d\n", irqResult->slotIndex);
+    
+    // 通知TRM时隙结束
+    TRM_NotifySlotEnd(irqResult);
+}
+
+void OnDriverError(TK8710IrqResult* irqResult) {
+    // 错误中断处理流程简述：
+    // 1. 分析错误类型和严重程度
+    // 2. 记录错误信息和统计
+    // 3. 执行错误恢复策略
+    // 4. 通知上层应用
+    
+    printf("Driver回调: 错误中断 - 类型=%d, 代码=%d\n", 
+           irqResult->irqType, irqResult->errorCode);
+    
+    // 通知TRM发生错误
+    TRM_NotifyError(irqResult);
+}
+
+// Driver回调注册
+void RegisterDriverCallbacks(void) {
+    TK8710DriverCallbacks callbacks = {
+        .onRxData = OnDriverRxData,
+        .onTxSlot = OnDriverTxSlot,
+        .onSlotEnd = OnDriverSlotEnd,
+        .onError = OnDriverError
+    };
+    
+    TK8710RegisterCallbacks(&callbacks);
+    printf("Driver回调注册完成\n");
+}
 ```
 
 ### 数据发送示例
@@ -1464,6 +1679,199 @@ ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1,
 
 // 多速率模式发送(使用速率模式匹配)
 ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, TK8710_RATE_MODE_5);
+```
+
+### Driver配置管理示例
+
+```c
+// 1. 获取当前配置
+ChipConfig currentChipConfig;
+ret = TK8710GetConfig(TK8710_CONFIG_TYPE_CHIP, &currentChipConfig);
+if (ret == TK8710_OK) {
+    printf("当前芯片配置: BCN_AGC=%u, 工作模式=%s\n", 
+           currentChipConfig.bcn_agc, 
+           currentChipConfig.conti_mode ? "连续" : "单次");
+}
+
+ChiprfConfig currentRfConfig;
+ret = TK8710GetConfig(TK8710_CONFIG_TYPE_RF, &currentRfConfig);
+if (ret == TK8710_OK) {
+    printf("当前射频配置: 频率=%uHz, 接收增益=%u, 发送增益=%u\n",
+           currentRfConfig.Freq, currentRfConfig.rxgain, currentRfConfig.txgain);
+}
+
+// 2. 动态修改配置
+ChipConfig newChipConfig = currentChipConfig;
+newChipConfig.conti_mode = 0;  // 切换到单次工作模式
+newChipConfig.tx_dly = 2;      // 调整发送时延
+
+ret = TK8710SetConfig(TK8710_CONFIG_TYPE_CHIP, &newChipConfig);
+if (ret == TK8710_OK) {
+    printf("芯片配置更新成功\n");
+}
+
+// 3. 时隙配置获取和使用
+const slotCfg_t* slotConfig = TK8710GetSlotCfg();
+if (slotConfig != NULL) {
+    printf("时隙配置: 字节数=%u, 时间长度=%uus, 中心频点=%uHz\n",
+           slotConfig->byteLen, slotConfig->timeLen, slotConfig->centerFreq);
+    
+    // 根据时隙配置调整业务逻辑
+    if (slotConfig->byteLen > 512) {
+        printf("大包模式，启用数据分片处理\n");
+    }
+}
+
+// 4. 用户信息设置
+TK8710UserInfo userInfo = {
+    .userId = 0x12345678,
+    .rateMode = TK8710_RATE_MODE_8,
+    .power = 25,
+    .freqOffset = 0
+};
+
+ret = TK8710SetTxUserInfo(0, &userInfo);
+if (ret == TK8710_OK) {
+    printf("用户信息设置成功: ID=0x%08X, 速率模式=%d\n", 
+           userInfo.userId, userInfo.rateMode);
+}
+```
+
+### 系统控制与维护示例
+
+```c
+// 1. 芯片状态监控
+uint8_t workType, workMode, chipState;
+ret = TK8710GetWorkMode(&workType, &workMode);
+if (ret == TK8710_OK) {
+    printf("工作模式: 类型=%d, 模式=%d\n", workType, workMode);
+}
+
+ret = TK8710GetChipState(&chipState);
+if (ret == TK8710_OK) {
+    printf("芯片状态: %s\n", chipState == 1 ? "工作中" : "空闲");
+}
+
+// 2. 信号质量监控
+for (int userIndex = 0; userIndex < maxUsers; userIndex++) {
+    uint32_t rssi, freq;
+    uint8_t snr;
+    
+    ret = TK8710GetSignalQuality(userIndex, &rssi, &snr, &freq);
+    if (ret == TK8710_OK) {
+        printf("用户[%d]信号质量: RSSI=%udBm, SNR=%d, 频率=%uHz\n",
+               userIndex, rssi, snr, freq);
+        
+        // 信号质量检查
+        if (rssi < -100) {
+            printf("警告: 用户[%d]信号强度过低\n", userIndex);
+        }
+        if (snr < 5) {
+            printf("警告: 用户[%d]信噪比过低\n", userIndex);
+        }
+    }
+}
+
+// 3. 工作状态控制
+// 暂停/恢复工作
+ret = TK8710SuspendWork();
+if (ret == TK8710_OK) {
+    printf("芯片工作已暂停\n");
+    
+    // 执行维护操作...
+    
+    ret = TK8710ResumeWork();
+    if (ret == TK8710_OK) {
+        printf("芯片工作已恢复\n");
+    }
+}
+
+// 4. 系统重置流程
+void SystemReset(void) {
+    printf("开始系统重置...\n");
+    
+    // 1. 停止TRM系统
+    ret = TRM_Stop();
+    if (ret != TRM_OK) {
+        printf("TRM停止失败: %d\n", ret);
+    }
+    
+    // 2. 停止芯片工作
+    ret = TK8710Stopwork();
+    if (ret != TK8710_OK) {
+        printf("芯片停止失败: %d\n", ret);
+    }
+    
+    // 3. 禁用GPIO中断
+    ret = TK8710GpioIrqDisable();
+    if (ret != TK8710_OK) {
+        printf("GPIO中断禁用失败: %d\n", ret);
+    }
+    
+    // 4. 重新初始化（可选）
+    // ... 重新执行初始化流程
+    
+    printf("系统重置完成\n");
+}
+
+// 5. 错误恢复处理
+void ErrorHandler(int errorCode) {
+    printf("处理错误: 代码=%d\n", errorCode);
+    
+    switch (errorCode) {
+        case TK8710_ERR_COMMUNICATION:
+            // 通信错误：重置通信接口
+            printf("重置通信接口...\n");
+            break;
+            
+        case TK8710_ERR_HARDWARE:
+            // 硬件错误：重新初始化硬件
+            printf("重新初始化硬件...\n");
+            SystemReset();
+            break;
+            
+        case TRM_ERR_STATE:
+            // 状态错误：重新启动TRM
+            printf("重新启动TRM...\n");
+            TRM_Stop();
+            TRM_Start();
+            break;
+            
+        default:
+            // 未知错误：记录并继续监控
+            printf("未知错误，继续监控\n");
+            break;
+    }
+}
+
+// 6. 性能监控
+void PerformanceMonitor(void) {
+    static uint32_t lastCheckTime = 0;
+    uint32_t currentTime = GetSystemTick();
+    
+    if (currentTime - lastCheckTime > 10000) {  // 每10秒检查一次
+        lastCheckTime = currentTime;
+        
+        // 检查中断处理性能
+        uint32_t totalTime, maxTime, minTime, count;
+        ret = TK8710GetIrqTimeStats(1, &totalTime, &maxTime, &minTime, &count);
+        if (ret == 0 && count > 0) {
+            uint32_t avgTime = totalTime / count;
+            printf("中断性能: 平均=%uus, 最大=%uus, 次数=%u\n", 
+                   avgTime, maxTime, count);
+            
+            if (avgTime > 1000) {
+                printf("警告: 中断处理平均时间过长\n");
+            }
+        }
+        
+        // 检查TRM状态
+        if (!TRM_IsRunning()) {
+            printf("警告: TRM未运行，尝试重新启动\n");
+            TRM_Start();
+        }
+    }
+}
 ```
 
 ### 接收数据处理示例
