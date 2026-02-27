@@ -235,6 +235,53 @@ int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 - `dataLen`: 数据长度输出
   **返回值**: 0-成功, 1-失败, 2-超时
 
+#### `TK8710GetRxUserInfo`
+
+```c
+int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uint64_t* pilotPower);
+```
+
+**功能**: 获取接收用户信息 (从MD_UD中断获取的数据)
+**参数**:
+
+- `userIndex`: 用户索引 (0-127)
+- `freq`: 输出频率指针 (Hz)
+- `ahData`: 输出AH数据数组 (16个32位数据)
+- `pilotPower`: 输出Pilot功率指针
+  **返回值**: 0-成功, 1-失败, 2-超时
+
+**说明**:
+
+- 从MD_UD中断获取的用户波束信息中提取详细参数
+- `ahData`数组包含16个32位的AH配置数据
+- `pilotPower`为导频功率值，用于波束管理
+- TRM层使用此接口获取用户信息进行波束跟踪和管理
+- 如果获取失败，TRM层会使用默认值进行处理
+
+**TRM层使用示例**:
+
+```c
+// TRM层获取用户信息进行波束管理
+uint32_t freq;
+uint32_t ahData[16];
+uint64_t pilotPower;
+TRM_BeamInfo beam;
+
+int ret = TK8710GetRxUserInfo(userIndex, &freq, ahData, &pilotPower);
+if (ret == TK8710_OK) {
+    // 使用实际获取的用户信息
+    beam.freq = freq;
+    memcpy(beam.ahData, ahData, sizeof(beam.ahData));
+    beam.pilotPower = pilotPower;
+    
+    // 更新波束信息
+    TRM_SetBeamInfo(userId, &beam);
+} else {
+    // 使用默认值
+    TRM_LOG_WARN("Failed to get RX user info, using defaults");
+}
+```
+
 #### `TK8710GetSignalInfo`
 
 ```c
@@ -359,19 +406,6 @@ typedef struct {
 - `onSlotEnd`: 当时隙结束时调用
 - `onError`: 当发生错误中断时调用
 
-**中断类型说明**:
-
-- `TK8710_IRQ_RX_BCN`: 接收信标中断
-- `TK8710_IRQ_BRD_UD`: 广播用户数据中断
-- `TK8710_IRQ_BRD_DATA`: 广播数据中断
-- `TK8710_IRQ_MD_UD`: 主数据用户中断（用户波束信息）
-- `TK8710_IRQ_MD_DATA`: 主数据中断（用户数据）
-- `TK8710_IRQ_S0`: 时隙0中断
-- `TK8710_IRQ_S1`: 时隙1中断
-- `TK8710_IRQ_S2`: 时隙2中断
-- `TK8710_IRQ_S3`: 时隙3中断
-- `TK8710_IRQ_ACM`: 自适应调制中断
-
 **说明**:
 
 - 替代了原有的单一回调接口 `TK8710IrqInit`
@@ -379,6 +413,8 @@ typedef struct {
 - 所有回调都使用统一的 `TK8710IrqResult*` 参数
 - 提供更灵活的中断处理机制
 - `TK8710_IRQ_MD_UD` 中断类型已定义但暂未实现具体回调处理
+
+### 7. 中断处理
 
 #### `TK8710GpioInit`
 
@@ -421,111 +457,6 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 - `gpioPin`: GPIO引脚号
 - `enable`: 使能标志 (1=使能, 0=禁用)
   **返回值**: 0-成功, 其他-失败
-
-#### Driver回调使用示例
-
-```c
-// 定义Driver回调函数
-void OnDriverRxData(TK8710IrqResult* irqResult)
-{
-    printf("接收到MD_DATA中断: 用户数=%d, CRC正确=%d\n", 
-           irqResult->crcValidCount, irqResult->crcValidCount);
-    
-    // 处理接收数据
-    for (uint8_t i = 0; i < irqResult->crcValidCount; i++) {
-        if (irqResult->crcResults[i].crcValid) {
-            printf("用户[%d]: 数据有效\n", i);
-        }
-    }
-}
-
-void OnDriverTxSlot(TK8710IrqResult* irqResult)
-{
-    printf("S1时隙发送完成: 自动发送用户数=%d\n", irqResult->autoTxCount);
-    // 处理发送完成逻辑
-}
-
-void OnDriverSlotEnd(TK8710IrqResult* irqResult)
-{
-    printf("时隙结束: 中断类型=%d\n", irqResult->irq_type);
-    // 时隙结束处理
-}
-
-void OnDriverError(TK8710IrqResult* irqResult)
-{
-    printf("Driver错误: 中断类型=%d\n", irqResult->irq_type);
-    // 错误处理逻辑
-}
-
-// 注册Driver回调
-TK8710DriverCallbacks driverCallbacks = {
-    .onRxData = OnDriverRxData,
-    .onTxSlot = OnDriverTxSlot,
-    .onSlotEnd = OnDriverSlotEnd,
-    .onError = OnDriverError
-};
-
-TK8710RegisterCallbacks(&driverCallbacks);
-
-// 初始化GPIO中断
-void GpioIrqHandler(void* user)
-{
-    printf("GPIO中断触发\n");
-    // GPIO中断处理
-}
-
-TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, GpioIrqHandler, NULL);
-TK8710GpioIrqEnable(0, 1);
-```
-
-#### Driver回调最佳实践
-
-**回调函数设计原则**:
-
-1. **快速处理**: 回调函数应尽快执行，避免阻塞中断处理
-2. **错误处理**: 检查参数有效性，处理异常情况
-3. **资源管理**: 及时释放资源，避免内存泄漏
-4. **线程安全**: 注意多线程环境下的数据同步
-
-**使用建议**:
-
-- 将复杂处理逻辑移到应用层，回调中只做必要的数据收集
-- 使用队列或缓冲区在中断和主线程间传递数据
-- 为不同的中断类型设置合适的处理优先级
-- 定期检查回调函数的执行性能
-
-### 7. 中断处理
-
-中断处理系统负责处理硬件中断事件，并将事件分发到相应的Driver回调函数。
-
-**中断处理流程**:
-
-1. **硬件中断触发**: TK8710芯片产生硬件中断信号
-2. **GPIO中断响应**: GPIO中断回调函数被调用
-3. **Driver层处理**: Driver层解析中断类型和状态
-4. **回调分发**: 根据中断类型调用相应的Driver回调函数
-5. **应用层处理**: 应用层在回调函数中处理具体事件
-
-**中断类型与回调映射**:
-
-- `TK8710_IRQ_MD_DATA` → `onRxData` 回调
-- `TK8710_IRQ_S1` → `onTxSlot` 回调
-- `TK8710_IRQ_S0/S2/S3` → `onSlotEnd` 回调
-- `其他中断类型` → `onError` 回调
-
-**中断处理特点**:
-
-- **异步处理**: 中断处理在独立的中断上下文中执行
-- **快速分发**: Driver层快速将中断分发到相应的回调函数
-- **统一接口**: 所有回调都使用 `TK8710IrqResult*` 参数
-- **灵活扩展**: 支持为新的中断类型添加专用回调
-
-**性能考虑**:
-
-- 回调函数应尽快执行，避免阻塞中断处理
-- 复杂的处理逻辑应移到应用层主线程中
-- 使用队列或缓冲区在中断和主线程间传递数据
-- 注意多线程环境下的数据同步问题
 
 ### 8. 日志系统
 
@@ -1023,7 +954,8 @@ typedef struct {
 } TRM_RxDataList;
 ```
 
-**说明**: 
+**说明**:
+
 - 当接收到用户数据时调用
 - 应用层需要同步处理数据，避免阻塞中断处理
 - `rxDataList->users` 包含所有接收到的用户数据
@@ -1052,7 +984,8 @@ typedef enum {
 } TRM_TxResult;
 ```
 
-**说明**: 
+**说明**:
+
 - 当数据发送完成时调用，通知发送结果
 - `userId` 标识发送的用户
 - `result` 指示发送是否成功及失败原因
@@ -1066,7 +999,8 @@ typedef struct {
 } TRM_Callbacks;
 ```
 
-**说明**: 
+**说明**:
+
 - TRM回调函数结构体
 - 在 `TRM_InitConfig` 中使用
 - 应用层在初始化TRM时设置这些回调函数
@@ -1080,7 +1014,7 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList)
 {
     printf("接收到数据: 时隙=%d, 用户数=%d, 帧号=%u\n", 
            rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
-    
+  
     // 处理每个用户的数据
     for (uint8_t i = 0; i < rxDataList->userCount; i++) {
         TRM_RxUserData* user = &rxDataList->users[i];

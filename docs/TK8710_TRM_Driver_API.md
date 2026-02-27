@@ -176,6 +176,23 @@ int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 - `dataLen`: 数据长度输出
   **返回值**: TK8710_OK-成功, 其他-失败
 
+#### `TK8710GetRxUserInfo`
+
+```c
+int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uint64_t* pilotPower);
+```
+
+**功能**: 获取接收用户信息 (从MD_UD中断获取的数据)
+**参数**:
+
+- `userIndex`: 用户索引 (0-127)
+- `freq`: 输出频率指针 (Hz)
+- `ahData`: 输出AH数据数组 (16个32位数据)
+- `pilotPower`: 输出Pilot功率指针
+  **返回值**: TK8710_OK-成功, 其他-失败
+
+**说明**: TRM层使用此接口获取用户波束信息进行波束跟踪和管理
+
 #### `TK8710GetSignalInfo`
 
 ```c
