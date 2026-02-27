@@ -512,46 +512,268 @@ int TRM_Init(const TRM_InitConfig* config);
 ```
 **功能**: 初始化TRM系统
 **参数**:
-- `config`: TRM初始化配置
-**返回值**: TRM_OK-成功, 其他-失败
+- `config`: TRM初始化配置指针，包含波束配置、回调函数等设置
+  - `beamMode`: 波束存储模式
+    - `TRM_BEAM_MODE_FULL_STORE`: 完整波束存储模式(CPU RAM)
+    - `TRM_BEAM_MODE_MAPPING`: 波束映射模式(8710 RAM)
+  - `beamMaxUsers`: 最大用户数，0表示使用默认值(3000)
+  - `beamTimeoutMs`: 波束超时时间(毫秒)，0表示使用默认值(3000ms)
+  - `callbacks`: 回调函数集合
+    - `onRxData`: 接收数据回调函数指针
+    - `onRxBroadcast`: 广播接收回调函数指针
+    - `onTxComplete`: 发送完成回调函数指针
+    - `onError`: 错误回调函数指针
+  - `platformConfig`: 平台配置指针(预留)
+**返回值**: 
+- `TRM_OK`: 初始化成功
+- `TRM_ERR_PARAM`: 参数错误
+- `TRM_ERR_NO_MEM`: 内存不足
+- 其他: 初始化失败
 
 #### `TRM_Start`
 ```c
 int TRM_Start(void);
 ```
-**功能**: 启动TRM系统
-**返回值**: TRM_OK-成功, 其他-失败
+**功能**: 启动TRM系统，开始处理数据发送和接收
+**返回值**: 
+- `TRM_OK`: 启动成功
+- `TRM_ERR_STATE`: 状态错误(未初始化或已启动)
+- 其他: 启动失败
 
 #### `TRM_Stop`
 ```c
 int TRM_Stop(void);
 ```
-**功能**: 停止TRM系统
-**返回值**: TRM_OK-成功, 其他-失败
+**功能**: 停止TRM系统，停止数据处理
+**返回值**: 
+- `TRM_OK`: 停止成功
+- `TRM_ERR_STATE`: 状态错误(未启动)
+- 其他: 停止失败
 
 #### `TRM_Deinit`
 ```c
 void TRM_Deinit(void);
 ```
-**功能**: 清理TRM系统
+**功能**: 清理TRM系统，释放所有资源
 
 ### 2. 数据发送
 
 #### `TRM_SendData`
 ```c
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t dataLen, uint8_t power, uint32_t frameNo, uint8_t targetRateMode);
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 ```
-**功能**: 发送数据(支持单速率和多速率模式)
+**功能**: 发送用户数据(支持单速率和多速率模式)
+**参数**:
+- `userId`: 用户ID，32位唯一标识符
+  - 范围: 0x00000000 - 0xFFFFFFFF
+  - 0xFFFFFFFF: 保留值，用于特殊操作
+- `data`: 数据指针，指向要发送的数据缓冲区
+  - 不能为NULL
+  - 数据长度不超过512字节
+- `len`: 数据长度，字节数
+  - 范围: 1 - 512
+  - 必须小于等于实际数据缓冲区大小
+- `txPower`: 发射功率
+  - 范围: 0 - 31
+  - 0: 最小功率
+  - 31: 最大功率
+- `frameNo`: 目标发送帧号
+  - 范围: 0 - g_trmMaxFrameCount-1
+  - 当targetRateMode=0时使用此参数进行帧号匹配
+- `targetRateMode`: 目标速率模式
+  - 0: 使用帧号匹配模式
+  - 5-11: 使用速率模式匹配(对应不同速率)
+  - 18: 使用速率模式匹配(特殊速率)
+- `dataType`: 数据类型
+  - `TK8710_USER_DATA_TYPE_NORMAL`: 正常用户数据
+  - `TK8710_USER_DATA_TYPE_SLOT3`: 与Slot3共用数据
+**返回值**: 
+- `TRM_OK`: 发送成功(数据已入队)
+- `TRM_ERR_PARAM`: 参数错误
+- `TRM_ERR_QUEUE_FULL`: 发送队列已满
+- `TRM_ERR_NOT_INIT`: TRM未初始化
+- 其他: 发送失败
+
+#### `TRM_SendBroadcast`
+```c
+int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
+```
+**功能**: 发送广播数据
+**参数**:
+- `brdIndex`: 广播索引
+  - 范围: 0 - 15
+  - 对应不同的广播用户
+- `data`: 数据指针，指向要发送的广播数据缓冲区
+  - 不能为NULL
+  - 数据长度不超过512字节
+- `len`: 数据长度，字节数
+  - 范围: 1 - 512
+  - 必须小于等于实际数据缓冲区大小
+- `txPower`: 发射功率
+  - 范围: 0 - 31
+  - 0: 最小功率
+  - 31: 最大功率
+- `dataType`: 数据类型
+  - `TK8710_BRD_DATA_TYPE_NORMAL`: 正常广播数据
+  - `TK8710_BRD_DATA_TYPE_SLOT3`: 与Slot3共用波束信息
+**返回值**: 
+- `TRM_OK`: 发送成功
+- `TRM_ERR_PARAM`: 参数错误
+- `TRM_ERR_NOT_INIT`: TRM未初始化
+- 其他: 发送失败
+
+#### `TRM_ClearTxData`
+```c
+int TRM_ClearTxData(uint32_t userId);
+```
+**功能**: 清除发送数据
 **参数**:
 - `userId`: 用户ID
-- `data`: 数据指针
-- `dataLen`: 数据长度
-- `power`: 发射功率
-- `frameNo`: 目标帧号
-- `targetRateMode`: 目标速率模式 (0=使用帧号匹配, 5-11,18=使用速率模式匹配)
-**返回值**: TRM_OK-成功, 其他-失败
+  - 0xFFFFFFFF: 清除所有用户的发送数据
+  - 其他值: 清除指定用户的发送数据
+**返回值**: 
+- `TRM_OK`: 清除成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 清除失败
 
-### 3. 状态查询
+### 3. 波束管理
+
+#### `TRM_SetBeamInfo`
+```c
+int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
+```
+**功能**: 设置用户波束信息
+**参数**:
+- `userId`: 用户ID
+  - 范围: 0x00000000 - 0xFFFFFFFF
+- `beamInfo`: 波束信息指针
+  - `userId`: 用户ID，与参数一致
+  - `freq`: 频率，26位格式
+    - 范围: 0 - 0x03FFFFFF
+    - 单位: Hz/128
+  - `ahData`: AH数据数组，8天线×2(I/Q)
+    - 长度: 16个uint32_t
+    - 包含I/Q两路数据
+  - `pilotPower`: Pilot功率
+    - 范围: 0 - 0xFFFFFFFFFFFFFFFF
+  - `timestamp`: 更新时间戳
+    - 单位: 毫秒
+  - `valid`: 有效标志
+    - 1: 波束信息有效
+    - 0: 波束信息无效
+**返回值**: 
+- `TRM_OK`: 设置成功
+- `TRM_ERR_PARAM`: 参数错误
+- `TRM_ERR_NO_MEM`: 内存不足
+- 其他: 设置失败
+
+#### `TRM_GetBeamInfo`
+```c
+int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
+```
+**功能**: 获取用户波束信息
+**参数**:
+- `userId`: 用户ID
+  - 范围: 0x00000000 - 0xFFFFFFFF
+- `beamInfo`: 波束信息输出指针
+  - 函数会填充此结构体
+**返回值**: 
+- `TRM_OK`: 获取成功
+- `TRM_ERR_PARAM`: 参数错误
+- `TRM_ERR_NO_BEAM`: 未找到波束信息
+- 其他: 获取失败
+
+#### `TRM_ClearBeamInfo`
+```c
+int TRM_ClearBeamInfo(uint32_t userId);
+```
+**功能**: 清除用户波束信息
+**参数**:
+- `userId`: 用户ID
+  - 0xFFFFFFFF: 清除所有用户的波束信息
+  - 其他值: 清除指定用户的波束信息
+**返回值**: 
+- `TRM_OK`: 清除成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 清除失败
+
+#### `TRM_SetBeamTimeout`
+```c
+int TRM_SetBeamTimeout(uint32_t timeoutMs);
+```
+**功能**: 设置波束超时时间
+**参数**:
+- `timeoutMs`: 超时时间(毫秒)
+  - 范围: 1000 - 30000
+  - 0: 使用默认值(3000ms)
+**返回值**: 
+- `TRM_OK`: 设置成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 设置失败
+
+### 4. 时隙配置
+
+#### `TRM_SetSlotConfig`
+```c
+int TRM_SetSlotConfig(const TRM_SlotConfig* config);
+```
+**功能**: 设置时隙配置
+**参数**:
+- `config`: 时隙配置指针
+  - `bcnSlotCount`: BCN时隙数
+    - 范围: 1 - 8
+  - `brdSlotCount`: 广播时隙数
+    - 范围: 0 - 8
+  - `ulSlotCount`: 上行时隙数
+    - 范围: 1 - 8
+  - `dlSlotCount`: 下行时隙数
+    - 范围: 1 - 8
+**返回值**: 
+- `TRM_OK`: 设置成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 设置失败
+
+#### `TRM_GetSlotConfig`
+```c
+int TRM_GetSlotConfig(TRM_SlotConfig* config);
+```
+**功能**: 获取时隙配置
+**参数**:
+- `config`: 时隙配置输出指针
+  - 函数会填充此结构体
+**返回值**: 
+- `TRM_OK`: 获取成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 获取失败
+
+### 5. 状态查询
+
+#### `TRM_IsRunning`
+```c
+int TRM_IsRunning(void);
+```
+**功能**: 检查TRM是否运行中
+**返回值**: 
+- 1: 运行中
+- 0: 未运行
+
+#### `TRM_GetStats`
+```c
+int TRM_GetStats(TRM_Stats* stats);
+```
+**功能**: 获取统计信息
+**参数**:
+- `stats`: 统计信息输出指针
+  - `txCount`: 发送次数
+  - `txSuccessCount`: 发送成功次数
+  - `rxCount`: 接收次数
+  - `beamCount`: 当前波束数量
+  - `memAllocCount`: 内存分配次数
+  - `memFreeCount`: 内存释放次数
+**返回值**: 
+- `TRM_OK`: 获取成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 获取失败
 
 #### `TRM_GetCurrentFrame`
 ```c
@@ -559,33 +781,49 @@ uint32_t TRM_GetCurrentFrame(void);
 ```
 **功能**: 获取当前帧号
 **返回值**: 当前帧号
+- 范围: 0 - g_trmMaxFrameCount-1
+
+#### `TRM_SetCurrentFrame`
+```c
+void TRM_SetCurrentFrame(uint32_t frameNo);
+```
+**功能**: 设置当前帧号
+**参数**:
+- `frameNo`: 帧号
+  - 范围: 0 - g_trmMaxFrameCount-1
+
+#### `TRM_SetMaxFrameCount`
+```c
+void TRM_SetMaxFrameCount(uint32_t maxCount);
+```
+**功能**: 设置最大帧数（超帧大小）
+**参数**:
+- `maxCount`: 最大帧数
+  - 范围: 1 - 10000
+  - 默认值: 1000
+
+### 6. 回调函数管理
+
+#### `TRM_RegisterDriverCallback`
+```c
+int TRM_RegisterDriverCallback(TK8710IrqCallback* driverIrqCallback);
+```
+**功能**: 注册Driver中断回调函数
+**参数**:
+- `driverIrqCallback`: Driver中断回调函数指针
+**返回值**: 
+- `TRM_OK`: 注册成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 注册失败
 
 #### `TRM_GetIrqCallback`
 ```c
 TK8710IrqCallback* TRM_GetIrqCallback(void);
 ```
 **功能**: 获取TRM中断回调函数
-**返回值**: 中断回调函数指针
+**返回值**: TRM中断回调函数指针
 
-### 4. 日志系统
-
-#### `TRM_LogInit`
-```c
-void TRM_LogInit(TRM_LogLevel level);
-```
-**功能**: 初始化TRM日志系统
-**参数**:
-- `level`: 日志级别
-
-#### `TRM_LOG_*` 宏
-```c
-TRM_LOG_ERROR(fmt, ...);  // 错误日志
-TRM_LOG_WARN(fmt, ...);   // 警告日志
-TRM_LOG_INFO(fmt, ...);   // 信息日志
-TRM_LOG_DEBUG(fmt, ...);  // 调试日志
-```
-
-### 5. TRM调试接口
+### 7. TRM调试接口
 
 #### `TRM_TxValidatorOnRxData`
 ```c
@@ -593,8 +831,27 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
 ```
 **功能**: 处理接收数据并触发发送验证
 **参数**:
-- `rxDataList`: 接收数据列表
-**返回值**: TRM_OK-成功, 其他-失败
+- `rxDataList`: 接收数据列表指针
+  - `slotIndex`: 时隙索引
+    - 范围: 0 - 7
+  - `userCount`: 用户数量
+    - 范围: 0 - 128
+  - `frameNo`: 帧号
+  - `users`: 用户数据数组指针
+    - 每个用户包含:
+      - `userId`: 用户ID
+      - `slotIndex`: 时隙索引
+      - `dataLen`: 数据长度
+      - `rateMode`: 接收速率模式
+      - `rssi`: 信号强度(dBm)
+      - `snr`: 信噪比(dB)
+      - `data`: 数据指针
+      - `freq`: 频率(Hz)
+      - `beam`: 波束信息
+**返回值**: 
+- `TRM_OK`: 处理成功
+- `TRM_ERR_PARAM`: 参数错误
+- 其他: 处理失败
 **说明**: 这是TRM发送验证器的核心函数，用于在接收到数据后自动触发相应的发送验证操作
 
 ---
