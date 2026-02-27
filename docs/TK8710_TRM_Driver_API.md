@@ -395,40 +395,102 @@ TRM_LOG_INFO(fmt, ...);   // 信息日志
 TRM_LOG_DEBUG(fmt, ...);  // 调试日志
 ```
 
-### 5. 发送验证器
+### 5. 调试接口
 
-#### `TRM_TxValidatorInit`
+#### `TK8710GetIrqTimeStats`
+
 ```c
-int TRM_TxValidatorInit(const TRM_TxValidatorConfig* config);
+int TK8710GetIrqTimeStats(uint8_t irqType, uint32_t* totalTime, 
+                          uint32_t* maxTime, uint32_t* minTime, uint32_t* count);
 ```
-**功能**: 初始化发送验证器
+
+**功能**: 获取中断处理时间统计
 **参数**:
-- `config`: 验证器配置
-**返回值**: TRM_OK-成功, 其他-失败
 
-#### `TRM_TxValidatorOnRxData`
+- `irqType`: 中断类型 (0-9)
+- `totalTime`: 总处理时间 (输出参数)
+- `maxTime`: 最大处理时间 (输出参数)
+- `minTime`: 最小处理时间 (输出参数)
+- `count`: 中断次数 (输出参数)
+  **返回值**: 0-成功, 1-失败
+
+#### `TK8710ResetIrqTimeStats`
+
 ```c
-int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
+int TK8710ResetIrqTimeStats(uint8_t irqType);
 ```
-**功能**: 处理接收数据并触发发送
+
+**功能**: 重置中断处理时间统计
 **参数**:
-- `rxDataList`: 接收数据列表
-**返回值**: TRM_OK-成功, 其他-失败
 
-#### `TRM_TxValidatorGetStats`
+- `irqType`: 中断类型 (0-9)，255表示重置所有
+  **返回值**: 0-成功, 1-失败
+
+#### `TK8710PrintIrqTimeStats`
+
 ```c
-int TRM_TxValidatorGetStats(TRM_TxValidatorStats* stats);
+void TK8710PrintIrqTimeStats(void);
 ```
-**功能**: 获取验证器统计信息
+
+**功能**: 打印中断处理时间统计报告
+
+#### `TK8710SetForceProcessAllUsers`
+
+```c
+void TK8710SetForceProcessAllUsers(uint8_t enable);
+```
+
+**功能**: 设置是否强制处理所有用户数据（测试接口）
 **参数**:
-- `stats`: 统计信息输出
-**返回值**: TRM_OK-成功, 其他-失败
 
-#### `TRM_TxValidatorDeinit`
+- `enable`: 1-强制处理所有用户数据，0-按CRC结果正常处理
+  **说明**: 此函数仅用于测试中断处理能力
+
+#### `TK8710GetForceProcessAllUsers`
+
 ```c
-void TRM_TxValidatorDeinit(void);
+uint8_t TK8710GetForceProcessAllUsers(void);
 ```
-**功能**: 清理发送验证器
+
+**功能**: 获取当前是否强制处理所有用户数据
+**返回值**: 1-强制处理，0-正常处理
+
+#### `TK8710SetForceMaxUsersTx`
+
+```c
+void TK8710SetForceMaxUsersTx(uint8_t enable);
+```
+
+**功能**: 设置是否强制按最大用户数发送（测试接口）
+**参数**:
+
+- `enable`: 1-强制按最大用户数发送，0-按实际输入用户数发送
+  **说明**: 此函数仅用于测试中断处理能力
+
+#### `TK8710GetForceMaxUsersTx`
+
+```c
+uint8_t TK8710GetForceMaxUsersTx(void);
+```
+
+**功能**: 获取当前是否强制按最大用户数发送
+**返回值**: 1-强制发送，0-正常发送
+
+#### `TK8710DebugCtrl`
+
+```c
+int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
+                    const void* inputParams, void* outputParams);
+```
+
+**功能**: 调试控制接口
+**参数**:
+
+- `ctrlType`: 控制类型
+- `optType`: 操作类型 (GET/SET)
+- `inputParams`: 输入参数
+- `outputParams`: 输出参数
+**返回值**: 0-成功, 1-失败
 
 ---
 
