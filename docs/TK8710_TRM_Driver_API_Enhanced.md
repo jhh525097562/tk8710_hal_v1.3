@@ -585,40 +585,17 @@ TRM_LOG_INFO(fmt, ...);   // 信息日志
 TRM_LOG_DEBUG(fmt, ...);  // 调试日志
 ```
 
-### 5. 发送验证器
-
-#### `TRM_TxValidatorInit`
-```c
-int TRM_TxValidatorInit(const TRM_TxValidatorConfig* config);
-```
-**功能**: 初始化发送验证器
-**参数**:
-- `config`: 验证器配置
-**返回值**: TRM_OK-成功, 其他-失败
+### 5. TRM调试接口
 
 #### `TRM_TxValidatorOnRxData`
 ```c
 int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
 ```
-**功能**: 处理接收数据并触发发送
+**功能**: 处理接收数据并触发发送验证
 **参数**:
 - `rxDataList`: 接收数据列表
 **返回值**: TRM_OK-成功, 其他-失败
-
-#### `TRM_TxValidatorGetStats`
-```c
-int TRM_TxValidatorGetStats(TRM_TxValidatorStats* stats);
-```
-**功能**: 获取验证器统计信息
-**参数**:
-- `stats`: 统计信息输出
-**返回值**: TRM_OK-成功, 其他-失败
-
-#### `TRM_TxValidatorDeinit`
-```c
-void TRM_TxValidatorDeinit(void);
-```
-**功能**: 清理发送验证器
+**说明**: 这是TRM发送验证器的核心函数，用于在接收到数据后自动触发相应的发送验证操作
 
 ---
 
@@ -670,7 +647,7 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
                user->userId, user->rateMode, user->dataLen);
     }
     
-    // 触发发送验证
+    // 调试接口：触发发送验证（仅在调试时使用）
     TRM_TxValidatorOnRxData(rxDataList);
 }
 ```
