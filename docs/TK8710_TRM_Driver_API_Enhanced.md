@@ -13,11 +13,14 @@
 ### 1. 芯片初始化与控制
 
 #### `TK8710Init`
+
 ```c
 int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallback);
 ```
+
 **功能**: 初始化TK8710芯片
 **参数**:
+
 - `initConfig`: 初始化配置参数，为NULL时使用默认配置
   ```c
   typedef struct {
@@ -44,54 +47,58 @@ int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallbac
 - `irqCallback`: 中断回调函数指针
   ```c
   typedef void (*TK8710IrqCallback)(TK8710IrqResult irqResult);
-  
+
   typedef struct {
       irqType_e irq_type;             /* 中断类型 */
       int32_t   bcn_freq_offset;      /* BCN offset */
       uint8_t   rx_bcnbits;           /* 接收BCN bit数 */
       uint8_t   rxbcn_status;         /* 接收BCN状态 */
-      
+
       /* MD_UD中断专用信息 */
       uint8_t  mdUserDataValid; /* MD_UD用户波束信息有效性 */
-      
+
       /* BRD_UD中断专用信息 */
       uint8_t  brdUserDataValid; /* BRD_UD用户波束信息有效性 */
-  
+
       /* MD_DATA中断专用信息 */
       uint8_t  mdDataValid;         /* MD_DATA数据有效性 */
       uint8_t  crcValidCount;       /* CRC正确的用户数量 */
       uint8_t  crcErrorCount;       /* CRC错误的用户数量 */
       uint8_t  maxUsers;            /* 当前速率模式最大用户数 */
       TK8710CrcResult crcResults[128]; /* CRC结果数组 (最多128个用户) */
-   
+
       /* BRD_DATA中断专用信息 */
       uint8_t  brdDataValid;         /* BRD_DATA数据有效性 */
       uint8_t  brdCrcValidCount;       /* CRC正确的用户数量 */
       uint8_t  brdCrcErrorCount;       /* CRC错误的用户数量 */
       uint8_t  brdMaxUsers;            /* 当前速率模式最大用户数 */
       TK8710CrcResult brdCrcResults[16]; /* CRC结果数组 (最多16个用户) */
-  
+
       /* S1时隙自动发送信息 */
       uint8_t  autoTxValid;         /* 自动发送数据有效性 */
       uint8_t  autoTxCount;         /* 自动发送用户数量 */
-      
+
       /* 广播发送信息 */
       uint8_t  brdTxValid;          /* 广播发送数据有效性 */
       uint8_t  brdTxCount;          /* 广播发送用户数量 */
-      
+
       /* 信号质量信息 */
       uint8_t  signalInfoValid;     /* 信号信息有效性 */
       uint8_t  currentRateIndex;    /* 当前速率序号 (0-based) */
   } TK8710IrqResult;
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710Startwork`
+
 ```c
 int TK8710Startwork(uint8_t workType, uint8_t workMode);
 ```
+
 **功能**: 芯片进入收发状态
 **参数**:
+
 - `workType`: 工作类型
   ```c
   typedef enum {
@@ -106,14 +113,18 @@ int TK8710Startwork(uint8_t workType, uint8_t workMode);
       TK8710_WORK_MODE_SINGLE     = 2,  /* 单次工作模式 */
   } workMode_e;
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710RfInit`
+
 ```c
 int TK8710RfInit(const ChiprfConfig* initrfConfig);
 ```
+
 **功能**: 初始化芯片连接射频
 **参数**:
+
 - `initrfConfig`: 射频初始化配置参数
   ```c
   typedef struct {
@@ -123,27 +134,31 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-  
+
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-  
+
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
   } TxAdcConfig;
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710ResetChip`
+
 ```c
 int TK8710ResetChip(uint8_t rstType);
 ```
+
 **功能**: 芯片复位
 **参数**:
+
 - `rstType`: 复位类型
   ```c
   typedef enum {
@@ -151,16 +166,20 @@ int TK8710ResetChip(uint8_t rstType);
       TK8710_RST_ALL           = 2,  /* 复位状态机+寄存器 */
   } rstType_e;
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 2. 配置管理
 
 #### `TK8710SetConfig`
+
 ```c
 int TK8710SetConfig(TK8710ConfigType type, const void* params);
 ```
+
 **功能**: 设置芯片配置
 **参数**:
+
 - `type`: 配置类型
   ```c
   typedef enum {
@@ -169,19 +188,23 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
 
+  ```
+
 **功能**: 获取芯片配置
 **参数**:
 
 - `type`: 配置类型 (同TK8710SetConfig)
 - `params`: 配置参数输出指针
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 3. 数据传输
 
 #### `TK8710SetDownlink1DataWithPower`
+
 ```c
 int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t power, TK8710BrdDataType dataType);
 ```
+
 **功能**: 设置下行1广播数据
 **参数**:
 
@@ -194,14 +217,18 @@ int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint
   #define TK8710_BRD_DATA_TYPE_NORMAL     0   /* 正常广播: 使用Driver自动生成的波束信息 */
   #define TK8710_BRD_DATA_TYPE_SLOT3      1   /* 与Slot3共用波束信息 */
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710SetDownlink2DataWithPower`
+
 ```c
 int TK8710SetDownlink2DataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t power, TK8710UserDataType dataType);
 ```
+
 **功能**: 设置下行2用户数据
 **参数**:
+
 - `userIndex`: 用户索引 (0-127)
 - `data`: 用户数据指针
 - `dataLen`: 数据长度 (0-512字节)
@@ -211,62 +238,78 @@ int TK8710SetDownlink2DataWithPower(uint8_t userIndex, const uint8_t* data, uint
   #define TK8710_USER_DATA_TYPE_NORMAL    0   /* 正常发送: 使用指定信息模式的波束信息 */
   #define TK8710_USER_DATA_TYPE_SLOT1     1   /* 与Slot1共用波束信息 (Driver自动生成) */
   ```
+
   **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710SetTxUserInfo`
+
 ```c
 int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint8_t* ahData, uint8_t pilotPower);
 ```
+
 **功能**: 设置发送用户信息
 **参数**:
+
 - `userIndex`: 用户索引 (0-127)
 - `freq`: 用户频率 (Hz)
 - `ahData`: AH数据指针 (64字节数组)
 - `pilotPower`: 导频功率 (0-31)
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 4. 数据接收
 
 #### `TK8710GetRxData`
+
 ```c
 int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 ```
+
 **功能**: 获取接收数据
 **参数**:
+
 - `userIndex`: 用户索引 (0-127)
 - `data`: 数据指针输出
 - `dataLen`: 数据长度输出
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710GetSignalInfo`
+
 ```c
 int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq);
 ```
+
 **功能**: 获取信号质量信息
 **参数**:
+
 - `userIndex`: 用户索引 (0-127)
 - `rssi`: RSSI值输出 (dBm)
 - `snr`: SNR值输出
 - `freq`: 频率值输出 (Hz)
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710ReleaseRxData`
+
 ```c
 void TK8710ReleaseRxData(uint8_t userIndex);
 ```
+
 **功能**: 释放接收数据缓冲区
 **参数**:
+
 - `userIndex`: 用户索引 (0-127)
 
 ### 5. 状态查询
 
 #### `TK8710GetSlotCfg`
+
 ```c
 const slotCfg_t* TK8710GetSlotCfg(void);
 ```
+
 **功能**: 获取时隙配置
 **返回值**: 时隙配置指针
-  ```c
+
+```c
   typedef struct {
       msMode_e   msMode;          /* 主从模式 */
       uint8_t    plCrcEn;         /* Payload CRC使能 */
@@ -282,7 +325,7 @@ const slotCfg_t* TK8710GetSlotCfg(void);
       uint32_t   rx_delay;        /* RX delay, 默认0 */
       uint32_t   md_agc;          /* DATA AGC长度, 默认1024 */
       uint8_t    local_sync;      /* 本地同步: 1=产生本地同步信号, 0=接收外部同步脉冲 */
-      
+    
       SlotConfig s0Cfg[4];           /* 时隙0(BCN)配置 */
       SlotConfig s1Cfg[4];           /* 时隙1配置 */
       SlotConfig s2Cfg[4];           /* 时隙2配置 */
@@ -313,26 +356,23 @@ const slotCfg_t* TK8710GetSlotCfg(void);
       TK8710_RATE_MODE_11 = 11,  /* 速率模式11: 128KHz, 500KHz系统带宽, 16用户 */
       TK8710_RATE_MODE_18 = 18,  /* 速率模式18: 128KHz, 500KHz系统带宽, 16用户 */
   } rateMode_e;
-  ```
+```
+
 **说明**: TRM和其他业务模块通过此接口获取完整的slot配置信息，包括速率模式配置等
 
 ### 6. 中断处理
 
-#### `TK8710IrqInit`
-```c
-int TK8710IrqInit(const TK8710IrqCallback* irqCallback);
-```
-**功能**: 初始化驱动层中断系统
-**参数**:
-- `irqCallback`: 中断回调函数指针 (参见TK8710Init参数说明)
-**返回值**: 0-成功, 1-失败, 2-超时
+中断系统通过 `TK8710Init` 函数自动初始化，无需单独调用中断初始化函数。
 
 #### `TK8710GpioInit`
+
 ```c
 int TK8710GpioInit(uint8_t gpioPin, TK8710GpioEdge edge, const TK8710IrqCallback* callback, void* userData);
 ```
+
 **功能**: 初始化GPIO中断
 **参数**:
+
 - `gpioPin`: GPIO引脚号
 - `edge`: 中断触发边沿
   ```c
@@ -344,26 +384,32 @@ int TK8710GpioInit(uint8_t gpioPin, TK8710GpioEdge edge, const TK8710IrqCallback
   ```
 - `callback`: 回调函数指针
 - `userData`: 用户数据指针
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710GpioIrqEnable`
+
 ```c
 int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 ```
+
 **功能**: 使能GPIO中断
 **参数**:
+
 - `gpioPin`: GPIO引脚号
 - `enable`: 使能标志 (1=使能, 0=禁用)
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 7. 日志系统
 
 #### `TK8710LogSimpleInit`
+
 ```c
 int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
 ```
+
 **功能**: 简化初始化日志系统
 **参数**:
+
 - `level`: 日志级别
   ```c
   typedef enum {
@@ -385,9 +431,11 @@ int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
       TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
   } TK8710LogModule;
   ```
+
   **返回值**: 0-成功, 1-失败
 
 #### `TK8710_LOG_*` 宏
+
 ```c
 TK8710_LOG_ERROR(module, fmt, ...);  // 错误日志
 TK8710_LOG_WARN(module, fmt, ...);   // 警告日志
@@ -401,83 +449,106 @@ TK8710_LOG_CONFIG_WARN(fmt, ...);    // 配置模块警告日志
 TK8710_LOG_IRQ_INFO(fmt, ...);        // 中断模块信息日志
 TK8710_LOG_HAL_DEBUG(fmt, ...);       // HAL层调试日志
 ```
+
 **功能**: 输出日志信息
 **参数**:
+
 - `module`: 模块类型 (TK8710_LOG_MODULE_*)
 - `fmt`: 格式化字符串
 - `...`: 可变参数
-**说明**: 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
+  **说明**: 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 
 ### 8. 调试接口
 
 #### `TK8710GetIrqTimeStats`
+
 ```c
 int TK8710GetIrqTimeStats(uint8_t irqType, uint32_t* totalTime, 
                           uint32_t* maxTime, uint32_t* minTime, uint32_t* count);
 ```
+
 **功能**: 获取中断处理时间统计
 **参数**:
+
 - `irqType`: 中断类型 (0-9)
 - `totalTime`: 总处理时间 (输出参数)
 - `maxTime`: 最大处理时间 (输出参数)
 - `minTime`: 最小处理时间 (输出参数)
 - `count`: 中断次数 (输出参数)
-**返回值**: 0-成功, 1-失败
+  **返回值**: 0-成功, 1-失败
 
 #### `TK8710ResetIrqTimeStats`
+
 ```c
 int TK8710ResetIrqTimeStats(uint8_t irqType);
 ```
+
 **功能**: 重置中断处理时间统计
 **参数**:
+
 - `irqType`: 中断类型 (0-9)，255表示重置所有
-**返回值**: 0-成功, 1-失败
+  **返回值**: 0-成功, 1-失败
 
 #### `TK8710PrintIrqTimeStats`
+
 ```c
 void TK8710PrintIrqTimeStats(void);
 ```
+
 **功能**: 打印中断处理时间统计报告
 
 #### `TK8710SetForceProcessAllUsers`
+
 ```c
 void TK8710SetForceProcessAllUsers(uint8_t enable);
 ```
+
 **功能**: 设置是否强制处理所有用户数据（测试接口）
 **参数**:
+
 - `enable`: 1-强制处理所有用户数据，0-按CRC结果正常处理
-**说明**: 此函数仅用于测试中断处理能力
+  **说明**: 此函数仅用于测试中断处理能力
 
 #### `TK8710GetForceProcessAllUsers`
+
 ```c
 uint8_t TK8710GetForceProcessAllUsers(void);
 ```
+
 **功能**: 获取当前是否强制处理所有用户数据
 **返回值**: 1-强制处理，0-正常处理
 
 #### `TK8710SetForceMaxUsersTx`
+
 ```c
 void TK8710SetForceMaxUsersTx(uint8_t enable);
 ```
+
 **功能**: 设置是否强制按最大用户数发送（测试接口）
 **参数**:
+
 - `enable`: 1-强制按最大用户数发送，0-按实际输入用户数发送
-**说明**: 此函数仅用于测试中断处理能力
+  **说明**: 此函数仅用于测试中断处理能力
 
 #### `TK8710GetForceMaxUsersTx`
+
 ```c
 uint8_t TK8710GetForceMaxUsersTx(void);
 ```
+
 **功能**: 获取当前是否强制按最大用户数发送
 **返回值**: 1-强制发送，0-正常发送
 
 #### `TK8710DebugCtrl`
+
 ```c
 int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                     const void* inputParams, void* outputParams);
 ```
+
 **功能**: 调试控制接口
 **参数**:
+
 - `ctrlType`: 控制类型
   ```c
   typedef enum {
@@ -491,7 +562,7 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
 - `optType`: 操作类型: 0=Set, 1=Get, 2=Exe
 - `inputParams`: 输入参数指针
 - `outputParams`: 输出参数指针
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 ---
 
@@ -500,30 +571,35 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
 ### 1. 系统初始化与控制
 
 #### `TRM_Init`
+
 ```c
 int TRM_Init(const TRM_InitConfig* config);
 ```
+
 **功能**: 初始化TRM系统
 **参数**:
+
 - `config`: TRM初始化配置指针，包含波束配置、回调函数等设置
 
 **TRM_InitConfig结构体定义**:
+
 ```c
 typedef struct {
     /* 波束配置 */
     TRM_BeamMode beamMode;          /* 波束存储模式 */
     uint32_t     beamMaxUsers;      /* 最大用户数，0表示使用默认值(3000) */
     uint32_t     beamTimeoutMs;     /* 波束超时时间(毫秒)，0表示使用默认值(3000ms) */
-    
+  
     /* 回调函数 */
     TRM_Callbacks callbacks;
-    
+  
     /* 平台配置(预留) */
     void* platformConfig;
 } TRM_InitConfig;
 ```
 
 **结构体成员详细说明**:
+
 - `beamMode`: 波束存储模式
   - `TRM_BEAM_MODE_FULL_STORE`: 完整波束存储模式(CPU RAM)
   - `TRM_BEAM_MODE_MAPPING`: 波束映射模式(8710 RAM)
@@ -533,6 +609,7 @@ typedef struct {
 - `platformConfig`: 平台配置指针(预留)
 
 **TRM_Callbacks结构体定义**:
+
 ```c
 typedef struct {
     TRM_OnRxData      onRxData;      /* 接收数据回调函数指针 */
@@ -543,6 +620,7 @@ typedef struct {
 ```
 
 **回调函数类型定义**:
+
 ```c
 /* 接收数据回调 - 上层必须同步处理数据 */
 typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
@@ -556,46 +634,59 @@ typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
 /* 错误回调 */
 typedef void (*TRM_OnError)(int errorCode, const char* message);
 ```
-**返回值**: 
+
+**返回值**:
+
 - `TRM_OK`: 初始化成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_MEM`: 内存不足
 - 其他: 初始化失败
 
 #### `TRM_Start`
+
 ```c
 int TRM_Start(void);
 ```
+
 **功能**: 启动TRM系统，开始处理数据发送和接收
-**返回值**: 
+**返回值**:
+
 - `TRM_OK`: 启动成功
 - `TRM_ERR_STATE`: 状态错误(未初始化或已启动)
 - 其他: 启动失败
 
 #### `TRM_Stop`
+
 ```c
 int TRM_Stop(void);
 ```
+
 **功能**: 停止TRM系统，停止数据处理
-**返回值**: 
+**返回值**:
+
 - `TRM_OK`: 停止成功
 - `TRM_ERR_STATE`: 状态错误(未启动)
 - 其他: 停止失败
 
 #### `TRM_Deinit`
+
 ```c
 void TRM_Deinit(void);
 ```
+
 **功能**: 清理TRM系统，释放所有资源
 
 ### 2. 数据发送
 
 #### `TRM_SendData`
+
 ```c
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 ```
+
 **功能**: 发送用户数据(支持单速率和多速率模式)
 **参数**:
+
 - `userId`: 用户ID，32位唯一标识符
   - 范围: 0x00000000 - 0xFFFFFFFF
   - 0xFFFFFFFF: 保留值，用于特殊操作
@@ -619,7 +710,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 - `dataType`: 数据类型
   - `TK8710_USER_DATA_TYPE_NORMAL`: 正常用户数据
   - `TK8710_USER_DATA_TYPE_SLOT3`: 与Slot3共用数据
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 发送成功(数据已入队)
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_QUEUE_FULL`: 发送队列已满
@@ -627,11 +718,14 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 - 其他: 发送失败
 
 #### `TRM_SendBroadcast`
+
 ```c
 int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
 ```
+
 **功能**: 发送广播数据
 **参数**:
+
 - `brdIndex`: 广播索引
   - 范围: 0 - 15
   - 对应不同的广播用户
@@ -648,22 +742,25 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
 - `dataType`: 数据类型
   - `TK8710_BRD_DATA_TYPE_NORMAL`: 正常广播数据
   - `TK8710_BRD_DATA_TYPE_SLOT3`: 与Slot3共用波束信息
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 发送成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NOT_INIT`: TRM未初始化
 - 其他: 发送失败
 
 #### `TRM_ClearTxData`
+
 ```c
 int TRM_ClearTxData(uint32_t userId);
 ```
+
 **功能**: 清除发送数据
 **参数**:
+
 - `userId`: 用户ID
   - 0xFFFFFFFF: 清除所有用户的发送数据
   - 其他值: 清除指定用户的发送数据
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 清除成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 清除失败
@@ -671,16 +768,20 @@ int TRM_ClearTxData(uint32_t userId);
 ### 3. 波束管理
 
 #### `TRM_SetBeamInfo`
+
 ```c
 int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
 ```
+
 **功能**: 设置用户波束信息
 **参数**:
+
 - `userId`: 用户ID
   - 范围: 0x00000000 - 0xFFFFFFFF
 - `beamInfo`: 波束信息指针
 
 **TRM_BeamInfo结构体定义**:
+
 ```c
 typedef struct {
     uint32_t userId;            /* 用户ID */
@@ -693,6 +794,7 @@ typedef struct {
 ```
 
 **结构体成员详细说明**:
+
 - `userId`: 用户ID，与参数一致
 - `freq`: 频率，26位格式
   - 范围: 0 - 0x03FFFFFF
@@ -707,52 +809,61 @@ typedef struct {
 - `valid`: 有效标志
   - 1: 波束信息有效
   - 0: 波束信息无效
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_MEM`: 内存不足
 - 其他: 设置失败
 
 #### `TRM_GetBeamInfo`
+
 ```c
 int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 ```
+
 **功能**: 获取用户波束信息
 **参数**:
+
 - `userId`: 用户ID
   - 范围: 0x00000000 - 0xFFFFFFFF
 - `beamInfo`: 波束信息输出指针
   - 函数会填充此结构体
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_BEAM`: 未找到波束信息
 - 其他: 获取失败
 
 #### `TRM_ClearBeamInfo`
+
 ```c
 int TRM_ClearBeamInfo(uint32_t userId);
 ```
+
 **功能**: 清除用户波束信息
 **参数**:
+
 - `userId`: 用户ID
   - 0xFFFFFFFF: 清除所有用户的波束信息
   - 其他值: 清除指定用户的波束信息
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 清除成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 清除失败
 
 #### `TRM_SetBeamTimeout`
+
 ```c
 int TRM_SetBeamTimeout(uint32_t timeoutMs);
 ```
+
 **功能**: 设置波束超时时间
 **参数**:
+
 - `timeoutMs`: 超时时间(毫秒)
   - 范围: 1000 - 30000
   - 0: 使用默认值(3000ms)
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 设置失败
@@ -760,23 +871,30 @@ int TRM_SetBeamTimeout(uint32_t timeoutMs);
 ### 5. 状态查询
 
 #### `TRM_IsRunning`
+
 ```c
 int TRM_IsRunning(void);
 ```
+
 **功能**: 检查TRM是否运行中
-**返回值**: 
+**返回值**:
+
 - 1: 运行中
 - 0: 未运行
 
 #### `TRM_GetStats`
+
 ```c
 int TRM_GetStats(TRM_Stats* stats);
 ```
+
 **功能**: 获取统计信息
 **参数**:
+
 - `stats`: 统计信息输出指针
 
 **TRM_Stats结构体定义**:
+
 ```c
 typedef struct {
     uint32_t txCount;           /* 发送次数 */
@@ -789,6 +907,7 @@ typedef struct {
 ```
 
 **结构体成员详细说明**:
+
 - `txCount`: 发送次数
   - 累计的数据发送尝试次数
 - `txSuccessCount`: 发送成功次数
@@ -801,34 +920,43 @@ typedef struct {
   - 累计的内存分配操作次数
 - `memFreeCount`: 内存释放次数
   - 累计的内存释放操作次数
-  **返回值**: 
+    **返回值**:
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 获取失败
 
 #### `TRM_GetCurrentFrame`
+
 ```c
 uint32_t TRM_GetCurrentFrame(void);
 ```
+
 **功能**: 获取当前帧号
 **返回值**: 当前帧号
+
 - 范围: 0 - g_trmMaxFrameCount-1
 
 #### `TRM_SetCurrentFrame`
+
 ```c
 void TRM_SetCurrentFrame(uint32_t frameNo);
 ```
+
 **功能**: 设置当前帧号
 **参数**:
+
 - `frameNo`: 帧号
   - 范围: 0 - g_trmMaxFrameCount-1
 
 #### `TRM_SetMaxFrameCount`
+
 ```c
 void TRM_SetMaxFrameCount(uint32_t maxCount);
 ```
+
 **功能**: 设置最大帧数（超帧大小）
 **参数**:
+
 - `maxCount`: 最大帧数
   - 范围: 1 - 10000
   - 默认值: 1000
@@ -836,32 +964,40 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
 ### 6. 回调函数管理
 
 #### `TRM_RegisterDriverCallback`
+
 ```c
 int TRM_RegisterDriverCallback(TK8710IrqCallback* driverIrqCallback);
 ```
+
 **功能**: 注册Driver中断回调函数
 **参数**:
+
 - `driverIrqCallback`: Driver中断回调函数指针
-**返回值**: 
+  **返回值**:
 - `TRM_OK`: 注册成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 注册失败
 
 #### `TRM_GetIrqCallback`
+
 ```c
 TK8710IrqCallback* TRM_GetIrqCallback(void);
 ```
+
 **功能**: 获取TRM中断回调函数
 **返回值**: TRM中断回调函数指针
 
 ### 7. TRM日志系统
 
 #### `TRM_LogInit`
+
 ```c
 void TRM_LogInit(TRMLogLevel level);
 ```
+
 **功能**: 初始化TRM日志系统
 **参数**:
+
 - `level`: 日志级别
   ```c
   typedef enum {
@@ -873,18 +1009,23 @@ void TRM_LogInit(TRMLogLevel level);
       TRM_LOG_TRACE = 5    /* 跟踪 */
   } TRMLogLevel;
   ```
+
 **说明**: 初始化TRM独立日志系统，设置默认日志级别
 
 #### `TRM_LogSetLevel`
+
 ```c
 void TRM_LogSetLevel(TRMLogLevel level);
 ```
+
 **功能**: 设置TRM日志级别
 **参数**:
+
 - `level`: 日志级别 (同TRM_LogInit)
-**说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
+  **说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
 
 #### `TRM_LOG_*` 宏
+
 ```c
 TRM_LOG_ERROR(fmt, ...);   // 错误日志
 TRM_LOG_WARN(fmt, ...);    // 警告日志
@@ -892,16 +1033,19 @@ TRM_LOG_INFO(fmt, ...);    // 信息日志
 TRM_LOG_DEBUG(fmt, ...);   // 调试日志
 TRM_LOG_TRACE(fmt, ...);   // 跟踪日志
 ```
+
 **功能**: TRM日志输出宏
 **参数**:
+
 - `fmt`: 格式化字符串
 - `...`: 可变参数
-**说明**: 
+  **说明**:
 - 自动包含文件名、行号、函数名等调试信息
 - 根据当前设置的日志级别过滤输出
 - 完全独立于TK8710日志系统，无任何耦合
 
 **TRM日志系统特性**:
+
 - ✅ **完全独立**: 无TK8710日志系统依赖
 - ✅ **线程安全**: 支持多线程环境使用
 - ✅ **级别过滤**: 支持动态调整日志级别
@@ -911,14 +1055,18 @@ TRM_LOG_TRACE(fmt, ...);   // 跟踪日志
 ### 8. TRM调试接口
 
 #### `TRM_TxValidatorOnRxData`
+
 ```c
 int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
 ```
-**功能**: 处理接收数据并触发发送验证
+
+**功能**: 接收数据事件中触发发送验证
 **参数**:
+
 - `rxDataList`: 接收数据列表指针
 
 **TRM_RxDataList结构体定义**:
+
 ```c
 typedef struct {
     uint8_t  slotIndex;         /* 时隙索引 */
@@ -930,6 +1078,7 @@ typedef struct {
 ```
 
 **TRM_RxUserData结构体定义**:
+
 ```c
 typedef struct {
     uint32_t userId;            /* 用户ID */
@@ -946,6 +1095,7 @@ typedef struct {
 ```
 
 **结构体成员详细说明**:
+
 - `slotIndex`: 时隙索引
   - 范围: 0 - 7
 - `userCount`: 用户数量
@@ -962,17 +1112,18 @@ typedef struct {
     - `data`: 数据指针
     - `freq`: 频率(Hz)
     - `beam`: 波束信息(详见TRM_BeamInfo结构体)
-    **返回值**: 
+      **返回值**:
 - `TRM_OK`: 处理成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 处理失败
-**说明**: 这是TRM发送验证器的核心函数，用于在接收到数据后自动触发相应的发送验证操作
+  **说明**: 这是TRM发送验证器的核心函数，用于在接收到数据后自动触发相应的发送验证操作
 
 ---
 
 ## 使用示例
 
 ### 基本初始化流程
+
 ```c
 // 1. 初始化Driver
 ChipConfig chipConfig = {0};
@@ -994,6 +1145,7 @@ ret = TRM_Start();
 ```
 
 ### 数据发送示例
+
 ```c
 // 单速率模式发送(使用帧号匹配)
 uint8_t testData[] = {0x01, 0x02, 0x03};
@@ -1005,25 +1157,27 @@ ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1,
 ```
 
 ### 接收数据处理示例
+
 ```c
 // 在中断回调中处理接收数据
 void OnTrmRxData(const TRM_RxDataList* rxDataList) {
     printf("接收到数据: 时隙=%d, 用户数=%d, 帧号=%u\n", 
            rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
-    
+  
     // 处理第一个用户的数据
     if (rxDataList->userCount > 0) {
         TRM_RxUserData* user = &rxDataList->users[0];
         printf("用户ID: 0x%08X, 速率模式: %d, 数据长度: %u\n", 
                user->userId, user->rateMode, user->dataLen);
     }
-    
+  
     // 调试接口：触发发送验证（仅在调试时使用）
     TRM_TxValidatorOnRxData(rxDataList);
 }
 ```
 
 ### 日志系统使用示例
+
 ```c
 // 1. 初始化日志系统
 TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
@@ -1043,6 +1197,7 @@ TK8710_LOG_TRACE(TK8710_LOG_MODULE_ALL, "跟踪: 函数进入");
 ```
 
 ### 调试接口使用示例
+
 ```c
 // 1. 中断时间统计
 // 获取特定中断类型的统计信息
@@ -1092,12 +1247,12 @@ if (ret == 0) {
 
 1. **初始化顺序**: 必须先初始化Driver，再初始化TRM
 2. **中断处理**: TRM的中断回调需要注册到Driver
-3. **多速率支持**: 使用`TRM_SendData`进行多速率发送
+3. **多速率支持**: 使用 `TRM_SendData`进行多速率发送
 4. **资源管理**: 及时释放接收数据Buffer，避免内存泄漏
 5. **错误处理**: 所有API调用都需要检查返回值
 6. **线程安全**: 在多线程环境下需要注意临界区保护
-7. **日志系统**: 
-   - 使用`TK8710LogSimpleInit`快速初始化日志系统
+7. **日志系统**:
+   - 使用 `TK8710LogSimpleInit`快速初始化日志系统
    - 生产环境建议设置为INFO或WARN级别以减少性能影响
    - 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 8. **调试接口**:
