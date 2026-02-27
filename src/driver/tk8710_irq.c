@@ -846,6 +846,11 @@ static void tk8710_md_data_process(void)
     const slotCfg_t* slotCfg = TK8710GetSlotCfg();
     if (TK8710GetRateModeParams(slotCfg->rateModes[g_irqResult.currentRateIndex], &rateParams) == TK8710_OK) {
         maxUsers = rateParams.maxUsers;
+        /* 限制最大用户数不超过数组大小 */
+        if (maxUsers > 128) {
+            maxUsers = 128;
+            TK8710_LOG_IRQ_WARN("Rate mode max users %d exceeds array size, limiting to 128", rateParams.maxUsers);
+        }
     } else {
         maxUsers = 16;  /* 默认值 */
         TK8710_LOG_IRQ_WARN("Failed to get rate mode params, use default max users = 16");

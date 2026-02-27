@@ -55,7 +55,7 @@ static uint8_t g_spiTxBuf[TK8710_SPI_TX_BUF_SIZE];
 static uint8_t g_spiRxBuf[TK8710_SPI_RX_BUF_SIZE];
 
 /* 中断回调 */
-static TK8710IrqCallback g_halIrqCallback = NULL;
+static TK8710GpioIrqCallback g_halIrqCallback = NULL;
 static void* g_halUserContext = NULL;
 
 /* JTOOL中断回调包装函数 */
@@ -298,7 +298,7 @@ void TK8710SpiCsControl(uint8_t active)
 /**
  * @brief 初始化GPIO中断
  */
-int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710IrqCallback cb, void* user)
+int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void* user)
 {
 #ifdef _WIN32
     ErrorType err;

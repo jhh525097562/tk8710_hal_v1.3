@@ -83,7 +83,7 @@ static struct gpiod_line *g_csLine = NULL;
 static struct gpiod_line *g_rstLine = NULL;
 
 /* 中断回调 */
-static TK8710IrqCallback g_halIrqCallback = NULL;
+static TK8710GpioIrqCallback g_halIrqCallback = NULL;
 static void* g_halUserContext = NULL;
 
 /* 中断线程 */
@@ -130,9 +130,8 @@ static void* IrqThreadFunc(void* arg)
         
         /* 调用注册的回调函数 */
         if (g_halIrqCallback != NULL) {
-            /* 创建一个空的IRQ结果，因为GPIO中断只是触发器 */
-            TK8710IrqResult gpioResult = {0};
-            g_halIrqCallback(gpioResult);
+            /* GPIO中断回调，传递用户上下文 */
+            g_halIrqCallback(g_halUserContext);
         }
     }
     
@@ -322,7 +321,7 @@ void TK8710SpiCsControl(uint8_t active)
 /**
  * @brief 初始化GPIO中断
  */
-int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710IrqCallback cb, void* user)
+int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void* user)
 {
     int ret;
     int lineOffset = (pin > 0) ? pin : TK8710_IRQ_LINE_OFFSET;
