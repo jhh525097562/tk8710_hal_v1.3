@@ -8,6 +8,8 @@
 
 ## Driver API接口
 
+### 1. Driver API接口 (5大类，17+函数)
+
 ### 1. 芯片初始化与控制
 
 #### `TK8710Init`
@@ -151,27 +153,7 @@ const slotCfg_t* TK8710GetSlotCfg(void);
 ```
 **功能**: 获取时隙配置
 **返回值**: 时隙配置指针
-
-#### `TK8710GetRateMode`
-```c
-uint8_t TK8710GetRateMode(void);
-```
-**功能**: 获取当前速率模式
-**返回值**: 速率模式值
-
-#### `TK8710GetWorkType`
-```c
-uint8_t TK8710GetWorkType(void);
-```
-**功能**: 获取工作类型
-**返回值**: 工作类型值
-
-#### `TK8710GetBrdUserNum`
-```c
-uint8_t TK8710GetBrdUserNum(void);
-```
-**功能**: 获取广播用户数量
-**返回值**: 用户数量
+**说明**: TRM和其他业务模块通过此接口获取完整的slot配置信息，包括速率模式配置等
 
 ### 6. 中断处理
 
