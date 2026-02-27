@@ -175,16 +175,24 @@ compile_test_suite.bat
 
 // 接收回调函数
 void OnRxData(const TRM_RxDataList* rxDataList) {
-    for (int i = 0; i < rxDataList->count; i++) {
-        printf("Received data from user: 0x%08X\n", rxDataList->items[i].userId);
+    for (int i = 0; i < rxDataList->userCount; i++) {
+        printf("Received data from user: 0x%08X\n", rxDataList->users[i].userId);
     }
 }
 
 int main(void) {
-    // 初始化TRM日志
+    // 1. 初始化中断系统
+    TK8710IrqCallback* trmCallback = TRM_GetIrqCallback();
+    TK8710IrqInit(trmCallback);  // 设置TRM回调
+    
+    // 2. 初始化Driver
+    ChipConfig chipConfig = {0};
+    TK8710Init(&chipConfig);  // 无回调参数
+    
+    // 3. 初始化TRM日志
     TRM_LogInit(TRM_LOG_INFO);
     
-    // 配置TRM参数
+    // 4. 配置TRM参数
     TRM_InitConfig config = {0};
     config.beamMode = TRM_BEAM_MODE_FULL_STORE;
     config.beamMaxUsers = 3000;
@@ -194,18 +202,37 @@ int main(void) {
     config.slotConfig.dlSlotCount = 4;
     config.callbacks.onRxData = OnRxData;
     
-    // 初始化并启动TRM
+    // 5. 初始化并启动TRM
     TRM_Init(&config);
     TRM_Start();
     
+    // 6. 启动芯片工作
+    TK8710Startwork(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    
     // 发送数据（TRM自动处理波束查找、队列管理等）
     uint8_t data[] = {0x01, 0x02, 0x03};
-    TRM_SendData(0x12345678, data, sizeof(data), 20, g_trmCurrentFrame);
+    uint32_t currentFrame = TRM_GetCurrentFrame();
+    TRM_SendData(0x12345678, data, sizeof(data), 20, currentFrame + 1, 0, TK8710_USER_DATA_TYPE_NORMAL);
+    
+    // 发送广播数据
+    uint8_t brdData[] = {0xAA, 0xBB, 0xCC};
+    TRM_SendBroadcast(0, brdData, sizeof(brdData), 35, TK8710_BRD_DATA_TYPE_NORMAL);
     
     // 运行主循环
     while (running) {
         // TRM自动处理中断、数据收发、波束管理等
         sleep(1);
+        
+        // 可选：获取TRM运行状态
+        if (TRM_IsRunning()) {
+            printf("TRM is running\n");
+        }
+        
+        // 可选：获取统计信息
+        TRM_Stats stats;
+        if (TRM_GetStats(&stats) == TRM_OK) {
+            printf("Total frames: %u\n", stats.totalFrames);
+        }
     }
     
     // 清理资源
@@ -224,10 +251,12 @@ int main(void) {
 | `TRM_Start()` | 启动TRM系统 | 启动中断处理、数据收发 |
 | `TRM_Stop()` | 停止TRM系统 | 停止所有处理 |
 | `TRM_SendData()` | 发送用户数据 | 自动波束查找、队列管理 |
+| `TRM_SendBroadcast()` | 发送广播数据 | 广播模式数据发送 |
 | `TRM_SetBeamInfo()` | 设置波束信息 | 黄金比例哈希优化 |
 | `TRM_GetBeamInfo()` | 获取波束信息 | 线程安全读取 |
-| `TRM_ScheduleBeamRamRelease()` | 调度延时释放 | 自动内存管理 |
+| `TRM_IsRunning()` | 检查运行状态 | 状态查询 |
 | `TRM_GetStats()` | 获取统计信息 | 性能监控 |
+| `TRM_GetCurrentFrame()` | 获取当前帧号 | 帧同步 |
 
 ### Driver API（底层硬件层）
 
@@ -239,34 +268,45 @@ int main(void) {
 #include "common/tk8710_log.h"
 
 // 中断回调函数
-void OnIrqEvent(int irqType, void* userData) {
-    if (irqType == TK8710_IRQ_RX_DEADLINE) {
+void OnIrqEvent(TK8710IrqResult irqResult) {
+    if (irqResult.irq_type == TK8710_IRQ_RX_DEADLINE) {
         // 处理接收中断
-        TK8710_ProcessRxData();
-    } else if (irqType == TK8710_IRQ_TX_DEADLINE) {
+        printf("RX interrupt: %d users\n", irqResult.crcValidCount);
+    } else if (irqResult.irq_type == TK8710_IRQ_TX_DEADLINE) {
         // 处理发送中断
-        TK8710_ProcessTxData();
+        printf("TX interrupt completed\n");
     }
 }
 
 int main(void) {
-    // 初始化Driver日志
-    TK8710_LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MOD_ALL);
+    // 1. 初始化中断系统
+    TK8710IrqInit(OnIrqEvent);  // 设置中断回调
     
-    // 初始化Driver
-    TK8710_InitConfig config = {0};
-    config.spiMode = TK8710_SPI_MODE_0;
-    config.spiSpeed = 1000000;  // 1MHz
-    config.irqCallback = OnIrqEvent;
+    // 2. 初始化Driver日志
+    TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MOD_ALL);
     
-    TK8710_Init(&config);
+    // 3. 初始化Driver
+    ChipConfig chipConfig = {0};
+    chipConfig.bcn_agc = 0x10;
+    chipConfig.interval = 0x01;
+    chipConfig.tx_dly = 0x01;
+    chipConfig.ant_en = 0x01;
+    chipConfig.rf_sel = 0x00;
+    chipConfig.tx_bcn_en = 0x01;
+    chipConfig.rf_model = 0x01;
+    chipConfig.irq_ctrl0 = 0x7FF;
+    chipConfig.irq_ctrl1 = 0x00;
     
-    // 配置芯片参数
-    TK8710_SetFrequency(2400);  // 2.4GHz
-    TK8710_SetPowerLevel(20);   // 20dBm
-    TK8710_SetAntennaConfig(8); // 8天线
+    TK8710Init(&chipConfig);  // 无回调参数
     
-    // 直接控制硬件发送
+    // 4. 配置芯片参数
+    TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
+    TK8710SetConfig(TK8710_CFG_TYPE_RF_CONFIG, &rfConfig);
+    
+    // 5. 启动芯片工作
+    TK8710Startwork(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    
+    // 6. 直接控制硬件发送
     uint8_t txData[] = {0xAA, 0xBB, 0xCC};
     uint8_t userIndex = 0;
     
@@ -280,17 +320,23 @@ int main(void) {
     
     TK8710SetTxUserInfo(userIndex, frequency, ahData, pilotPower);
     
-    // 触发发送
-    TK8710_TriggerTx();
-    
-    // 运行主循环
+    // 7. 运行主循环
     while (running) {
         // 应用层自定义处理逻辑
         sleep(1);
+        
+        // 可选：调试接口使用
+        if (debug_mode) {
+            // 中断时间统计
+            uint32_t totalTime, maxTime, minTime, count;
+            TK8710GetIrqTimeStats(1, &totalTime, &maxTime, &minTime, &count);
+            printf("IRQ stats: avg=%uus, max=%uus, count=%u\n", 
+                   totalTime/count, maxTime, count);
+        }
     }
     
     // 清理资源
-    TK8710_Deinit();
+    TK8710Deinit();
     
     return 0;
 }
@@ -300,15 +346,35 @@ int main(void) {
 
 | 函数 | 说明 | 特性 |
 |------|------|------|
-| `TK8710_Init()` | 初始化Driver | SPI、中断、基础配置 |
-| `TK8710_Deinit()` | 反初始化Driver | 清理资源 |
+| `TK8710Init()` | 初始化Driver | SPI、中断、基础配置 |
+| `TK8710IrqInit()` | 初始化中断系统 | 设置中断回调 |
+| `TK8710Startwork()` | 启动芯片工作 | 主模式/从模式 |
 | `TK8710SetDownlink2DataWithPower()` | 设置下行2数据 | 直接硬件控制 |
+| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据 | 广播数据发送 |
 | `TK8710SetTxUserInfo()` | 设置用户信息 | 频率、波束、功率 |
-| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据 | 下行1发送 |
-| `TK8710_ProcessRxData()` | 处理接收数据 | 手动数据处理 |
-| `TK8710_GetChipStatus()` | 获取芯片状态 | 硬件状态监控 |
-| `TK8710_SetFrequency()` | 设置频率 | 频率控制 |
-| `TK8710_SetPowerLevel()` | 设置功率 | 功率控制 |
+| `TK8710SetConfig()` | 设置芯片配置 | 时隙、射频等配置 |
+| `TK8710GetConfig()` | 获取芯片配置 | 读取当前配置 |
+| `TK8710GetSlotCfg()` | 获取时隙配置 | 时隙参数查询 |
+| `TK8710ResetChip()` | 芯片复位 | 状态机/寄存器复位 |
+
+### 调试接口使用
+
+**性能监控和测试功能：**
+
+```c
+// 1. 中断时间统计
+uint32_t totalTime, maxTime, minTime, count;
+TK8710GetIrqTimeStats(1, &totalTime, &maxTime, &minTime, &count);
+printf("IRQ avg time: %uus\n", totalTime/count);
+
+// 2. 测试接口（仅用于开发测试）
+TK8710SetForceProcessAllUsers(1);  // 强制处理所有用户
+TK8710SetForceMaxUsersTx(1);       // 强制最大用户发送
+
+// 3. 调试控制
+uint8_t debugData[1024];
+TK8710DebugCtrl(TK8710_DBG_TYPE_FFT_OUT, GET_OPT, NULL, debugData);
+```
 
 ## 🔧 核心特性
 
