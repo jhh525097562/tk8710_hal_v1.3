@@ -511,7 +511,8 @@ int init_interrupt_system(void)
     printf("Initializing interrupt system...\n");
     
     /* 1. 初始化驱动层中断系统 */
-    /* 注意：中断系统初始化和TRM回调注册都在init_tk8710_chip()中的TK8710Init()完成 */
+    /* 注意：TRM回调注册在init_tk8710_chip()中的TK8710Init()完成，这里只重置中断结果结构 */
+    TK8710IrqInit(NULL);  /* 重置中断结果结构，确保干净状态 */
     
     /* 2. 初始化GPIO中断 (使用JTOOL的GPIO功能) */
     const TK8710IrqCallback gpio_callback = gpio_irq_wrapper;
