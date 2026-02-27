@@ -438,8 +438,9 @@ int TRM_ClearBeamInfo(uint32_t userId);
 /**
  * @brief 设置波束超时时间
  * @param timeoutMs 超时时间(毫秒)
+ * @return 0-成功, 非0-失败
  */
-void TRM_SetBeamTimeout(uint32_t timeoutMs);
+int TRM_SetBeamTimeout(uint32_t timeoutMs);
 
 /**
  * @brief 设置当前系统帧号
