@@ -363,6 +363,211 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 - `enable`: 使能标志 (1=使能, 0=禁用)
 **返回值**: 0-成功, 1-失败, 2-超时
 
+### 7. 日志系统
+
+#### `TK8710LogInit`
+```c
+int TK8710LogInit(const TK8710LogConfig* config);
+```
+**功能**: 初始化日志系统
+**参数**:
+- `config`: 日志配置
+  ```c
+  typedef struct {
+      TK8710LogLevel level;           /* 当前日志级别 */
+      uint32_t module_mask;           /* 模块掩码 */
+      TK8710LogCallback callback;     /* 日志输出回调 */
+      uint8_t enable_timestamp;       /* 是否启用时间戳 */
+      uint8_t enable_module_name;     /* 是否启用模块名 */
+  } TK8710LogConfig;
+  
+  typedef enum {
+      TK8710_LOG_ERROR = 0,  /* 错误级别 */
+      TK8710_LOG_WARN  = 1,  /* 警告级别 */
+      TK8710_LOG_INFO  = 2,  /* 信息级别 */
+      TK8710_LOG_DEBUG = 3,  /* 调试级别 */
+      TK8710_LOG_TRACE = 4,  /* 跟踪级别 */
+      TK8710_LOG_ALL   = 5   /* 所有级别 */
+  } TK8710LogLevel;
+  
+  typedef enum {
+      TK8710_LOG_MODULE_CORE     = 0x01,  /* 核心模块 */
+      TK8710_LOG_MODULE_DRIVER   = 0x02,  /* Driver模块 */
+      TK8710_LOG_MODULE_HAL      = 0x04,  /* HAL层模块 */
+      TK8710_LOG_MODULE_TRM      = 0x08,  /* TRM模块 */
+      TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
+  } TK8710LogModule;
+  
+  typedef void (*TK8710LogCallback)(TK8710LogLevel level, TK8710LogModule module, 
+                                    const char* file, int line, const char* func, 
+                                    const char* fmt, ...);
+  ```
+**返回值**: 0-成功, 1-失败
+
+#### `TK8710LogSimpleInit`
+```c
+int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
+```
+**功能**: 简化初始化日志系统
+**参数**:
+- `level`: 日志级别
+- `module_mask`: 模块掩码
+**返回值**: 0-成功, 1-失败
+
+#### `TK8710LogSetLevel`
+```c
+void TK8710LogSetLevel(TK8710LogLevel level);
+```
+**功能**: 设置日志级别
+**参数**:
+- `level`: 日志级别
+
+#### `TK8710LogGetLevel`
+```c
+TK8710LogLevel TK8710LogGetLevel(void);
+```
+**功能**: 获取当前日志级别
+**返回值**: 当前日志级别
+
+#### `TK8710LogSetModuleMask`
+```c
+void TK8710LogSetModuleMask(uint32_t module_mask);
+```
+**功能**: 设置模块掩码
+**参数**:
+- `module_mask`: 模块掩码
+
+#### `TK8710LogGetModuleMask`
+```c
+uint32_t TK8710LogGetModuleMask(void);
+```
+**功能**: 获取当前模块掩码
+**返回值**: 当前模块掩码
+
+#### `TK8710LogSetCallback`
+```c
+void TK8710LogSetCallback(TK8710LogCallback callback);
+```
+**功能**: 设置日志回调函数
+**参数**:
+- `callback`: 回调函数指针
+
+#### `TK8710LogEnableTimestamp`
+```c
+void TK8710LogEnableTimestamp(uint8_t enable);
+```
+**功能**: 启用/禁用时间戳
+**参数**:
+- `enable`: 是否启用时间戳
+
+#### `TK8710LogEnableModuleName`
+```c
+void TK8710LogEnableModuleName(uint8_t enable);
+```
+**功能**: 启用/禁用模块名
+**参数**:
+- `enable`: 是否启用模块名
+
+#### `TK8710_LOG_*` 宏
+```c
+TK8710_LOG_ERROR(module, fmt, ...);  // 错误日志
+TK8710_LOG_WARN(module, fmt, ...);   // 警告日志
+TK8710_LOG_INFO(module, fmt, ...);   // 信息日志
+TK8710_LOG_DEBUG(module, fmt, ...);  // 调试日志
+TK8710_LOG_TRACE(module, fmt, ...);  // 跟踪日志
+
+// 模块特定日志宏
+TK8710_LOG_CORE_ERROR(fmt, ...);     // 核心模块错误日志
+TK8710_LOG_DRIVER_WARN(fmt, ...);    // Driver模块警告日志
+TK8710_LOG_HAL_INFO(fmt, ...);        // HAL层信息日志
+TK8710_LOG_TRM_DEBUG(fmt, ...);       // TRM模块调试日志
+```
+
+### 8. 调试接口
+
+#### `TK8710GetIrqTimeStats`
+```c
+int TK8710GetIrqTimeStats(uint8_t irqType, uint32_t* totalTime, 
+                          uint32_t* maxTime, uint32_t* minTime, uint32_t* count);
+```
+**功能**: 获取中断处理时间统计
+**参数**:
+- `irqType`: 中断类型 (0-9)
+- `totalTime`: 总处理时间 (输出参数)
+- `maxTime`: 最大处理时间 (输出参数)
+- `minTime`: 最小处理时间 (输出参数)
+- `count`: 中断次数 (输出参数)
+**返回值**: 0-成功, 1-失败
+
+#### `TK8710ResetIrqTimeStats`
+```c
+int TK8710ResetIrqTimeStats(uint8_t irqType);
+```
+**功能**: 重置中断处理时间统计
+**参数**:
+- `irqType`: 中断类型 (0-9)，255表示重置所有
+**返回值**: 0-成功, 1-失败
+
+#### `TK8710PrintIrqTimeStats`
+```c
+void TK8710PrintIrqTimeStats(void);
+```
+**功能**: 打印中断处理时间统计报告
+
+#### `TK8710SetForceProcessAllUsers`
+```c
+void TK8710SetForceProcessAllUsers(uint8_t enable);
+```
+**功能**: 设置是否强制处理所有用户数据（测试接口）
+**参数**:
+- `enable`: 1-强制处理所有用户数据，0-按CRC结果正常处理
+**说明**: 此函数仅用于测试中断处理能力
+
+#### `TK8710GetForceProcessAllUsers`
+```c
+uint8_t TK8710GetForceProcessAllUsers(void);
+```
+**功能**: 获取当前是否强制处理所有用户数据
+**返回值**: 1-强制处理，0-正常处理
+
+#### `TK8710SetForceMaxUsersTx`
+```c
+void TK8710SetForceMaxUsersTx(uint8_t enable);
+```
+**功能**: 设置是否强制按最大用户数发送（测试接口）
+**参数**:
+- `enable`: 1-强制按最大用户数发送，0-按实际输入用户数发送
+**说明**: 此函数仅用于测试中断处理能力
+
+#### `TK8710GetForceMaxUsersTx`
+```c
+uint8_t TK8710GetForceMaxUsersTx(void);
+```
+**功能**: 获取当前是否强制按最大用户数发送
+**返回值**: 1-强制发送，0-正常发送
+
+#### `TK8710DebugCtrl`
+```c
+int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
+                    const void* inputParams, void* outputParams);
+```
+**功能**: 调试控制接口
+**参数**:
+- `ctrlType`: 控制类型
+  ```c
+  typedef enum {
+      TK8710_DBG_TYPE_FFT_OUT,
+      TK8710_DBG_TYPE_CAPTURE_DATA,
+      TK8710_DBG_TYPE_ACM_CAL_FACTOR,
+      TK8710_DBG_TYPE_ACM_SNR,
+      TK8710_DBG_TYPE_TX_TONE,
+  } TK8710DebugCtrlType;
+  ```
+- `optType`: 操作类型: 0=Set, 1=Get, 2=Exe
+- `inputParams`: 输入参数指针
+- `outputParams`: 输出参数指针
+**返回值**: 0-成功, 1-失败, 2-超时
+
 ---
 
 ## TRM API接口
@@ -402,29 +607,16 @@ void TRM_Deinit(void);
 
 #### `TRM_SendData`
 ```c
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t dataLen, uint8_t power, uint32_t frameNo);
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t dataLen, uint8_t power, uint32_t frameNo, uint8_t targetRateMode);
 ```
-**功能**: 发送数据(单速率模式)
+**功能**: 发送数据(支持单速率和多速率模式)
 **参数**:
 - `userId`: 用户ID
 - `data`: 数据指针
 - `dataLen`: 数据长度
 - `power`: 发射功率
 - `frameNo`: 目标帧号
-**返回值**: TRM_OK-成功, 其他-失败
-
-#### `TRM_SendDataWithRateMode`
-```c
-int TRM_SendDataWithRateMode(uint32_t userId, const uint8_t* data, uint16_t dataLen, uint8_t power, uint32_t frameNo, uint8_t targetRateMode);
-```
-**功能**: 发送数据(多速率模式)
-**参数**:
-- `userId`: 用户ID
-- `data`: 数据指针
-- `dataLen`: 数据长度
-- `power`: 发射功率
-- `frameNo`: 目标帧号
-- `targetRateMode`: 目标速率模式
+- `targetRateMode`: 目标速率模式 (0=使用帧号匹配, 5-11,18=使用速率模式匹配)
 **返回值**: TRM_OK-成功, 其他-失败
 
 ### 3. 状态查询
@@ -523,13 +715,13 @@ ret = TRM_Start();
 
 ### 数据发送示例
 ```c
-// 单速率模式发送
+// 单速率模式发送(使用帧号匹配)
 uint8_t testData[] = {0x01, 0x02, 0x03};
 uint32_t currentFrame = TRM_GetCurrentFrame();
-ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1);
+ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, 0);
 
-// 多速率模式发送
-ret = TRM_SendDataWithRateMode(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, TK8710_RATE_MODE_5);
+// 多速率模式发送(使用速率模式匹配)
+ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, TK8710_RATE_MODE_5);
 ```
 
 ### 接收数据处理示例
@@ -551,16 +743,105 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
 }
 ```
 
+### 日志系统使用示例
+```c
+// 1. 简化初始化日志系统
+TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
+
+// 2. 使用日志宏输出日志
+TK8710_LOG_CORE_ERROR("系统初始化失败: %d", ret);
+TK8710_LOG_DRIVER_WARN("发送队列接近满载: %d/64", queued);
+TK8710_LOG_HAL_INFO("芯片初始化完成");
+TK8710_LOG_TRM_DEBUG("波束信息更新: 用户ID=0x%08X", userId);
+
+// 3. 动态调整日志级别
+TK8710LogSetLevel(TK8710_LOG_DEBUG);  // 设置为调试级别
+TK8710LogSetModuleMask(TK8710_LOG_MODULE_DRIVER | TK8710_LOG_MODULE_TRM);  // 只显示Driver和TRM日志
+
+// 4. 自定义日志回调
+void CustomLogCallback(TK8710LogLevel level, TK8710LogModule module, 
+                      const char* file, int line, const char* func, 
+                      const char* fmt, ...) {
+    // 自定义日志处理逻辑
+    printf("[%s][%s] %s:%d %s(): ", 
+           TK8710LogGetLevelName(level),
+           TK8710LogGetModuleName(module),
+           file, line, func);
+    
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    printf("\n");
+}
+
+TK8710LogSetCallback(CustomLogCallback);
+```
+
+### 调试接口使用示例
+```c
+// 1. 中断时间统计
+// 获取特定中断类型的统计信息
+uint32_t totalTime, maxTime, minTime, count;
+int ret = TK8710GetIrqTimeStats(1, &totalTime, &maxTime, &minTime, &count);
+if (ret == 0) {
+    printf("中断类型1统计: 总时间=%uus, 最大=%uus, 最小=%uus, 次数=%u\n", 
+           totalTime, maxTime, minTime, count);
+}
+
+// 打印完整的中断时间统计报告
+TK8710PrintIrqTimeStats();
+
+// 重置统计信息
+TK8710ResetIrqTimeStats(255);  // 重置所有中断统计
+
+// 2. 测试接口使用
+// 强制处理所有用户数据（用于测试中断处理能力）
+TK8710SetForceProcessAllUsers(1);
+printf("当前强制处理所有用户: %s\n", 
+       TK8710GetForceProcessAllUsers() ? "是" : "否");
+
+// 强制按最大用户数发送（用于测试发送能力）
+TK8710SetForceMaxUsersTx(1);
+printf("当前强制最大用户发送: %s\n", 
+       TK8710GetForceMaxUsersTx() ? "是" : "否");
+
+// 3. 调试控制接口
+// 获取FFT输出数据
+uint8_t fftData[1024];
+ret = TK8710DebugCtrl(TK8710_DBG_TYPE_FFT_OUT, 1, NULL, fftData);
+if (ret == 0) {
+    printf("FFT数据获取成功\n");
+}
+
+// 获取捕获数据
+uint8_t captureData[2048];
+ret = TK8710DebugCtrl(TK8710_DBG_TYPE_CAPTURE_DATA, 1, NULL, captureData);
+if (ret == 0) {
+    printf("捕获数据获取成功\n");
+}
+```
+
 ---
 
 ## 注意事项
 
 1. **初始化顺序**: 必须先初始化Driver，再初始化TRM
 2. **中断处理**: TRM的中断回调需要注册到Driver
-3. **多速率支持**: 使用`TRM_SendDataWithRateMode`进行多速率发送
+3. **多速率支持**: 使用`TRM_SendData`进行多速率发送
 4. **资源管理**: 及时释放接收数据Buffer，避免内存泄漏
 5. **错误处理**: 所有API调用都需要检查返回值
 6. **线程安全**: 在多线程环境下需要注意临界区保护
+7. **日志系统**: 
+   - 日志系统应在系统初始化时尽早设置
+   - 生产环境中建议设置为INFO或WARN级别以减少性能影响
+   - 自定义日志回调函数应避免阻塞操作
+   - 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
+8. **调试接口**:
+   - 测试接口（ForceProcessAllUsers、ForceMaxUsersTx）仅用于开发测试，生产环境应禁用
+   - 中断时间统计会影响性能，仅在调试时启用
+   - 调试控制接口获取的数据量较大，注意缓冲区大小
+   - FFT和捕获数据获取可能影响正常通信，应在非关键时段使用
 
 ---
 
