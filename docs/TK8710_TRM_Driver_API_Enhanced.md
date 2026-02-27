@@ -346,7 +346,7 @@ const slotCfg_t* TK8710GetSlotCfg(void);
 
 **说明**: TRM和其他业务模块通过此接口获取完整的slot配置信息，包括速率模式配置等
 
-### 6. Driver回调函数
+### 6. TRM Driver回调注册
 
 Driver层提供完整的多回调架构，支持为不同中断类型注册专用回调函数，提供灵活的事件处理机制。
 
@@ -1124,7 +1124,7 @@ int TRM_SetBeamTimeout(uint32_t timeoutMs);
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 设置失败
 
-### 5. TRM回调函数类型定义
+### 5. TRM上层回调接口
 
 TRM提供完整的上层回调接口，用于通知应用层各种事件，包括数据接收和发送完成。
 
