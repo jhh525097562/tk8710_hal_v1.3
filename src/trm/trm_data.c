@@ -5,6 +5,7 @@
 
 #include "../inc/trm/trm.h"
 #include "../inc/trm/trm_log.h"
+#include "../inc/trm/trm_beam.h"
 #include "../inc/driver/tk8710_api.h"
 #include "../port/tk8710_hal.h"
 #include <string.h>
@@ -14,6 +15,9 @@
 extern void TK8710EnterCritical(void);
 extern void TK8710ExitCritical(void);
 extern uint64_t TK8710GetTimeUs(void);
+
+/* 外部变量声明 */
+extern TrmContext g_trmCtx;
 
 /*==============================================================================
  * 私有定义
@@ -452,4 +456,185 @@ void TRM_DataInit(void)
 void TRM_DataDeinit(void)
 {
     TRM_ClearTxData(0xFFFFFFFF);
+}
+
+/*==============================================================================
+ * 接收数据处理实现
+ *============================================================================*/
+
+/**
+ * @brief 批量处理接收的用户数据
+ * @param userIndices 用户索引数组
+ * @param userCount 用户数量
+ * @param crcResults CRC结果数组
+ * @param irqResult Driver中断结果
+ * @return 0-成功, 其他-失败
+ */
+int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults, TK8710IrqResult* irqResult)
+{
+    /* 创建用户数据存储数组 */
+    static TRM_RxUserData userStorage[128];  /* 静态存储用户数据数组 */
+    TRM_RxDataList rxDataList;
+    rxDataList.slotIndex = 0;  /* TODO: 获取实际时隙索引 */
+    rxDataList.frameNo = TRM_GetCurrentFrame();  /* 获取当前系统帧号 */
+    rxDataList.userCount = userCount;
+    rxDataList.users = userStorage;  /* 指向用户数据数组 */
+    
+    TRM_LOG_DEBUG("TRM: Processing %d valid users in batch", userCount);
+    
+    /* 获取当前速率模式 - 直接从Driver中断结果中获取 */
+    uint8_t currentRateMode = 0;
+    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    if (slotCfg && slotCfg->rateCount > 0 && irqResult) {
+        /* 使用Driver提供的当前速率索引获取速率模式 */
+        uint8_t currentRateIndex = irqResult->currentRateIndex;
+        if (currentRateIndex < slotCfg->rateCount) {
+            currentRateMode = slotCfg->rateModes[currentRateIndex];
+            if (slotCfg->rateCount > 1) {
+                TRM_LOG_DEBUG("TRM: Multi-rate mode - rateIndex=%u, rateMode=%d", 
+                             currentRateIndex, currentRateMode);
+            } else {
+                TRM_LOG_DEBUG("TRM: Single-rate mode - rateIndex=%u, rateMode=%d", 
+                             currentRateIndex, currentRateMode);
+            }
+        } else {
+            TRM_LOG_WARN("TRM: Invalid rate index %u, using default rate mode", currentRateIndex);
+            currentRateMode = slotCfg->rateModes[0];  /* 使用第一个速率模式 */
+        }
+    } else if (slotCfg && slotCfg->rateCount > 0) {
+        /* 信号信息无效但配置有效，使用第一个速率模式 */
+        TRM_LOG_DEBUG("TRM: Signal info invalid, using first configured rate mode");
+        currentRateMode = slotCfg->rateModes[0];
+    } else {
+        /* 配置无效，使用默认速率模式 */
+        TRM_LOG_WARN("TRM: Failed to get rate info from Driver, using default rate mode");
+        currentRateMode = TK8710_RATE_MODE_8;  /* 默认速率模式 */
+    }
+    
+    /* 批量处理用户数据 */
+    for (uint8_t i = 0; i < userCount; i++) {
+        uint8_t userIndex = userIndices[i];
+        TRM_RxUserData* currentUser = &userStorage[i];
+        
+        TRM_LOG_DEBUG("TRM: Processing user[%d] with CRC result", userIndex);
+        
+        /* 初始化用户数据结构 */
+        memset(currentUser, 0, sizeof(TRM_RxUserData));
+        currentUser->userId = userIndex;  /* 默认用户ID */
+        currentUser->slotIndex = rxDataList.slotIndex;
+        currentUser->rateMode = currentRateMode;  /* 设置接收速率模式 */  // TODO: 后面id需要从获取的数据中提取
+        
+        /* 从接收数据中提取用户信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetRxUserInfo实现 */
+        uint32_t freq;
+        uint32_t ahData[16];
+        uint64_t pilotPower;
+        TRM_BeamInfo beam;
+        memset(&beam, 0, sizeof(beam));
+        
+        /* 调用TK8710GetRxUserInfo获取实际的用户信息 */
+        int ret = TK8710GetRxUserInfo(userIndex, &freq, ahData, &pilotPower);
+        if (ret != TK8710_OK) {
+            /* 如果获取失败，使用默认值 */
+            TRM_LOG_WARN("TRM: Failed to get RX user info for user[%d]: %d, using defaults", userIndex, ret);
+            freq = 20000;  /* 默认频率 */
+            for (int j = 0; j < 16; j++) {
+                ahData[j] = 8192 + j;  /* 默认AH值 */
+            }
+            pilotPower = 1000000;  /* 默认Pilot功率 */
+        }
+        
+        /* 使用获取到的用户信息 */
+        beam.freq = freq;  /* 实际频率 */
+        memcpy(beam.ahData, ahData, sizeof(beam.ahData));  /* 实际AH数据 */
+        beam.pilotPower = pilotPower;  /* 实际Pilot功率 */
+        
+        /* 获取用户数据 */
+        uint8_t* userData;
+        uint16_t dataLen;
+        if (TK8710GetRxData(userIndex, &userData, &dataLen) == TK8710_OK) {
+            // TRM_LOG_DEBUG("TRM: User[%d] received %d bytes\n", userIndex, dataLen);
+            
+            /* 从接收数据的前4个字节提取用户ID */
+            if (dataLen >= 4) {
+                beam.userId = (userData[0] << 24) | (userData[1] << 16) | (userData[2] << 8) | userData[3];
+                TRM_LOG_DEBUG("TRM: Extracted user ID from data: 0x%08X", beam.userId);
+            } else {
+                /* 数据长度不足4字节，保持原有ID */
+                TRM_LOG_WARN("TRM: Data length %d < 4, using default user ID %d", dataLen, beam.userId);
+            }
+            
+            beam.valid = 1;
+            beam.timestamp = TK8710GetTickMs();
+            
+            /* 存储波束信息 */
+            int ret = TRM_SetBeamInfo(beam.userId, &beam);
+            if (ret == TRM_OK) {
+                /* 创建波束后，延时30个帧周期释放波束RAM */
+                TRM_ScheduleBeamRamRelease(beam.userId, 30);
+                TRM_LOG_DEBUG("TRM: Beam info stored successfully for user ID=0x%08X", beam.userId);
+            } else {
+                TRM_LOG_WARN("TRM: Failed to store beam info for user ID=0x%08X, error=%d", beam.userId, ret);
+            }
+            
+            /* 填充用户数据 */
+            currentUser->userId = beam.userId;
+            currentUser->data = userData;
+            currentUser->dataLen = dataLen;
+            
+            /* 获取信号质量信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetSignalInfo实现 */
+            uint32_t rssi, freqSignal;
+            uint8_t snr;
+            if (TK8710GetSignalInfo(userIndex, &rssi, &snr, &freqSignal) == TK8710_OK) {
+                /* SNR转换：uint8_t最大255，直接除以4 */
+                uint8_t snrValue = snr / 4;
+                
+                /* RSSI转换：11位有符号数，需要转换为有符号值 */
+                uint32_t rssiRaw = rssi;
+                int16_t rssiValue = (int16_t)(rssiRaw - 2048) / 4;
+                
+                /* 频率转换：26-bit格式转换为实际频率Hz */
+                uint32_t freq26 = freqSignal & 0x03FFFFFF;  /* 取26位 */
+                int32_t freqValue = freq26 > (1<<25) ? (int)(freq26 - (1<<26)) : freq26;
+                
+                /* 设置信号质量信息到currentUser */
+                currentUser->rssi = rssiValue;               /* 设置实际RSSI值 (int16) */
+                currentUser->snr = snrValue;                 /* 设置SNR值 (uint8) */
+                currentUser->freq = freqValue;               /* 设置频率值 (int32) */
+                
+                // TRM_LOG_DEBUG("TRM: User[%d] Signal: SNR=%d, RSSI=%d, Freq=%d Hz", 
+                //              userIndex, snrValue, rssiValue, freqValue/128);
+            } else {
+                currentUser->rssi = 0;    /* 获取失败时使用默认值 */
+                currentUser->snr = 0;      /* SNR默认值 */
+                currentUser->freq = 0;     /* 频率默认值 */
+                TRM_LOG_WARN("TRM: Failed to get signal info for user[%d]", userIndex);
+            }
+            
+            currentUser->beam = beam;  /* 设置波束信息，包含timestamp */
+        } else {
+            /* 获取数据失败，设置默认值 */
+            currentUser->userId = beam.userId;
+            currentUser->data = NULL;
+            currentUser->dataLen = 0;
+            currentUser->rssi = 0;
+            currentUser->snr = 0;
+            currentUser->freq = 0;
+            currentUser->beam = beam;
+            TRM_LOG_WARN("TRM: Failed to get RX data for user[%d]", userIndex);
+        }
+    }
+    
+    /* 一次性调用接收回调，处理所有用户 */
+    if (g_trmCtx.config.callbacks.onRxData != NULL) {
+        TRM_LOG_DEBUG("TRM: Calling onRxData callback for %d users", userCount);
+        g_trmCtx.config.callbacks.onRxData(&rxDataList);
+    }
+    
+    /* 批量释放接收数据Buffer */
+    for (uint8_t idx = 0; idx < userCount; idx++) {
+        uint8_t userIndex = userIndices[idx];
+        TK8710ReleaseRxData(userIndex);
+    }
+    
+    return TRM_OK;
 }

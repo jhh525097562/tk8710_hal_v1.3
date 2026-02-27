@@ -104,6 +104,22 @@ typedef enum {
 
 
 
+/* TRM状态 */
+
+typedef enum {
+
+    TRM_STATE_UNINIT = 0,
+
+    TRM_STATE_INIT,
+
+    TRM_STATE_RUNNING,
+
+    TRM_STATE_STOPPED,
+
+} TrmState;
+
+
+
 /* 速率模式 */
 
 typedef enum {
@@ -307,6 +323,20 @@ typedef struct {
     void* platformConfig;
 
 } TRM_InitConfig;
+
+
+
+/* TRM上下文 */
+
+typedef struct {
+
+    TrmState state;
+
+    TRM_InitConfig config;
+
+    TRM_Stats stats;
+
+} TrmContext;
 
 
 

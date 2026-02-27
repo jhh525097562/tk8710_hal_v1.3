@@ -58,6 +58,16 @@ void TRM_DataDeinit(void);
  */
 int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
 
+/**
+ * @brief 批量处理接收的用户数据（内部函数）
+ * @param userIndices 用户索引数组
+ * @param userCount 用户数量
+ * @param crcResults CRC结果数组
+ * @param irqResult Driver中断结果
+ * @return 0-成功, 其他-失败
+ */
+int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710CrcResult* crcResults, TK8710IrqResult* irqResult);
+
 #ifdef __cplusplus
 }
 #endif
