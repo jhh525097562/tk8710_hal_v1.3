@@ -513,17 +513,56 @@ int TRM_Init(const TRM_InitConfig* config);
 **功能**: 初始化TRM系统
 **参数**:
 - `config`: TRM初始化配置指针，包含波束配置、回调函数等设置
-  - `beamMode`: 波束存储模式
-    - `TRM_BEAM_MODE_FULL_STORE`: 完整波束存储模式(CPU RAM)
-    - `TRM_BEAM_MODE_MAPPING`: 波束映射模式(8710 RAM)
-  - `beamMaxUsers`: 最大用户数，0表示使用默认值(3000)
-  - `beamTimeoutMs`: 波束超时时间(毫秒)，0表示使用默认值(3000ms)
-  - `callbacks`: 回调函数集合
-    - `onRxData`: 接收数据回调函数指针
-    - `onRxBroadcast`: 广播接收回调函数指针
-    - `onTxComplete`: 发送完成回调函数指针
-    - `onError`: 错误回调函数指针
-  - `platformConfig`: 平台配置指针(预留)
+
+**TRM_InitConfig结构体定义**:
+```c
+typedef struct {
+    /* 波束配置 */
+    TRM_BeamMode beamMode;          /* 波束存储模式 */
+    uint32_t     beamMaxUsers;      /* 最大用户数，0表示使用默认值(3000) */
+    uint32_t     beamTimeoutMs;     /* 波束超时时间(毫秒)，0表示使用默认值(3000ms) */
+    
+    /* 回调函数 */
+    TRM_Callbacks callbacks;
+    
+    /* 平台配置(预留) */
+    void* platformConfig;
+} TRM_InitConfig;
+```
+
+**结构体成员详细说明**:
+- `beamMode`: 波束存储模式
+  - `TRM_BEAM_MODE_FULL_STORE`: 完整波束存储模式(CPU RAM)
+  - `TRM_BEAM_MODE_MAPPING`: 波束映射模式(8710 RAM)
+- `beamMaxUsers`: 最大用户数，0表示使用默认值(3000)
+- `beamTimeoutMs`: 波束超时时间(毫秒)，0表示使用默认值(3000ms)
+- `callbacks`: 回调函数集合，详见TRM_Callbacks结构体
+- `platformConfig`: 平台配置指针(预留)
+
+**TRM_Callbacks结构体定义**:
+```c
+typedef struct {
+    TRM_OnRxData      onRxData;      /* 接收数据回调函数指针 */
+    TRM_OnRxBroadcast onRxBroadcast; /* 广播接收回调函数指针 */
+    TRM_OnTxComplete  onTxComplete;  /* 发送完成回调函数指针 */
+    TRM_OnError       onError;       /* 错误回调函数指针 */
+} TRM_Callbacks;
+```
+
+**回调函数类型定义**:
+```c
+/* 接收数据回调 - 上层必须同步处理数据 */
+typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
+
+/* 广播接收回调 */
+typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
+
+/* 发送完成回调 */
+typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+
+/* 错误回调 */
+typedef void (*TRM_OnError)(int errorCode, const char* message);
+```
 **返回值**: 
 - `TRM_OK`: 初始化成功
 - `TRM_ERR_PARAM`: 参数错误
@@ -647,20 +686,34 @@ int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
 - `userId`: 用户ID
   - 范围: 0x00000000 - 0xFFFFFFFF
 - `beamInfo`: 波束信息指针
-  - `userId`: 用户ID，与参数一致
-  - `freq`: 频率，26位格式
-    - 范围: 0 - 0x03FFFFFF
-    - 单位: Hz/128
-  - `ahData`: AH数据数组，8天线×2(I/Q)
-    - 长度: 16个uint32_t
-    - 包含I/Q两路数据
-  - `pilotPower`: Pilot功率
-    - 范围: 0 - 0xFFFFFFFFFFFFFFFF
-  - `timestamp`: 更新时间戳
-    - 单位: 毫秒
-  - `valid`: 有效标志
-    - 1: 波束信息有效
-    - 0: 波束信息无效
+
+**TRM_BeamInfo结构体定义**:
+```c
+typedef struct {
+    uint32_t userId;            /* 用户ID */
+    uint32_t freq;              /* 频率 (26位格式) */
+    uint32_t ahData[16];        /* AH数据: 8天线×2(I/Q) */
+    uint64_t pilotPower;        /* Pilot功率 */
+    uint32_t timestamp;         /* 更新时间戳*/
+    uint8_t  valid;             /* 有效标志 */
+} TRM_BeamInfo;
+```
+
+**结构体成员详细说明**:
+- `userId`: 用户ID，与参数一致
+- `freq`: 频率，26位格式
+  - 范围: 0 - 0x03FFFFFF
+  - 单位: Hz/128
+- `ahData`: AH数据数组，8天线×2(I/Q)
+  - 长度: 16个uint32_t
+  - 包含I/Q两路数据
+- `pilotPower`: Pilot功率
+  - 范围: 0 - 0xFFFFFFFFFFFFFFFF
+- `timestamp`: 更新时间戳
+  - 单位: 毫秒
+- `valid`: 有效标志
+  - 1: 波束信息有效
+  - 0: 波束信息无效
 **返回值**: 
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
@@ -720,14 +773,26 @@ int TRM_SetSlotConfig(const TRM_SlotConfig* config);
 **功能**: 设置时隙配置
 **参数**:
 - `config`: 时隙配置指针
-  - `bcnSlotCount`: BCN时隙数
-    - 范围: 1 - 8
-  - `brdSlotCount`: 广播时隙数
-    - 范围: 0 - 8
-  - `ulSlotCount`: 上行时隙数
-    - 范围: 1 - 8
-  - `dlSlotCount`: 下行时隙数
-    - 范围: 1 - 8
+
+**TRM_SlotConfig结构体定义**:
+```c
+typedef struct {
+    uint8_t bcnSlotCount;       /* BCN时隙数 */
+    uint8_t brdSlotCount;       /* 广播时隙数 */
+    uint8_t ulSlotCount;        /* 上行时隙数 */
+    uint8_t dlSlotCount;        /* 下行时隙数 */
+} TRM_SlotConfig;
+```
+
+**结构体成员详细说明**:
+- `bcnSlotCount`: BCN时隙数
+  - 范围: 1 - 8
+- `brdSlotCount`: 广播时隙数
+  - 范围: 0 - 8
+- `ulSlotCount`: 上行时隙数
+  - 范围: 1 - 8
+- `dlSlotCount`: 下行时隙数
+  - 范围: 1 - 8
 **返回值**: 
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
@@ -764,12 +829,32 @@ int TRM_GetStats(TRM_Stats* stats);
 **功能**: 获取统计信息
 **参数**:
 - `stats`: 统计信息输出指针
-  - `txCount`: 发送次数
-  - `txSuccessCount`: 发送成功次数
-  - `rxCount`: 接收次数
-  - `beamCount`: 当前波束数量
-  - `memAllocCount`: 内存分配次数
-  - `memFreeCount`: 内存释放次数
+
+**TRM_Stats结构体定义**:
+```c
+typedef struct {
+    uint32_t txCount;           /* 发送次数 */
+    uint32_t txSuccessCount;    /* 发送成功次数 */
+    uint32_t rxCount;           /* 接收次数 */
+    uint32_t beamCount;         /* 当前波束数量 */
+    uint32_t memAllocCount;     /* 内存分配次数 */
+    uint32_t memFreeCount;      /* 内存释放次数 */
+} TRM_Stats;
+```
+
+**结构体成员详细说明**:
+- `txCount`: 发送次数
+  - 累计的数据发送尝试次数
+- `txSuccessCount`: 发送成功次数
+  - 累计的数据发送成功次数
+- `rxCount`: 接收次数
+  - 累计的数据接收次数
+- `beamCount`: 当前波束数量
+  - 当前系统中存储的波束信息数量
+- `memAllocCount`: 内存分配次数
+  - 累计的内存分配操作次数
+- `memFreeCount`: 内存释放次数
+  - 累计的内存释放操作次数
 **返回值**: 
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
@@ -832,22 +917,51 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
 **功能**: 处理接收数据并触发发送验证
 **参数**:
 - `rxDataList`: 接收数据列表指针
-  - `slotIndex`: 时隙索引
-    - 范围: 0 - 7
-  - `userCount`: 用户数量
-    - 范围: 0 - 128
-  - `frameNo`: 帧号
-  - `users`: 用户数据数组指针
-    - 每个用户包含:
-      - `userId`: 用户ID
-      - `slotIndex`: 时隙索引
-      - `dataLen`: 数据长度
-      - `rateMode`: 接收速率模式
-      - `rssi`: 信号强度(dBm)
-      - `snr`: 信噪比(dB)
-      - `data`: 数据指针
-      - `freq`: 频率(Hz)
-      - `beam`: 波束信息
+
+**TRM_RxDataList结构体定义**:
+```c
+typedef struct {
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  userCount;         /* 用户数量 */
+    uint16_t reserved;
+    uint32_t frameNo;           /* 帧号 */
+    TRM_RxUserData* users;      /* 用户数据数组 */
+} TRM_RxDataList;
+```
+
+**TRM_RxUserData结构体定义**:
+```c
+typedef struct {
+    uint32_t userId;            /* 用户ID */
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  dataLen;           /* 数据长度 */
+    uint8_t  rateMode;          /* 接收速率模式 */
+    int16_t  rssi;              /* 信号强度 */
+    uint8_t  snr;               /* 信噪比 */
+    uint8_t  reserved;
+    uint8_t* data;              /* 数据指针 */
+    int32_t  freq;              /* 频率 */
+    TRM_BeamInfo beam;          /* 波束信息 */
+} TRM_RxUserData;
+```
+
+**结构体成员详细说明**:
+- `slotIndex`: 时隙索引
+  - 范围: 0 - 7
+- `userCount`: 用户数量
+  - 范围: 0 - 128
+- `frameNo`: 帧号
+- `users`: 用户数据数组指针
+  - 每个用户包含:
+    - `userId`: 用户ID
+    - `slotIndex`: 时隙索引
+    - `dataLen`: 数据长度
+    - `rateMode`: 接收速率模式
+    - `rssi`: 信号强度(dBm)
+    - `snr`: 信噪比(dB)
+    - `data`: 数据指针
+    - `freq`: 频率(Hz)
+    - `beam`: 波束信息(详见TRM_BeamInfo结构体)
 **返回值**: 
 - `TRM_OK`: 处理成功
 - `TRM_ERR_PARAM`: 参数错误
