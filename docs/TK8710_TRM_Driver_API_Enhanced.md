@@ -884,47 +884,6 @@ void TRM_LogSetLevel(TRMLogLevel level);
 - `level`: 日志级别 (同TRM_LogInit)
 **说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
 
-#### `TRM_LogSetCallback`
-```c
-void TRM_LogSetCallback(TRMLogCallback callback);
-```
-**功能**: 设置TRM日志输出回调函数
-**参数**:
-- `callback`: 日志输出回调函数指针
-  ```c
-  typedef void (*TRMLogCallback)(TRMLogLevel level, const char* tag, 
-                                const char* file, int line, const char* func,
-                                const char* fmt, va_list args);
-  ```
-**说明**: 自定义日志输出处理，可用于重定向到文件、网络或其他输出
-
-#### `TRM_LogEnableTimestamp`
-```c
-void TRM_LogEnableTimestamp(uint8_t enable);
-```
-**功能**: 启用/禁用日志时间戳
-**参数**:
-- `enable`: 1-启用时间戳, 0-禁用时间戳
-**说明**: 控制日志输出是否包含时间戳信息
-
-#### `TRM_LogEnableModuleName`
-```c
-void TRM_LogEnableModuleName(uint8_t enable);
-```
-**功能**: 启用/禁用模块名显示
-**参数**:
-- `enable`: 1-启用模块名, 0-禁用模块名
-**说明**: 控制日志输出是否包含模块名信息
-
-#### `TRM_LogEnableFileInfo`
-```c
-void TRM_LogEnableFileInfo(uint8_t enable);
-```
-**功能**: 启用/禁用文件信息显示
-**参数**:
-- `enable`: 1-启用文件信息, 0-禁用文件信息
-**说明**: 控制日志输出是否包含文件名、行号、函数名等调试信息
-
 #### `TRM_LOG_*` 宏
 ```c
 TRM_LOG_ERROR(fmt, ...);   // 错误日志
@@ -942,21 +901,10 @@ TRM_LOG_TRACE(fmt, ...);   // 跟踪日志
 - 根据当前设置的日志级别过滤输出
 - 完全独立于TK8710日志系统，无任何耦合
 
-#### `TRM_LogGetLevelName`
-```c
-const char* TRM_LogGetLevelName(TRMLogLevel level);
-```
-**功能**: 获取日志级别名称
-**参数**:
-- `level`: 日志级别
-**返回值**: 日志级别字符串指针
-**说明**: 用于日志输出时显示级别名称
-
 **TRM日志系统特性**:
 - ✅ **完全独立**: 无TK8710日志系统依赖
 - ✅ **线程安全**: 支持多线程环境使用
 - ✅ **级别过滤**: 支持动态调整日志级别
-- ✅ **自定义输出**: 支持自定义日志输出回调
 - ✅ **调试信息**: 自动包含文件、行号、函数信息
 - ✅ **时间戳**: 可选的时间戳功能
 
