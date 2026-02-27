@@ -366,28 +366,24 @@ int TRM_Stop(void);
 
 int TRM_Reset(void);
 
-
-
 /**
-
  * @brief 发送用户数据（缓存到发送队列）
-
  * @param userId 用户ID
-
  * @param data 数据
-
  * @param len 数据长度
-
  * @param txPower 发射功率
-
  * @param frameNo 目标发送帧号
-
- * @return TRM_OK成功，其他失? */
+ * @param targetRateMode 目标速率模式 (0=使用帧号, 5-11,18=使用速率模式)
+ * @param dataType 数据类型 (TK8710_USER_DATA_TYPE_NORMAL 或 TK8710_USER_DATA_TYPE_SLOT3)
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 
 /**
-
- * @brief 清除发送数? * @param userId 用户ID?xFFFFFFFF表示清除所有 * @return TRM_OK成功，其他失? */
-
+ * @brief 清除发送数据
+ * @param userId 用户ID，0xFFFFFFFF表示清除所有
+ * @return TRM_OK成功，其他失败
+ */
 int TRM_ClearTxData(uint32_t userId);
 
 
