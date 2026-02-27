@@ -336,7 +336,7 @@ void TK8710RegisterCallbacks(const TK8710DriverCallbacks* callbacks);
 **功能**: 注册Driver多回调函数
 **参数**:
 
--  `callbacks`: 回调函数结构体指针
+- `callbacks`: 回调函数结构体指针
 
 ```c
 typedef void (*TK8710RxDataCallback)(TK8710IrqResult* irqResult);
@@ -355,22 +355,9 @@ typedef struct {
 **回调函数说明**:
 
 - `onRxData`: 当接收到MD_DATA中断时调用
-- `onTxSlot`: 当S1时隙发送完成时调用  
+- `onTxSlot`: 当S1时隙发送完成时调用
 - `onSlotEnd`: 当时隙结束时调用
 - `onError`: 当发生错误中断时调用
-
-**中断类型说明**:
-
-- `TK8710_IRQ_RX_BCN`: 接收信标中断
-- `TK8710_IRQ_BRD_UD`: 广播用户数据中断
-- `TK8710_IRQ_BRD_DATA`: 广播数据中断
-- `TK8710_IRQ_MD_UD`: 主数据用户中断（用户波束信息）
-- `TK8710_IRQ_MD_DATA`: 主数据中断（用户数据）
-- `TK8710_IRQ_S0`: 时隙0中断
-- `TK8710_IRQ_S1`: 时隙1中断
-- `TK8710_IRQ_S2`: 时隙2中断
-- `TK8710_IRQ_S3`: 时隙3中断
-- `TK8710_IRQ_ACM`: 自适应调制中断
 
 **说明**:
 
@@ -378,7 +365,6 @@ typedef struct {
 - 支持为不同中断类型注册专用回调函数
 - 所有回调都使用统一的 `TK8710IrqResult*` 参数
 - 提供更灵活的中断处理机制
-- `TK8710_IRQ_MD_UD` 中断类型已定义但暂未实现具体回调处理
 
 #### `TK8710GpioInit`
 
@@ -887,7 +873,160 @@ int TRM_SetBeamTimeout(uint32_t timeoutMs);
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 设置失败
 
-### 5. 状态查询
+### 5. TRM回调函数
+
+TRM提供完整的上层回调接口，用于通知应用层各种事件，包括数据接收、发送完成、广播接收和错误处理。
+
+#### `TRM_OnRxData`
+
+```c
+typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
+```
+
+**功能**: 接收数据回调函数
+**参数**:
+
+- `rxDataList`: 接收数据列表指针
+
+```c
+typedef struct {
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  userCount;         /* 用户数量 */
+    uint16_t reserved;
+    uint32_t frameNo;           /* 帧号 */
+    TRM_RxUserData* users;      /* 用户数据数组 */
+} TRM_RxDataList;
+```
+
+**说明**: 
+- 当接收到用户数据时调用
+- 应用层需要同步处理数据，避免阻塞中断处理
+- `rxDataList->users` 包含所有接收到的用户数据
+- 处理完成后需要及时释放相关资源
+
+#### `TRM_OnRxBroadcast`
+
+```c
+typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
+```
+
+**功能**: 广播接收回调函数
+**参数**:
+
+- `brdData`: 广播数据指针
+
+```c
+typedef struct {
+    uint8_t  brdIndex;          /* 广播索引 */
+    uint8_t  dataLen;           /* 数据长度 */
+    uint16_t reserved;
+    uint8_t* data;              /* 数据指针 */
+} TRM_RxBrdData;
+```
+
+**说明**: 
+- 当接收到广播数据时调用
+- `brdData->data` 指向接收到的广播数据内容
+- 应用层需要根据 `dataLen` 处理相应长度的数据
+
+#### `TRM_OnTxComplete`
+
+```c
+typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+```
+
+**功能**: 发送完成回调函数
+**参数**:
+
+- `userId`: 用户ID
+- `result`: 发送结果
+
+```c
+typedef enum {
+    TRM_TX_OK = 0,              /* 发送成功 */
+    TRM_TX_ERR_TIMEOUT,         /* 发送超时 */
+    TRM_TX_ERR_RETRY,           /* 发送重试 */
+    TRM_TX_ERR_PARAM,           /* 参数错误 */
+    TRM_TX_ERR_BUSY,            /* 发送忙 */
+    TRM_TX_ERR_FAIL,            /* 发送失败 */
+} TRM_TxResult;
+```
+
+**说明**: 
+- 当数据发送完成时调用，通知发送结果
+- `userId` 标识发送的用户
+- `result` 指示发送是否成功及失败原因
+
+#### `TRM_OnError`
+
+```c
+typedef void (*TRM_OnError)(int errorCode, const char* message);
+```
+
+**功能**: 错误回调函数
+**参数**:
+
+- `errorCode`: 错误代码
+- `message`: 错误消息
+
+**说明**: 
+- 当发生错误时调用，通知应用层错误信息
+- `errorCode` 为具体的错误代码
+- `message` 为可读的错误描述信息
+
+#### `TRM_Callbacks`
+
+```c
+typedef struct {
+    TRM_OnRxData      onRxData;        /* 接收数据回调 */
+    TRM_OnRxBroadcast onRxBroadcast;   /* 广播接收回调 */
+    TRM_OnTxComplete  onTxComplete;    /* 发送完成回调 */
+    TRM_OnError       onError;         /* 错误回调 */
+} TRM_Callbacks;
+```
+
+**说明**: 
+- TRM回调函数结构体
+- 在 `TRM_InitConfig` 中使用
+- 应用层在初始化TRM时设置这些回调函数
+- 所有回调函数都是可选的，可以设置为NULL
+
+#### 回调函数使用示例
+
+```c
+// 定义回调函数
+void OnTrmRxData(const TRM_RxDataList* rxDataList)
+{
+    printf("接收到数据: 时隙=%d, 用户数=%d, 帧号=%u\n", 
+           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    
+    // 处理每个用户的数据
+    for (uint8_t i = 0; i < rxDataList->userCount; i++) {
+        TRM_RxUserData* user = &rxDataList->users[i];
+        printf("用户ID: 0x%08X, 数据长度: %d\n", user->userId, user->dataLen);
+        // 处理用户数据...
+    }
+}
+
+void OnTrmTxComplete(uint32_t userId, TRM_TxResult result)
+{
+    printf("发送完成: 用户ID=0x%08X, 结果=%s\n", 
+           userId, result == TRM_TX_OK ? "成功" : "失败");
+}
+
+void OnTrmError(int errorCode, const char* message)
+{
+    printf("TRM错误: 错误码=%d, 消息=%s\n", errorCode, message);
+}
+
+// 在初始化时设置回调
+TRM_InitConfig trmConfig = {0};
+trmConfig.callbacks.onRxData = OnTrmRxData;
+trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
+trmConfig.callbacks.onError = OnTrmError;
+```
+
+### 6. 状态查询
 
 #### `TRM_IsRunning`
 

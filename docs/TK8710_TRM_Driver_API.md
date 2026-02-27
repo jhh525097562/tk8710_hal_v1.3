@@ -369,7 +369,97 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
 - `dataType`: 数据类型 (TK8710_BRD_DATA_TYPE_NORMAL 或 TK8710_BRD_DATA_TYPE_SLOT3)
 - **返回值**: TRM_OK成功，其他失败
 
-### 3. 状态查询
+### 3. TRM回调函数
+
+TRM提供上层回调接口，用于通知应用层接收数据、发送完成和错误事件。
+
+#### `TRM_OnRxData`
+
+```c
+typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
+```
+
+**功能**: 接收数据回调函数
+**参数**:
+
+- `rxDataList`: 接收数据列表指针
+
+```c
+typedef struct {
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  userCount;         /* 用户数量 */
+    uint16_t reserved;
+    uint32_t frameNo;           /* 帧号 */
+    TRM_RxUserData* users;      /* 用户数据数组 */
+} TRM_RxDataList;
+```
+
+**说明**: 当接收到用户数据时调用，应用层需要同步处理数据
+
+#### `TRM_OnRxBroadcast`
+
+```c
+typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
+```
+
+**功能**: 广播接收回调函数
+**参数**:
+
+- `brdData`: 广播数据指针
+
+```c
+typedef struct {
+    uint8_t  brdIndex;          /* 广播索引 */
+    uint8_t  dataLen;           /* 数据长度 */
+    uint16_t reserved;
+    uint8_t* data;              /* 数据指针 */
+} TRM_RxBrdData;
+```
+
+**说明**: 当接收到广播数据时调用
+
+#### `TRM_OnTxComplete`
+
+```c
+typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+```
+
+**功能**: 发送完成回调函数
+**参数**:
+
+- `userId`: 用户ID
+- `result`: 发送结果
+
+**说明**: 当数据发送完成时调用，通知发送结果
+
+#### `TRM_OnError`
+
+```c
+typedef void (*TRM_OnError)(int errorCode, const char* message);
+```
+
+**功能**: 错误回调函数
+**参数**:
+
+- `errorCode`: 错误代码
+- `message`: 错误消息
+
+**说明**: 当发生错误时调用，通知应用层错误信息
+
+#### `TRM_Callbacks`
+
+```c
+typedef struct {
+    TRM_OnRxData      onRxData;        /* 接收数据回调 */
+    TRM_OnRxBroadcast onRxBroadcast;   /* 广播接收回调 */
+    TRM_OnTxComplete  onTxComplete;    /* 发送完成回调 */
+    TRM_OnError       onError;         /* 错误回调 */
+} TRM_Callbacks;
+```
+
+**说明**: TRM回调函数结构体，在 `TRM_InitConfig` 中使用
+
+### 4. 状态查询
 
 #### `TRM_IsRunning`
 
