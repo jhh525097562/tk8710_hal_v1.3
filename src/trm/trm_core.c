@@ -41,6 +41,7 @@ TrmContext* TRM_GetContext(void);
 
 static void TRM_OnDriverSlotEnd(uint8_t slotType, uint8_t slotIndex, uint32_t frameNo);
 static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
+static void TRM_OnDriverSlotRx(TK8710IrqResult* irqResult);
 static void TRM_OnDriverError(int errorCode);
 
 /* Driver中断回调 */
@@ -67,36 +68,7 @@ static void TRM_DriverIrqCallback(TK8710IrqResult irqResult)
     switch (irqResult.irq_type) {
         /* ===== 接收数据中断 ===== */
         case TK8710_IRQ_MD_DATA:
-            TRM_LOG_DEBUG("TRM: Processing MD_DATA interrupt");
-            if (irqResult.mdDataValid) {
-                TRM_LOG_DEBUG("TRM: RxData valid_users=%d, crc_errors=%d", 
-                       irqResult.crcValidCount, irqResult.crcErrorCount);
-                
-                /* 收集所有CRC正确的用户索引 */
-                uint8_t validUserIndices[128];
-                uint8_t validUserCount = 0;
-                
-                for (uint8_t i = 0; i < 128; i++) {
-                    if (irqResult.crcResults[i].userIndex < 128 && 
-                        irqResult.crcResults[i].dataValid) {
-                        validUserIndices[validUserCount++] = i;
-                    }
-                }
-                
-                /* 批量处理所有CRC正确的用户 */
-                if (validUserCount > 0) {
-                    TRM_ProcessRxUserDataBatch(validUserIndices, validUserCount, irqResult.crcResults, &irqResult);
-                }
-            } else {
-                TRM_LOG_DEBUG("TRM: MD_DATA interrupt but mdDataValid=0, skipping");
-            }
-            // TRM_LOG_DEBUG("TRM: Tx deadline interrupt (MD_DATA)");
-            
-            // /* 处理发送截止 */
-            // if (g_trmCtx.state == TRM_STATE_RUNNING) {
-            //     /* 调用发送截止处理函数 */
-            //     TRM_OnDriverTxSlot(1, 128);  /* S1时隙，最大128用户 */
-            // }
+            TRM_OnDriverSlotRx(&irqResult);
             break;
             
         /* ===== 发送截止中断 ===== */
@@ -327,6 +299,33 @@ TrmContext* TRM_GetContext(void)
 /*==============================================================================
  * 内部函数实现
  *============================================================================*/
+
+static void TRM_OnDriverSlotRx(TK8710IrqResult* irqResult)
+{
+    TRM_LOG_DEBUG("TRM: Processing MD_DATA interrupt");
+    if (irqResult->mdDataValid) {
+        TRM_LOG_DEBUG("TRM: RxData valid_users=%d, crc_errors=%d", 
+               irqResult->crcValidCount, irqResult->crcErrorCount);
+        
+        /* 收集所有CRC正确的用户索引 */
+        uint8_t validUserIndices[128];
+        uint8_t validUserCount = 0;
+        
+        for (uint8_t i = 0; i < 128; i++) {
+            if (irqResult->crcResults[i].userIndex < 128 && 
+                irqResult->crcResults[i].dataValid) {
+                validUserIndices[validUserCount++] = i;
+            }
+        }
+        
+        /* 批量处理所有CRC正确的用户 */
+        if (validUserCount > 0) {
+            TRM_ProcessRxUserDataBatch(validUserIndices, validUserCount, irqResult->crcResults, irqResult);
+        }
+    } else {
+        TRM_LOG_DEBUG("TRM: MD_DATA interrupt but mdDataValid=0, skipping");
+    }
+}
 
 /*==============================================================================
  * Driver回调函数实现
