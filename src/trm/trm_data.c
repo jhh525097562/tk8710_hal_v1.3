@@ -15,9 +15,7 @@
 extern void TK8710EnterCritical(void);
 extern void TK8710ExitCritical(void);
 extern uint64_t TK8710GetTimeUs(void);
-
-/* 外部变量声明 */
-extern TrmContext g_trmCtx;
+extern TrmContext* TRM_GetContext(void);
 
 /*==============================================================================
  * 私有定义
@@ -625,9 +623,10 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
     }
     
     /* 一次性调用接收回调，处理所有用户 */
-    if (g_trmCtx.config.callbacks.onRxData != NULL) {
+    TrmContext* ctx = TRM_GetContext();
+    if (ctx && ctx->config.callbacks.onRxData != NULL) {
         TRM_LOG_DEBUG("TRM: Calling onRxData callback for %d users", userCount);
-        g_trmCtx.config.callbacks.onRxData(&rxDataList);
+        ctx->config.callbacks.onRxData(&rxDataList);
     }
     
     /* 批量释放接收数据Buffer */

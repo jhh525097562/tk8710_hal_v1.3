@@ -531,6 +531,12 @@ int TRM_IsRunning(void);
  */
 int TRM_GetStats(TRM_Stats* stats);
 
+/**
+ * @brief 获取TRM上下文（内部函数）
+ * @return TRM上下文指针
+ */
+TrmContext* TRM_GetContext(void);
+
 
 
 /*==============================================================================

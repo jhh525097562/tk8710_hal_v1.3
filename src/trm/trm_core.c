@@ -32,6 +32,9 @@ static TrmContext g_trmCtx;
 uint32_t g_trmCurrentFrame = 0;
 uint32_t g_trmMaxFrameCount = 100;
 
+/* 内部函数声明 */
+TrmContext* TRM_GetContext(void);
+
 /*==============================================================================
  * Driver回调函数声明
  *============================================================================*/
@@ -313,6 +316,12 @@ uint32_t TRM_GetCurrentFrame(void)
 void TRM_SetMaxFrameCount(uint32_t maxCount)
 {
     g_trmMaxFrameCount = maxCount;
+}
+
+/* 内部函数实现 */
+TrmContext* TRM_GetContext(void)
+{
+    return &g_trmCtx;
 }
 
 /*==============================================================================
