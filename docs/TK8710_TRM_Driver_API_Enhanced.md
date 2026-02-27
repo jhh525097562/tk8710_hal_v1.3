@@ -362,7 +362,25 @@ const slotCfg_t* TK8710GetSlotCfg(void);
 
 ### 6. 中断处理
 
-中断系统通过 `TK8710Init` 函数自动初始化，无需单独调用中断初始化函数。
+中断系统需要通过 `TK8710IrqInit` 函数初始化中断回调，然后通过 `TK8710Init` 函数完成芯片初始化。
+
+#### `TK8710IrqInit`
+
+```c
+void TK8710IrqInit(const TK8710IrqCallback* irqCallback);
+```
+
+**功能**: 初始化中断系统并注册中断回调函数
+**参数**:
+
+- `irqCallback`: 中断回调函数指针
+
+**说明**:
+
+- 必须在 `TK8710Init` 之前调用
+- 设置TRM中断回调函数
+- 重置中断结果结构体
+- 确保中断处理正常工作
 
 #### `TK8710GpioInit`
 
