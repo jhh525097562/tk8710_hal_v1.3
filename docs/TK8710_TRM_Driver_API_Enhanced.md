@@ -56,21 +56,21 @@ int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallbac
       
       /* BRD_UD中断专用信息 */
       uint8_t  brdUserDataValid; /* BRD_UD用户波束信息有效性 */
-
+  
       /* MD_DATA中断专用信息 */
       uint8_t  mdDataValid;         /* MD_DATA数据有效性 */
       uint8_t  crcValidCount;       /* CRC正确的用户数量 */
       uint8_t  crcErrorCount;       /* CRC错误的用户数量 */
       uint8_t  maxUsers;            /* 当前速率模式最大用户数 */
       TK8710CrcResult crcResults[128]; /* CRC结果数组 (最多128个用户) */
- 
+   
       /* BRD_DATA中断专用信息 */
       uint8_t  brdDataValid;         /* BRD_DATA数据有效性 */
       uint8_t  brdCrcValidCount;       /* CRC正确的用户数量 */
       uint8_t  brdCrcErrorCount;       /* CRC错误的用户数量 */
       uint8_t  brdMaxUsers;            /* 当前速率模式最大用户数 */
       TK8710CrcResult brdCrcResults[16]; /* CRC结果数组 (最多16个用户) */
-
+  
       /* S1时隙自动发送信息 */
       uint8_t  autoTxValid;         /* 自动发送数据有效性 */
       uint8_t  autoTxCount;         /* 自动发送用户数量 */
@@ -84,7 +84,7 @@ int TK8710Init(const ChipConfig* initConfig, const TK8710IrqCallback* irqCallbac
       uint8_t  currentRateIndex;    /* 当前速率序号 (0-based) */
   } TK8710IrqResult;
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710Startwork`
 ```c
@@ -106,7 +106,7 @@ int TK8710Startwork(uint8_t workType, uint8_t workMode);
       TK8710_WORK_MODE_SINGLE     = 2,  /* 单次工作模式 */
   } workMode_e;
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710RfInit`
 ```c
@@ -136,7 +136,7 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig);
       int16_t q;              /* Q路直流, 16bit */
   } TxAdcConfig;
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710ResetChip`
 ```c
@@ -151,7 +151,7 @@ int TK8710ResetChip(uint8_t rstType);
       TK8710_RST_ALL           = 2,  /* 复位状态机+寄存器 */
   } rstType_e;
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 2. 配置管理
 
@@ -163,21 +163,15 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 **参数**:
 - `type`: 配置类型
   ```c
-typedef enum {
+  typedef enum {
     TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
-} TK8710ConfigType;
-```
-- `params`: 配置参数指针，具体类型根据type决定
-**返回值**: 0-成功, 1-失败, 2-超时
+  } TK8710ConfigType;
 
-#### `TK8710GetConfig`
-```c
-int TK8710GetConfig(TK8710ConfigType type, void* params);
-```
 **功能**: 获取芯片配置
 **参数**:
+
 - `type`: 配置类型 (同TK8710SetConfig)
 - `params`: 配置参数输出指针
 **返回值**: 0-成功, 1-失败, 2-超时
@@ -190,6 +184,7 @@ int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint
 ```
 **功能**: 设置下行1广播数据
 **参数**:
+
 - `userIndex`: 广播用户索引 (0-15)
 - `data`: 广播数据指针
 - `dataLen`: 数据长度 (0-512字节)
@@ -199,7 +194,7 @@ int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint
   #define TK8710_BRD_DATA_TYPE_NORMAL     0   /* 正常广播: 使用Driver自动生成的波束信息 */
   #define TK8710_BRD_DATA_TYPE_SLOT3      1   /* 与Slot3共用波束信息 */
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710SetDownlink2DataWithPower`
 ```c
@@ -216,7 +211,7 @@ int TK8710SetDownlink2DataWithPower(uint8_t userIndex, const uint8_t* data, uint
   #define TK8710_USER_DATA_TYPE_NORMAL    0   /* 正常发送: 使用指定信息模式的波束信息 */
   #define TK8710_USER_DATA_TYPE_SLOT1     1   /* 与Slot1共用波束信息 (Driver自动生成) */
   ```
-**返回值**: 0-成功, 1-失败, 2-超时
+  **返回值**: 0-成功, 1-失败, 2-超时
 
 #### `TK8710SetTxUserInfo`
 ```c
@@ -390,7 +385,7 @@ int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
       TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
   } TK8710LogModule;
   ```
-**返回值**: 0-成功, 1-失败
+  **返回值**: 0-成功, 1-失败
 
 #### `TK8710_LOG_*` 宏
 ```c
@@ -624,7 +619,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 - `dataType`: 数据类型
   - `TK8710_USER_DATA_TYPE_NORMAL`: 正常用户数据
   - `TK8710_USER_DATA_TYPE_SLOT3`: 与Slot3共用数据
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 发送成功(数据已入队)
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_QUEUE_FULL`: 发送队列已满
@@ -653,7 +648,7 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
 - `dataType`: 数据类型
   - `TK8710_BRD_DATA_TYPE_NORMAL`: 正常广播数据
   - `TK8710_BRD_DATA_TYPE_SLOT3`: 与Slot3共用波束信息
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 发送成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NOT_INIT`: TRM未初始化
@@ -668,7 +663,7 @@ int TRM_ClearTxData(uint32_t userId);
 - `userId`: 用户ID
   - 0xFFFFFFFF: 清除所有用户的发送数据
   - 其他值: 清除指定用户的发送数据
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 清除成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 清除失败
@@ -712,7 +707,7 @@ typedef struct {
 - `valid`: 有效标志
   - 1: 波束信息有效
   - 0: 波束信息无效
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_MEM`: 内存不足
@@ -728,7 +723,7 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
   - 范围: 0x00000000 - 0xFFFFFFFF
 - `beamInfo`: 波束信息输出指针
   - 函数会填充此结构体
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_BEAM`: 未找到波束信息
@@ -743,7 +738,7 @@ int TRM_ClearBeamInfo(uint32_t userId);
 - `userId`: 用户ID
   - 0xFFFFFFFF: 清除所有用户的波束信息
   - 其他值: 清除指定用户的波束信息
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 清除成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 清除失败
@@ -757,7 +752,7 @@ int TRM_SetBeamTimeout(uint32_t timeoutMs);
 - `timeoutMs`: 超时时间(毫秒)
   - 范围: 1000 - 30000
   - 0: 使用默认值(3000ms)
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 设置成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 设置失败
@@ -806,7 +801,7 @@ typedef struct {
   - 累计的内存分配操作次数
 - `memFreeCount`: 内存释放次数
   - 累计的内存释放操作次数
-**返回值**: 
+  **返回值**: 
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 获取失败
@@ -859,7 +854,113 @@ TK8710IrqCallback* TRM_GetIrqCallback(void);
 **功能**: 获取TRM中断回调函数
 **返回值**: TRM中断回调函数指针
 
-### 7. TRM调试接口
+### 7. TRM日志系统
+
+#### `TRM_LogInit`
+```c
+void TRM_LogInit(TRMLogLevel level);
+```
+**功能**: 初始化TRM日志系统
+**参数**:
+- `level`: 日志级别
+  ```c
+  typedef enum {
+      TRM_LOG_NONE = 0,    /* 无日志 */
+      TRM_LOG_ERROR = 1,   /* 错误 */
+      TRM_LOG_WARN = 2,    /* 警告 */
+      TRM_LOG_INFO = 3,    /* 信息 */
+      TRM_LOG_DEBUG = 4,   /* 调试 */
+      TRM_LOG_TRACE = 5    /* 跟踪 */
+  } TRMLogLevel;
+  ```
+**说明**: 初始化TRM独立日志系统，设置默认日志级别
+
+#### `TRM_LogSetLevel`
+```c
+void TRM_LogSetLevel(TRMLogLevel level);
+```
+**功能**: 设置TRM日志级别
+**参数**:
+- `level`: 日志级别 (同TRM_LogInit)
+**说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
+
+#### `TRM_LogSetCallback`
+```c
+void TRM_LogSetCallback(TRMLogCallback callback);
+```
+**功能**: 设置TRM日志输出回调函数
+**参数**:
+- `callback`: 日志输出回调函数指针
+  ```c
+  typedef void (*TRMLogCallback)(TRMLogLevel level, const char* tag, 
+                                const char* file, int line, const char* func,
+                                const char* fmt, va_list args);
+  ```
+**说明**: 自定义日志输出处理，可用于重定向到文件、网络或其他输出
+
+#### `TRM_LogEnableTimestamp`
+```c
+void TRM_LogEnableTimestamp(uint8_t enable);
+```
+**功能**: 启用/禁用日志时间戳
+**参数**:
+- `enable`: 1-启用时间戳, 0-禁用时间戳
+**说明**: 控制日志输出是否包含时间戳信息
+
+#### `TRM_LogEnableModuleName`
+```c
+void TRM_LogEnableModuleName(uint8_t enable);
+```
+**功能**: 启用/禁用模块名显示
+**参数**:
+- `enable`: 1-启用模块名, 0-禁用模块名
+**说明**: 控制日志输出是否包含模块名信息
+
+#### `TRM_LogEnableFileInfo`
+```c
+void TRM_LogEnableFileInfo(uint8_t enable);
+```
+**功能**: 启用/禁用文件信息显示
+**参数**:
+- `enable`: 1-启用文件信息, 0-禁用文件信息
+**说明**: 控制日志输出是否包含文件名、行号、函数名等调试信息
+
+#### `TRM_LOG_*` 宏
+```c
+TRM_LOG_ERROR(fmt, ...);   // 错误日志
+TRM_LOG_WARN(fmt, ...);    // 警告日志
+TRM_LOG_INFO(fmt, ...);    // 信息日志
+TRM_LOG_DEBUG(fmt, ...);   // 调试日志
+TRM_LOG_TRACE(fmt, ...);   // 跟踪日志
+```
+**功能**: TRM日志输出宏
+**参数**:
+- `fmt`: 格式化字符串
+- `...`: 可变参数
+**说明**: 
+- 自动包含文件名、行号、函数名等调试信息
+- 根据当前设置的日志级别过滤输出
+- 完全独立于TK8710日志系统，无任何耦合
+
+#### `TRM_LogGetLevelName`
+```c
+const char* TRM_LogGetLevelName(TRMLogLevel level);
+```
+**功能**: 获取日志级别名称
+**参数**:
+- `level`: 日志级别
+**返回值**: 日志级别字符串指针
+**说明**: 用于日志输出时显示级别名称
+
+**TRM日志系统特性**:
+- ✅ **完全独立**: 无TK8710日志系统依赖
+- ✅ **线程安全**: 支持多线程环境使用
+- ✅ **级别过滤**: 支持动态调整日志级别
+- ✅ **自定义输出**: 支持自定义日志输出回调
+- ✅ **调试信息**: 自动包含文件、行号、函数信息
+- ✅ **时间戳**: 可选的时间戳功能
+
+### 8. TRM调试接口
 
 #### `TRM_TxValidatorOnRxData`
 ```c
@@ -913,7 +1014,7 @@ typedef struct {
     - `data`: 数据指针
     - `freq`: 频率(Hz)
     - `beam`: 波束信息(详见TRM_BeamInfo结构体)
-**返回值**: 
+    **返回值**: 
 - `TRM_OK`: 处理成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 处理失败
