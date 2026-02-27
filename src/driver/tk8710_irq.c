@@ -229,6 +229,8 @@ void TK8710_IRQHandler(void)
                             g_driverCallbacks.onSlotEnd(&g_irqResult);
                         }
                         break;
+                    case TK8710_IRQ_MD_UD:
+                        break;
                     default:
                         /* 其他中断类型，调用错误回调 */
                         if (g_driverCallbacks.onError) {

@@ -264,21 +264,9 @@ typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
 
 
 
-/* 广播接收回调 */
-
-typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
-
-
-
 /* 发送完成回?*/
 
 typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
-
-
-
-/* 错误回调 */
-
-typedef void (*TRM_OnError)(int errorCode, const char* message);
 
 
 
@@ -288,11 +276,7 @@ typedef struct {
 
     TRM_OnRxData      onRxData;
 
-    TRM_OnRxBroadcast onRxBroadcast;
-
     TRM_OnTxComplete  onTxComplete;
-
-    TRM_OnError       onError;
 
 } TRM_Callbacks;
 

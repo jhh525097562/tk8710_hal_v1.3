@@ -87,10 +87,10 @@ int TRM_Stop(void);
 
 ### TRM_SendData
 
-发送用户数据。
+发送用户数据（支持单速率和多速率模式）。
 
 ```c
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower);
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode);
 ```
 
 **参数：**
@@ -99,6 +99,8 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 - `data` - 数据指针
 - `len` - 数据长度（1-512字节）
 - `txPower` - 发射功率
+- `frameNo` - 目标帧号
+- `targetRateMode` - 目标速率模式 (0=使用帧号匹配, 5-11,18=使用速率模式匹配)
 
 **返回值：**
 
@@ -110,7 +112,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 
 ```c
 uint8_t data[] = {0x01, 0x02, 0x03, 0x04};
-int ret = TRM_SendData(0x12345678, data, sizeof(data), 20);
+int ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0);
 ```
 
 ---

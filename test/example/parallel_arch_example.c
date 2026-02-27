@@ -30,22 +30,11 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void OnRxBroadcast(const TRM_RxBrdData* brdData)
-{
-    printf("TRM Received broadcast: index=%d, len=%d\n",
-           brdData->brdIndex, brdData->dataLen);
-}
-
 static void OnTxComplete(uint32_t userId, TRM_TxResult result)
 {
     const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
     printf("TRM Tx complete: userId=0x%08X, result=%s\n",
            userId, resultStr[result]);
-}
-
-static void OnError(int errorCode, const char* message)
-{
-    printf("TRM Error: code=%d, message=%s\n", errorCode, message);
 }
 
 /*==============================================================================
@@ -174,9 +163,7 @@ int main(void)
     
     /* TRM回调配置 */
     trmConfig.callbacks.onRxData = OnRxData;
-    trmConfig.callbacks.onRxBroadcast = OnRxBroadcast;
     trmConfig.callbacks.onTxComplete = OnTxComplete;
-    trmConfig.callbacks.onError = OnError;
     
     /* 初始化TRM */
     ret = TRM_Init(&trmConfig);

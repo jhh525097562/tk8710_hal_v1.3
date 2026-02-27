@@ -904,31 +904,6 @@ typedef struct {
 - `rxDataList->users` 包含所有接收到的用户数据
 - 处理完成后需要及时释放相关资源
 
-#### `TRM_OnRxBroadcast`
-
-```c
-typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
-```
-
-**功能**: 广播接收回调函数
-**参数**:
-
-- `brdData`: 广播数据指针
-
-```c
-typedef struct {
-    uint8_t  brdIndex;          /* 广播索引 */
-    uint8_t  dataLen;           /* 数据长度 */
-    uint16_t reserved;
-    uint8_t* data;              /* 数据指针 */
-} TRM_RxBrdData;
-```
-
-**说明**: 
-- 当接收到广播数据时调用
-- `brdData->data` 指向接收到的广播数据内容
-- 应用层需要根据 `dataLen` 处理相应长度的数据
-
 #### `TRM_OnTxComplete`
 
 ```c
@@ -957,31 +932,12 @@ typedef enum {
 - `userId` 标识发送的用户
 - `result` 指示发送是否成功及失败原因
 
-#### `TRM_OnError`
-
-```c
-typedef void (*TRM_OnError)(int errorCode, const char* message);
-```
-
-**功能**: 错误回调函数
-**参数**:
-
-- `errorCode`: 错误代码
-- `message`: 错误消息
-
-**说明**: 
-- 当发生错误时调用，通知应用层错误信息
-- `errorCode` 为具体的错误代码
-- `message` 为可读的错误描述信息
-
 #### `TRM_Callbacks`
 
 ```c
 typedef struct {
     TRM_OnRxData      onRxData;        /* 接收数据回调 */
-    TRM_OnRxBroadcast onRxBroadcast;   /* 广播接收回调 */
     TRM_OnTxComplete  onTxComplete;    /* 发送完成回调 */
-    TRM_OnError       onError;         /* 错误回调 */
 } TRM_Callbacks;
 ```
 
@@ -1014,16 +970,10 @@ void OnTrmTxComplete(uint32_t userId, TRM_TxResult result)
            userId, result == TRM_TX_OK ? "成功" : "失败");
 }
 
-void OnTrmError(int errorCode, const char* message)
-{
-    printf("TRM错误: 错误码=%d, 消息=%s\n", errorCode, message);
-}
-
 // 在初始化时设置回调
 TRM_InitConfig trmConfig = {0};
 trmConfig.callbacks.onRxData = OnTrmRxData;
 trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
-trmConfig.callbacks.onError = OnTrmError;
 ```
 
 ### 6. 状态查询

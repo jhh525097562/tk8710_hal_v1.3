@@ -96,9 +96,7 @@ void app_irq_handler(TK8710IrqResult irqResult);
 
 /* TRM回调函数声明 */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList);
-static void OnTrmRxBroadcast(const TRM_RxBrdData* brdData);
 static void OnTrmTxComplete(uint32_t userId, TRM_TxResult result);
-static void OnTrmError(int errorCode, const char* message);
 
 /*============================================================================
  * 自动下行发送测试函数
@@ -294,27 +292,6 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     printf("==================\n");
 }
 
-/**
- * @brief TRM接收广播回调
- * @param brdData 广播数据
- */
-static void OnTrmRxBroadcast(const TRM_RxBrdData* brdData)
-{
-    if (!g_trmEnabled) return;
-    
-    printf("=== TRM接收广播事件 ===\n");
-    printf("广播索引: %d, 长度: %d\n", brdData->brdIndex, brdData->dataLen);
-    
-    if (brdData->data != NULL && brdData->dataLen > 0) {
-        printf("广播内容: ");
-        for (int i = 0; i < brdData->dataLen && i < 16; i++) {
-            printf("%02X ", brdData->data[i]);
-        }
-        if (brdData->dataLen > 16) printf("...");
-        printf("\n");
-    }
-    printf("==================\n");
-}
 
 /**
  * @brief TRM发送完成回调
@@ -335,19 +312,6 @@ static void OnTrmTxComplete(uint32_t userId, TRM_TxResult result)
     printf("==================\n");
 }
 
-/**
- * @brief TRM错误回调
- * @param errorCode 错误码
- * @param message 错误消息
- */
-static void OnTrmError(int errorCode, const char* message)
-{
-    if (!g_trmEnabled) return;
-    
-    printf("=== TRM错误事件 ===\n");
-    printf("错误码: %d, 消息: %s\n", errorCode, message);
-    printf("==================\n");
-}
 
 /*============================================================================
  * 中断处理函数
@@ -556,9 +520,7 @@ int init_trm_system(void)
     
     /* TRM回调函数 */
     trmConfig.callbacks.onRxData = OnTrmRxData;
-    trmConfig.callbacks.onRxBroadcast = OnTrmRxBroadcast;
     trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
-    trmConfig.callbacks.onError = OnTrmError;
     TRM_LOG_INFO("设置TRM回调函数");
     
     /* 初始化TRM */

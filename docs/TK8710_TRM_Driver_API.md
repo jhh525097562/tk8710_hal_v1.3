@@ -396,28 +396,6 @@ typedef struct {
 
 **说明**: 当接收到用户数据时调用，应用层需要同步处理数据
 
-#### `TRM_OnRxBroadcast`
-
-```c
-typedef void (*TRM_OnRxBroadcast)(const TRM_RxBrdData* brdData);
-```
-
-**功能**: 广播接收回调函数
-**参数**:
-
-- `brdData`: 广播数据指针
-
-```c
-typedef struct {
-    uint8_t  brdIndex;          /* 广播索引 */
-    uint8_t  dataLen;           /* 数据长度 */
-    uint16_t reserved;
-    uint8_t* data;              /* 数据指针 */
-} TRM_RxBrdData;
-```
-
-**说明**: 当接收到广播数据时调用
-
 #### `TRM_OnTxComplete`
 
 ```c
@@ -432,28 +410,12 @@ typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
 
 **说明**: 当数据发送完成时调用，通知发送结果
 
-#### `TRM_OnError`
-
-```c
-typedef void (*TRM_OnError)(int errorCode, const char* message);
-```
-
-**功能**: 错误回调函数
-**参数**:
-
-- `errorCode`: 错误代码
-- `message`: 错误消息
-
-**说明**: 当发生错误时调用，通知应用层错误信息
-
 #### `TRM_Callbacks`
 
 ```c
 typedef struct {
     TRM_OnRxData      onRxData;        /* 接收数据回调 */
-    TRM_OnRxBroadcast onRxBroadcast;   /* 广播接收回调 */
     TRM_OnTxComplete  onTxComplete;    /* 发送完成回调 */
-    TRM_OnError       onError;         /* 错误回调 */
 } TRM_Callbacks;
 ```
 

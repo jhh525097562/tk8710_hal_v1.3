@@ -165,12 +165,12 @@ TEST_CASE(send_data_max_length)
     /* 发送最大长度数�?(512字节) */
     uint8_t maxData[512];
     memset(maxData, 0xAA, sizeof(maxData));
-    int ret = TRM_SendData(0x12345678, maxData, 512, 20, 0);
+    int ret = TRM_SendData(0x12345678, maxData, 512, 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_OK, "Send max length data should succeed");
     
     /* 发送超过最大长度应该失�?*/
     uint8_t overData[513];
-    ret = TRM_SendData(0x12345678, overData, 513, 20, 0);
+    ret = TRM_SendData(0x12345678, overData, 513, 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_ERR_PARAM, "Send over max length should fail");
     
     TRM_Stop();
@@ -187,19 +187,19 @@ TEST_CASE(send_data_queue_full)
     uint8_t data[16] = {0};
     int successCount = 0;
     for (int i = 0; i < 64; i++) {
-        if (TRM_SendData(0x12345678, data, sizeof(data), 20, 0) == TRM_OK) {
+        if (TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0) == TRM_OK) {
             successCount++;
         }
     }
     TEST_ASSERT_EQ(successCount, 64, "Should queue 64 packets");
     
     /* 第65个应该失败 */
-    int ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0);
+    int ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_ERR_QUEUE_FULL, "65th packet should fail with QUEUE_FULL");
     
     /* 清除队列后应该可以再发�?*/
     TRM_ClearTxData(0xFFFFFFFF);
-    ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0);
+    ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_OK, "Send after clear should succeed");
     
     TRM_Stop();
@@ -350,7 +350,7 @@ TEST_CASE(stress_send_clear_cycle)
         /* 填满队列 */
         int queued = 0;
         for (int i = 0; i < 64; i++) {
-            if (TRM_SendData(0x12345678, data, sizeof(data), 20, 0) == TRM_OK) {
+            if (TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0) == TRM_OK) {
                 queued++;
             }
         }

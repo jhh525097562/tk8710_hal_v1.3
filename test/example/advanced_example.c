@@ -41,21 +41,11 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void OnRxBroadcast(const TRM_RxBrdData* brdData)
-{
-    LOG_TRM_INFO("RX Broadcast: index=%d, len=%d", brdData->brdIndex, brdData->dataLen);
-}
-
 static void OnTxComplete(uint32_t userId, TRM_TxResult result)
 {
     g_txCount++;
-    const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
-    LOG_TRM_INFO("TX Complete: userId=0x%08X, result=%s", userId, resultStr[result]);
-}
-
-static void OnError(int errorCode, const char* message)
-{
-    LOG_TRM_ERROR("Error: code=%d, msg=%s", errorCode, message);
+    LOG_TRM_INFO("TX: userId=0x%08X, result=%s", 
+                 userId, result == TRM_TX_OK ? "OK" : "FAIL");
 }
 
 /*==============================================================================
@@ -210,14 +200,14 @@ static void DemoDataTransfer(void)
         txData[i] = i;
     }
     
-    int ret = TRM_SendData(0xAABBCCDD, txData, sizeof(txData), 25);
+    int ret = TRM_SendData(0xAABBCCDD, txData, sizeof(txData), 25, 0, 0);
     printf("  SendData result: %d\n", ret);
     
     /* 发送多个数据包 */
     printf("\nSending 10 packets...\n");
     for (int i = 0; i < 10; i++) {
         txData[0] = i;
-        ret = TRM_SendData(0xAABBCCDD, txData, 16, 20);
+        ret = TRM_SendData(0xAABBCCDD, txData, 16, 20, 0, 0);
         printf("  Packet %d: %s\n", i, ret == TRM_OK ? "queued" : "failed");
     }
     
@@ -279,9 +269,7 @@ int main(void)
     config.txPower = 20;
     
     config.callbacks.onRxData = OnRxData;
-    config.callbacks.onRxBroadcast = OnRxBroadcast;
     config.callbacks.onTxComplete = OnTxComplete;
-    config.callbacks.onError = OnError;
     
     /* 初始化TRM */
     printf("\nInitializing TRM...\n");

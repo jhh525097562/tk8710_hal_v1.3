@@ -27,12 +27,6 @@ static void TestOnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void TestOnRxBroadcast(const TRM_RxBrdData* brdData)
-{
-    if (brdData != NULL) {
-        g_rxBrdCount++;
-    }
-}
 
 static void TestOnTxComplete(uint32_t userId, TRM_TxResult result)
 {
@@ -41,12 +35,6 @@ static void TestOnTxComplete(uint32_t userId, TRM_TxResult result)
     g_txCompleteCount++;
 }
 
-static void TestOnError(int errorCode, const char* message)
-{
-    (void)errorCode;
-    (void)message;
-    g_errorCount++;
-}
 
 static void ResetTestCounters(void)
 {
@@ -126,9 +114,7 @@ TEST_CASE(trm_init_valid_config)
     config.rfConfig = &defaultRfConfig;
     
     config.callbacks.onRxData = TestOnRxData;
-    config.callbacks.onRxBroadcast = TestOnRxBroadcast;
     config.callbacks.onTxComplete = TestOnTxComplete;
-    config.callbacks.onError = TestOnError;
     
     int ret = TRM_Init(&config);
     TEST_ASSERT_EQ(ret, TRM_OK, "Init with valid config should succeed");
@@ -315,7 +301,7 @@ TEST_CASE(send_data_basic)
     TRM_Start();
     
     uint8_t data[] = {0x01, 0x02, 0x03, 0x04};
-    int ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0);
+    int ret = TRM_SendData(0x12345678, data, sizeof(data), 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_OK, "SendData should succeed");
     
     TRM_Stop();
@@ -330,7 +316,7 @@ TEST_CASE(send_data_null)
     TRM_Init(&config);
     TRM_Start();
     
-    int ret = TRM_SendData(0x12345678, NULL, 10, 20, 0);
+    int ret = TRM_SendData(0x12345678, NULL, 10, 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_ERR_PARAM, "SendData with NULL data should fail");
     
     TRM_Stop();
@@ -346,7 +332,7 @@ TEST_CASE(send_data_zero_len)
     TRM_Start();
     
     uint8_t data[] = {0x01};
-    int ret = TRM_SendData(0x12345678, data, 0, 20, 0);
+    int ret = TRM_SendData(0x12345678, data, 0, 20, 0, 0);
     TEST_ASSERT_EQ(ret, TRM_ERR_PARAM, "SendData with zero length should fail");
     
     TRM_Stop();

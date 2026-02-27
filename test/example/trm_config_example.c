@@ -114,9 +114,9 @@ int main(void)
         /* 回调函数 */
         .callbacks = {
             .onRxData = on_rx_data,
-            .onRxBroadcast = NULL,
+
             .onTxComplete = NULL,
-            .onError = on_error
+
         },
         
         .platformConfig = NULL
