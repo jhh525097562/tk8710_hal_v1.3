@@ -284,9 +284,6 @@ typedef struct {
     
 } TK8710IrqResult;
 
-/* 中断回调函数类型 */
-typedef void (*TK8710IrqCallback)(TK8710IrqResult irqResult);
-
 /* 专用回调函数类型 */
 typedef void (*TK8710RxDataCallback)(TK8710IrqResult* irqResult);
 typedef void (*TK8710TxSlotCallback)(TK8710IrqResult* irqResult);

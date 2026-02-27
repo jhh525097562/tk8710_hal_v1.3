@@ -50,97 +50,6 @@ static void TRM_OnDriverTxSlotAdapter(TK8710IrqResult* irqResult);
 static void TRM_OnDriverSlotRxAdapter(TK8710IrqResult* irqResult);
 static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult);
 
-/* Driver中断回调 */
-static void TRM_DriverIrqCallback(TK8710IrqResult irqResult);
-
-/*==============================================================================
- * 私有函数实现
- *============================================================================*/
-
-static void TRM_DriverIrqCallback(TK8710IrqResult irqResult)
-{
-
-    if (g_trmCtx.state == TRM_STATE_UNINIT) {
-        TRM_LOG_DEBUG("TRM: Ignoring interrupt - TRM not initialized\n");
-        return;
-    }
-    
-    g_trmCtx.stats.rxCount++;
-    
-    /* 调试：记录所有中断类型 */
-    TRM_LOG_DEBUG("TRM: Received interrupt type=%d", irqResult.irq_type);
-    
-    /* 根据中断类型处理 */
-    switch (irqResult.irq_type) {
-        /* ===== 接收数据中断 ===== */
-        case TK8710_IRQ_MD_DATA:
-            TRM_OnDriverSlotRx(&irqResult);
-            break;
-            
-        /* ===== 发送截止中断 ===== */
-        case TK8710_IRQ_S1:
-            TRM_LOG_DEBUG("TRM: Tx deadline interrupt (S1)");
-            
-            /* 处理发送截止 */
-            if (g_trmCtx.state == TRM_STATE_RUNNING) {
-                /* 调用发送截止处理函数 */
-                TRM_OnDriverTxSlot(1, 128, &irqResult);  /* S1时隙，最大128用户 */
-            }
-            break;
-            
-        /* ===== 时隙结束中断 ===== */
-        case TK8710_IRQ_S0:
-            TRM_LOG_DEBUG("TRM: Slot end interrupt (S0 - BCN)");
-            if (g_trmCtx.state == TRM_STATE_RUNNING) {
-                TRM_OnDriverSlotEnd(0, 0, g_trmCurrentFrame);
-            }
-            break;
-            
-        case TK8710_IRQ_S2:
-            TRM_LOG_DEBUG("TRM: Slot end interrupt (S2)");
-            if (g_trmCtx.state == TRM_STATE_RUNNING) {
-                TRM_OnDriverSlotEnd(2, 2, g_trmCurrentFrame);
-            }
-            break;
-            
-        case TK8710_IRQ_S3:
-            TRM_LOG_DEBUG("TRM: Slot end interrupt (S3)");
-            if (g_trmCtx.state == TRM_STATE_RUNNING) {
-                TRM_OnDriverSlotEnd(3, 3, g_trmCurrentFrame);
-            }
-            break;
-            
-        /* ===== 其他中断类型 ===== */
-        case TK8710_IRQ_RX_BCN:
-            TRM_LOG_DEBUG("TRM: BCN receive interrupt");
-            break;
-            
-        case TK8710_IRQ_BRD_UD:
-            TRM_LOG_DEBUG("TRM: Broadcast UD interrupt");
-            break;
-            
-        case TK8710_IRQ_BRD_DATA:
-            TRM_LOG_DEBUG("TRM: Broadcast DATA interrupt");
-            /* 如果有广播接收回调，通知上层应用 */
-            if (g_trmCtx.config.callbacks.onRxBroadcast != NULL) {
-                /* TODO: 构建广播数据并调用回调 */
-            }
-            break;
-            
-        case TK8710_IRQ_MD_UD:
-            TRM_LOG_DEBUG("TRM: MD UD interrupt");
-            break;
-            
-        case TK8710_IRQ_ACM:
-            TRM_LOG_DEBUG("TRM: ACM calibration interrupt");
-            break;
-            
-        default:
-            TRM_LOG_WARN("TRM: Unknown interrupt type: %d", irqResult.irq_type);
-            break;
-    }
-}
-
 /*==============================================================================
  * 公共接口实现
  *============================================================================*/
@@ -327,17 +236,29 @@ TrmContext* TRM_GetContext(void)
 /* 多回调适配函数实现 */
 static void TRM_OnDriverSlotRxAdapter(TK8710IrqResult* irqResult)
 {
+    /* 更新统计信息 */
+    g_trmCtx.stats.rxCount++;
+    
+    /* 调试：记录中断类型 */
+    TRM_LOG_DEBUG("TRM: Received RX interrupt type=%d", irqResult->irq_type);
+    
     TRM_OnDriverSlotRx(irqResult);
 }
 
 static void TRM_OnDriverTxSlotAdapter(TK8710IrqResult* irqResult)
 {
+    /* 调试：记录中断类型 */
+    TRM_LOG_DEBUG("TRM: Received TX interrupt type=%d", irqResult->irq_type);
+    
     /* S1时隙，最大128用户 */
     TRM_OnDriverTxSlot(1, 128, irqResult);
 }
 
 static void TRM_OnDriverSlotEndAdapter(TK8710IrqResult* irqResult)
 {
+    /* 调试：记录中断类型 */
+    TRM_LOG_DEBUG("TRM: Received SlotEnd interrupt type=%d", irqResult->irq_type);
+    
     /* 根据中断类型确定时隙信息 */
     uint8_t slotType = 0;
     uint8_t slotIndex = 0;
@@ -362,6 +283,9 @@ static void TRM_OnDriverSlotEndAdapter(TK8710IrqResult* irqResult)
 
 static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult)
 {
+    /* 调试：记录中断类型 */
+    TRM_LOG_DEBUG("TRM: Received Error interrupt type=%d", irqResult->irq_type);
+    
     /* 从irqResult中提取错误信息 */
     int errorCode = irqResult->irq_type;  /* 使用中断类型作为错误码 */
     TRM_OnDriverError(irqResult);
@@ -474,13 +398,3 @@ static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710Ir
 }
 
 /* 这些函数在trm_beam.c和trm_data.c中实现，这里不需要重复定义 */
-
-/*==============================================================================
- * 新增：Driver回调管理API
- *============================================================================*/
-
-TK8710IrqCallback* TRM_GetIrqCallback(void)
-{
-    static TK8710IrqCallback callback = TRM_DriverIrqCallback;
-    return &callback;
-}

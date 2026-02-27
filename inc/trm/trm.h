@@ -516,8 +516,6 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
 
  */
 
-TK8710IrqCallback* TRM_GetIrqCallback(void);
-
 /**
  * @brief 获取TRM运行状态
  * @return 1表示运行中，0表示未运行

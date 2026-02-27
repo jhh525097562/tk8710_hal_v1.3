@@ -11,6 +11,9 @@
 #include <stddef.h>
 #include "driver/tk8710_types.h"
 
+/* GPIO中断回调函数类型 */
+typedef void (*TK8710GpioIrqCallback)(void* user);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -77,7 +80,7 @@ void TK8710SpiCsControl(uint8_t active);
  * @param user 用户上下文数据
  * @return 0-成功, 非0-失败
  */
-int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710IrqCallback cb, void* user);
+int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void* user);
 
 /**
  * @brief 使能GPIO中断

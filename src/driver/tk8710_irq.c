@@ -24,9 +24,8 @@
 #include <stdlib.h>
 
 /* 全局变量 */
-static TK8710IrqCallback g_irqCallback = NULL;
 static TK8710DriverCallbacks g_driverCallbacks = {0};
-static uint8_t g_useMultiCallbacks = 0;  /* 是否使用多回调模式 */
+static uint8_t g_useMultiCallbacks = 1;  /* 默认使用多回调模式 */
 static TK8710IrqResult g_irqResult = {0};
 static volatile uint8_t g_irqInProgress = 0;  /* 中断处理进行标志 */
 
@@ -106,28 +105,11 @@ void TK8710RegisterCallbacks(const TK8710DriverCallbacks* callbacks)
     if (callbacks) {
         memcpy(&g_driverCallbacks, callbacks, sizeof(TK8710DriverCallbacks));
         g_useMultiCallbacks = 1;
-        TK8710_LOG_IRQ_INFO("Multi-callback mode enabled");
+        TK8710_LOG_IRQ_INFO("Driver callbacks registered successfully");
     } else {
         memset(&g_driverCallbacks, 0, sizeof(TK8710DriverCallbacks));
         g_useMultiCallbacks = 0;
-        TK8710_LOG_IRQ_INFO("Multi-callback mode disabled");
-    }
-    
-    /* 重置中断结果 */
-    memset(&g_irqResult, 0, sizeof(TK8710IrqResult));
-}
-
-/**
- * @brief 初始化中断模块
- * @param irqCallback 中断回调函数指针（已弃用，请使用TK8710RegisterCallbacks）
- * @deprecated 请使用TK8710RegisterCallbacks注册专用回调
- */
-void TK8710IrqInit(const TK8710IrqCallback* irqCallback)
-{
-    if (irqCallback && *irqCallback) {
-        g_irqCallback = *irqCallback;
-        g_useMultiCallbacks = 0;  /* 使用传统单一回调模式 */
-        TK8710_LOG_IRQ_INFO("Legacy single callback mode enabled");
+        TK8710_LOG_IRQ_INFO("Driver callbacks cleared");
     }
     
     /* 重置中断结果 */
@@ -248,19 +230,15 @@ void TK8710_IRQHandler(void)
                         }
                         break;
                     default:
-                        /* 其他中断类型，可以调用错误回调或忽略 */
+                        /* 其他中断类型，调用错误回调 */
                         if (g_driverCallbacks.onError) {
                             g_driverCallbacks.onError(&g_irqResult);
                         }
                         break;
                 }
-            } else if (g_irqCallback) {
-                /* 使用传统单一回调模式 */
-                // printf("Driver: Calling IRQ callback for interrupt %d\n", i);
-                g_irqCallback(g_irqResult);
-                // printf("Driver: IRQ callback returned for interrupt %d\n", i);
             } else {
-                // printf("Driver: No IRQ callback registered for interrupt %d\n", i);
+                /* 未注册回调，记录警告 */
+                TK8710_LOG_IRQ_WARN("No callback registered for interrupt %d", i);
             }
         }
     }
