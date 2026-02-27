@@ -325,14 +325,8 @@ int init_interrupt_system(void)
     
     printf("Initializing interrupt system...\n");
     
-    /* 1. 初始化驱动层中断系统 */
-    const TK8710IrqCallback callback = app_irq_handler;
-    TK8710IrqInit(&callback);
-    
-    /* 注意: TK8710IrqInit返回void, 不检查返回值 */
-    
-    /* 3. 初始化GPIO中断 (使用JTOOL的GPIO功能) */
-    const TK8710IrqCallback gpio_callback = app_irq_handler;
+    /* 1. 初始化GPIO中断 (使用JTOOL的GPIO功能) */
+    const TK8710GpioIrqCallback gpio_callback = app_irq_handler;
     ret = TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, gpio_callback, NULL);//TK8710_GPIO_EDGE_FALLING  TK8710_GPIO_EDGE_RISING
     if (ret != TK8710_OK) {
         printf("GPIO initialization failed: %d (no hardware support)\n", ret);

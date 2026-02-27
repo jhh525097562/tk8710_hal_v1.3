@@ -237,6 +237,15 @@ int main(void)
     }
     printf("TRM initialized successfully\n");
     
+    /* 注册TRM到Driver的回调函数 */
+    ret = TRM_RegisterDriverCallbacks();
+    if (ret != TRM_OK) {
+        printf("TRM_RegisterDriverCallbacks failed: %d\n", ret);
+        TRM_Deinit();
+        return -1;
+    }
+    printf("TRM Driver callbacks registered successfully\n");
+    
     /* 2. 独立配置和初始化Driver */
     printf("Initializing Driver...\n");
     
@@ -300,11 +309,6 @@ int main(void)
     }
     
     /* 3. 建立平行连接 - 直接使用Driver API */
-    TK8710IrqCallback* trmIrqCallback = TRM_GetIrqCallback();
-    
-    /* 初始化中断系统 */
-    TK8710IrqInit(trmIrqCallback);  /* 设置TRM回调 */
-    
     /* 初始化Driver芯片 */
     ret = TK8710Init(&chipConfig);
     if (ret != TK8710_OK) {

@@ -133,11 +133,6 @@ int main(void)
     }
     
     /* 3. 建立平行连接 - 直接使用Driver API */
-    TK8710IrqCallback* trmIrqCallback = TRM_GetIrqCallback();
-    
-    /* 初始化中断系统 */
-    TK8710IrqInit(trmIrqCallback);  /* 设置TRM回调 */
-    
     /* 初始化Driver芯片 */
     ret = TK8710Init(&chipConfig);
     if (ret != TK8710_OK) {
@@ -166,6 +161,42 @@ int main(void)
     }
     
     /* 4. 平行启动系统 */
+    printf("Initializing TRM...\n");
+    
+    /* 配置TRM参数 */
+    TRM_InitConfig trmConfig;
+    memset(&trmConfig, 0, sizeof(trmConfig));
+    
+    /* TRM波束配置 */
+    trmConfig.beamMode = TRM_BEAM_MODE_FULL_STORE;
+    trmConfig.beamMaxUsers = 64;
+    trmConfig.beamTimeoutMs = 5000;
+    
+    /* TRM回调配置 */
+    trmConfig.callbacks.onRxData = OnRxData;
+    trmConfig.callbacks.onRxBroadcast = OnRxBroadcast;
+    trmConfig.callbacks.onTxComplete = OnTxComplete;
+    trmConfig.callbacks.onError = OnError;
+    
+    /* 初始化TRM */
+    ret = TRM_Init(&trmConfig);
+    if (ret != TRM_OK) {
+        printf("TRM_Init failed: %d\n", ret);
+        TK8710ResetChip(TK8710_RST_ALL);
+        return -1;
+    }
+    printf("TRM initialized successfully\n");
+    
+    /* 注册TRM到Driver的回调函数 */
+    ret = TRM_RegisterDriverCallbacks();
+    if (ret != TRM_OK) {
+        printf("TRM_RegisterDriverCallbacks failed: %d\n", ret);
+        TRM_Deinit();
+        TK8710ResetChip(TK8710_RST_ALL);
+        return -1;
+    }
+    printf("TRM Driver callbacks registered successfully\n");
+    
     printf("Starting TRM...\n");
     ret = TRM_Start();
     if (ret != TRM_OK) {
