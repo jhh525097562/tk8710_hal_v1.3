@@ -270,8 +270,15 @@ int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_
  */
 
 /**
+ * @brief 注册Driver回调函数
+ * @param callbacks 回调函数结构体指针
+ */
+void TK8710RegisterCallbacks(const TK8710DriverCallbacks* callbacks);
+
+/**
  * @brief 初始化中断模块
- * @param irqCallback 中断回调函数指针
+ * @param irqCallback 中断回调函数指针（已弃用，请使用TK8710RegisterCallbacks）
+ * @deprecated 请使用TK8710RegisterCallbacks注册专用回调
  */
 void TK8710IrqInit(const TK8710IrqCallback* irqCallback);
 

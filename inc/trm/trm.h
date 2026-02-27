@@ -537,6 +537,12 @@ int TRM_GetStats(TRM_Stats* stats);
  */
 TrmContext* TRM_GetContext(void);
 
+/**
+ * @brief 注册TRM到Driver的回调函数
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_RegisterDriverCallbacks(void);
+
 
 
 /*==============================================================================

@@ -287,6 +287,20 @@ typedef struct {
 /* 中断回调函数类型 */
 typedef void (*TK8710IrqCallback)(TK8710IrqResult irqResult);
 
+/* 专用回调函数类型 */
+typedef void (*TK8710RxDataCallback)(TK8710IrqResult* irqResult);
+typedef void (*TK8710TxSlotCallback)(TK8710IrqResult* irqResult);
+typedef void (*TK8710SlotEndCallback)(TK8710IrqResult* irqResult);
+typedef void (*TK8710ErrorCallback)(TK8710IrqResult* irqResult);
+
+/* Driver回调结构体 */
+typedef struct {
+    TK8710RxDataCallback onRxData;
+    TK8710TxSlotCallback onTxSlot;
+    TK8710SlotEndCallback onSlotEnd;
+    TK8710ErrorCallback onError;
+} TK8710DriverCallbacks;
+
 /* 接收数据Buffer结构体 */
 typedef struct {
     uint8_t* data;        /* 数据指针 */

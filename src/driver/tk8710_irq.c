@@ -25,6 +25,8 @@
 
 /* 全局变量 */
 static TK8710IrqCallback g_irqCallback = NULL;
+static TK8710DriverCallbacks g_driverCallbacks = {0};
+static uint8_t g_useMultiCallbacks = 0;  /* 是否使用多回调模式 */
 static TK8710IrqResult g_irqResult = {0};
 static volatile uint8_t g_irqInProgress = 0;  /* 中断处理进行标志 */
 
@@ -96,13 +98,36 @@ static const IrqHandler g_irqHandlers[] = {
 };
 
 /**
+ * @brief 注册Driver回调函数
+ * @param callbacks 回调函数结构体指针
+ */
+void TK8710RegisterCallbacks(const TK8710DriverCallbacks* callbacks)
+{
+    if (callbacks) {
+        memcpy(&g_driverCallbacks, callbacks, sizeof(TK8710DriverCallbacks));
+        g_useMultiCallbacks = 1;
+        TK8710_LOG_IRQ_INFO("Multi-callback mode enabled");
+    } else {
+        memset(&g_driverCallbacks, 0, sizeof(TK8710DriverCallbacks));
+        g_useMultiCallbacks = 0;
+        TK8710_LOG_IRQ_INFO("Multi-callback mode disabled");
+    }
+    
+    /* 重置中断结果 */
+    memset(&g_irqResult, 0, sizeof(TK8710IrqResult));
+}
+
+/**
  * @brief 初始化中断模块
- * @param irqCallback 中断回调函数指针
+ * @param irqCallback 中断回调函数指针（已弃用，请使用TK8710RegisterCallbacks）
+ * @deprecated 请使用TK8710RegisterCallbacks注册专用回调
  */
 void TK8710IrqInit(const TK8710IrqCallback* irqCallback)
 {
     if (irqCallback && *irqCallback) {
         g_irqCallback = *irqCallback;
+        g_useMultiCallbacks = 0;  /* 使用传统单一回调模式 */
+        TK8710_LOG_IRQ_INFO("Legacy single callback mode enabled");
     }
     
     /* 重置中断结果 */
@@ -202,7 +227,35 @@ void TK8710_IRQHandler(void)
             TK8710_LOG_IRQ_DEBUG("IRQ %d processed in %u us", i, processTime);
             
             /* 为每个中断调用用户回调 (如果注册了) */
-            if (g_irqCallback) {
+            if (g_useMultiCallbacks) {
+                /* 使用多回调模式 */
+                switch (i) {
+                    case TK8710_IRQ_MD_DATA:
+                        if (g_driverCallbacks.onRxData) {
+                            g_driverCallbacks.onRxData(&g_irqResult);
+                        }
+                        break;
+                    case TK8710_IRQ_S1:
+                        if (g_driverCallbacks.onTxSlot) {
+                            g_driverCallbacks.onTxSlot(&g_irqResult);
+                        }
+                        break;
+                    case TK8710_IRQ_S0:
+                    case TK8710_IRQ_S2:
+                    case TK8710_IRQ_S3:
+                        if (g_driverCallbacks.onSlotEnd) {
+                            g_driverCallbacks.onSlotEnd(&g_irqResult);
+                        }
+                        break;
+                    default:
+                        /* 其他中断类型，可以调用错误回调或忽略 */
+                        if (g_driverCallbacks.onError) {
+                            g_driverCallbacks.onError(&g_irqResult);
+                        }
+                        break;
+                }
+            } else if (g_irqCallback) {
+                /* 使用传统单一回调模式 */
                 // printf("Driver: Calling IRQ callback for interrupt %d\n", i);
                 g_irqCallback(g_irqResult);
                 // printf("Driver: IRQ callback returned for interrupt %d\n", i);

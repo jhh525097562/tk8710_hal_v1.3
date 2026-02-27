@@ -42,7 +42,13 @@ TrmContext* TRM_GetContext(void);
 static void TRM_OnDriverSlotEnd(uint8_t slotType, uint8_t slotIndex, uint32_t frameNo);
 static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult);
 static void TRM_OnDriverSlotRx(TK8710IrqResult* irqResult);
-static void TRM_OnDriverError(int errorCode);
+static void TRM_OnDriverError(TK8710IrqResult* irqResult);
+
+/* 多回调适配函数 */
+static void TRM_OnDriverSlotEndAdapter(TK8710IrqResult* irqResult);
+static void TRM_OnDriverTxSlotAdapter(TK8710IrqResult* irqResult);
+static void TRM_OnDriverSlotRxAdapter(TK8710IrqResult* irqResult);
+static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult);
 
 /* Driver中断回调 */
 static void TRM_DriverIrqCallback(TK8710IrqResult irqResult);
@@ -290,10 +296,103 @@ void TRM_SetMaxFrameCount(uint32_t maxCount)
     g_trmMaxFrameCount = maxCount;
 }
 
+int TRM_RegisterDriverCallbacks(void)
+{
+    if (g_trmCtx.state == TRM_STATE_UNINIT) {
+        TRM_LOG_WARN("TRM未初始化，无法注册Driver回调");
+        return TRM_ERR_STATE;
+    }
+    
+    /* 设置Driver回调结构体 */
+    TK8710DriverCallbacks callbacks = {
+        .onRxData = TRM_OnDriverSlotRxAdapter,
+        .onTxSlot = TRM_OnDriverTxSlotAdapter,
+        .onSlotEnd = TRM_OnDriverSlotEndAdapter,
+        .onError = TRM_OnDriverErrorAdapter
+    };
+    
+    /* 注册到Driver */
+    TK8710RegisterCallbacks(&callbacks);
+    
+    TRM_LOG_INFO("TRM Driver回调注册完成");
+    return TRM_OK;
+}
+
 /* 内部函数实现 */
 TrmContext* TRM_GetContext(void)
 {
     return &g_trmCtx;
+}
+
+/* 多回调适配函数实现 */
+static void TRM_OnDriverSlotRxAdapter(TK8710IrqResult* irqResult)
+{
+    TRM_OnDriverSlotRx(irqResult);
+}
+
+static void TRM_OnDriverTxSlotAdapter(TK8710IrqResult* irqResult)
+{
+    /* S1时隙，最大128用户 */
+    TRM_OnDriverTxSlot(1, 128, irqResult);
+}
+
+static void TRM_OnDriverSlotEndAdapter(TK8710IrqResult* irqResult)
+{
+    /* 根据中断类型确定时隙信息 */
+    uint8_t slotType = 0;
+    uint8_t slotIndex = 0;
+    
+    switch (irqResult->irq_type) {
+        case TK8710_IRQ_S0:
+            slotType = 0; slotIndex = 0;  /* BCN时隙 */
+            break;
+        case TK8710_IRQ_S2:
+            slotType = 2; slotIndex = 2;  /* S2时隙 */
+            break;
+        case TK8710_IRQ_S3:
+            slotType = 3; slotIndex = 3;  /* S3时隙 */
+            break;
+        default:
+            TRM_LOG_WARN("TRM: Unexpected slot end interrupt type: %d", irqResult->irq_type);
+            return;
+    }
+    
+    TRM_OnDriverSlotEnd(slotType, slotIndex, g_trmCurrentFrame);
+}
+
+static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult)
+{
+    /* 从irqResult中提取错误信息 */
+    int errorCode = irqResult->irq_type;  /* 使用中断类型作为错误码 */
+    TRM_OnDriverError(irqResult);
+}
+
+static void TRM_OnDriverError(TK8710IrqResult* irqResult)
+{
+    int errorCode = irqResult->irq_type;
+    TRM_LOG_WARN("TRM: Driver error callback, error code: %d", errorCode);
+    
+    /* 可以根据错误类型进行不同的处理 */
+    switch (errorCode) {
+        case TK8710_IRQ_RX_BCN:
+            TRM_LOG_DEBUG("TRM: BCN receive error");
+            break;
+        case TK8710_IRQ_BRD_UD:
+            TRM_LOG_DEBUG("TRM: Broadcast UD error");
+            break;
+        case TK8710_IRQ_BRD_DATA:
+            TRM_LOG_DEBUG("TRM: Broadcast DATA error");
+            break;
+        case TK8710_IRQ_MD_UD:
+            TRM_LOG_DEBUG("TRM: MD UD error");
+            break;
+        case TK8710_IRQ_ACM:
+            TRM_LOG_DEBUG("TRM: ACM calibration error");
+            break;
+        default:
+            TRM_LOG_WARN("TRM: Unknown error type: %d", errorCode);
+            break;
+    }
 }
 
 /*==============================================================================
@@ -371,15 +470,6 @@ static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710Ir
     if (sentCount > 0) {
         g_trmCtx.stats.txCount += sentCount;
         TRM_LOG_DEBUG("TRM: TxSlot: sent %d users\n", sentCount);
-    }
-}
-
-static void TRM_OnDriverError(int errorCode)
-{
-    /* TODO: 添加错误计数到统计结构 */
-    
-    if (g_trmCtx.config.callbacks.onError != NULL) {
-        g_trmCtx.config.callbacks.onError(errorCode, "Driver error");
     }
 }
 
