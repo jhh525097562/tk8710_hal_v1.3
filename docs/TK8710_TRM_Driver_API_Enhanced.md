@@ -386,9 +386,9 @@ int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
   ```c
   typedef enum {
       TK8710_LOG_MODULE_CORE     = 0x01,  /* 核心模块 */
-      TK8710_LOG_MODULE_DRIVER   = 0x02,  /* Driver模块 */
-      TK8710_LOG_MODULE_HAL      = 0x04,  /* HAL层模块 */
-      TK8710_LOG_MODULE_TRM      = 0x08,  /* TRM模块 */
+      TK8710_LOG_MODULE_CONFIG   = 0x02,  /* 配置模块 */
+      TK8710_LOG_MODULE_IRQ      = 0x04,  /* 中断模块 */
+      TK8710_LOG_MODULE_HAL      = 0x08,  /* HAL层模块 */
       TK8710_LOG_MODULE_ALL      = 0xFF   /* 所有模块 */
   } TK8710LogModule;
   ```
@@ -404,9 +404,9 @@ TK8710_LOG_TRACE(module, fmt, ...);  // 跟踪日志
 
 // 模块特定日志宏
 TK8710_LOG_CORE_ERROR(fmt, ...);     // 核心模块错误日志
-TK8710_LOG_DRIVER_WARN(fmt, ...);    // Driver模块警告日志
-TK8710_LOG_HAL_INFO(fmt, ...);        // HAL层信息日志
-TK8710_LOG_TRM_DEBUG(fmt, ...);       // TRM模块调试日志
+TK8710_LOG_CONFIG_WARN(fmt, ...);    // 配置模块警告日志
+TK8710_LOG_IRQ_INFO(fmt, ...);        // 中断模块信息日志
+TK8710_LOG_HAL_DEBUG(fmt, ...);       // HAL层调试日志
 ```
 **功能**: 输出日志信息
 **参数**:
@@ -682,15 +682,15 @@ TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 
 // 2. 使用日志宏输出日志
 TK8710_LOG_CORE_ERROR("系统初始化失败: %d", ret);
-TK8710_LOG_DRIVER_WARN("发送队列接近满载: %d/64", queued);
-TK8710_LOG_HAL_INFO("芯片初始化完成");
-TK8710_LOG_TRM_DEBUG("波束信息更新: 用户ID=0x%08X", userId);
+TK8710_LOG_CONFIG_WARN("配置参数无效: %s", param_name);
+TK8710_LOG_IRQ_INFO("中断处理完成: 类型=%d", irq_type);
+TK8710_LOG_HAL_DEBUG("寄存器读写: 地址=0x%04X, 值=0x%08X", reg_addr, value);
 
 // 3. 不同级别和模块的日志示例
 TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "严重错误: %s", error_msg);
-TK8710_LOG_WARN(TK8710_LOG_MODULE_DRIVER, "警告: 连接超时");
-TK8710_LOG_INFO(TK8710_LOG_MODULE_HAL, "信息: 芯片温度正常");
-TK8710_LOG_DEBUG(TK8710_LOG_MODULE_TRM, "调试: 处理用户数据");
+TK8710_LOG_WARN(TK8710_LOG_MODULE_CONFIG, "警告: 配置超时");
+TK8710_LOG_INFO(TK8710_LOG_MODULE_IRQ, "信息: 中断触发");
+TK8710_LOG_DEBUG(TK8710_LOG_MODULE_HAL, "调试: 硬件初始化");
 TK8710_LOG_TRACE(TK8710_LOG_MODULE_ALL, "跟踪: 函数进入");
 ```
 
