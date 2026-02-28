@@ -107,7 +107,7 @@ TEST_CASE(driver_start_stop)
     
     TK8710Init(&config, NULL);
     
-    int ret = TK8710Startwork(1, 1);
+    int ret = TK8710Start(1, 1);
     TEST_ASSERT_EQ(ret, TK8710_OK, "Start should succeed");
     
     // 使用复位代替停止，因为没有停止控制类型
@@ -116,7 +116,7 @@ TEST_CASE(driver_start_stop)
 
 TEST_CASE(driver_start_without_init)
 {
-    int ret = TK8710Startwork(1, 1);
+    int ret = TK8710Start(1, 1);
     TEST_ASSERT_EQ(ret, TK8710_ERR, "Start without init should fail");
 }
 

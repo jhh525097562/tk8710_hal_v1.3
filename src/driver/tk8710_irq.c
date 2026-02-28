@@ -827,7 +827,7 @@ static void tk8710_handle_md_data(void)
     
     /* 处理MD_DATA中断 */
     tk8710_md_data_process();
-
+    
     /* 读取CRC正确用户的SNR、RSSI、AH、freq数据 */
     tk8710_md_data_read_signal_info();
 }

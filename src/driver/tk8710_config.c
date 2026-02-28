@@ -612,7 +612,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                 if (ret != TK8710_OK) return ret;
             }
             
-            /* 注：主从模式由TK8710Startwork配置，此处不更新 */
+            /* 注：主从模式由TK8710Start配置，此处不更新 */
             
             /* 保存时隙配置到全局变量 (包含brdUserNum) */
             memcpy(&g_slotCfg, slotCfg, sizeof(slotCfg_t));

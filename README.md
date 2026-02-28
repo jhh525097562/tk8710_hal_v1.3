@@ -371,7 +371,7 @@ int main(void) {
     TK8710SetConfig(TK8710_CONFIG_TYPE_SLOT, &slotConfig);
   
     // 启动芯片工作
-    ret = TK8710Startwork(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         printf("芯片启动失败: %d\n", ret);
         return -1;
@@ -559,7 +559,7 @@ int main(void) {
     TK8710RegisterCallbacks(&driverCallbacks);
   
     // 6. 启动芯片工作
-    ret = TK8710Startwork(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         printf("芯片启动失败: %d\n", ret);
         return -1;
@@ -632,7 +632,7 @@ int main(void) {
 | `TK8710RfInit()`                    | 初始化射频子系统 | 频率、增益、直流校准 |
 | `TK8710GpioInit()`                  | 初始化GPIO中断   | 中断引脚配置         |
 | `TK8710RegisterCallbacks()`         | 注册Driver回调   | 多回调架构           |
-| `TK8710Startwork()`                 | 启动芯片工作     | 主模式/从模式        |
+| `TK8710Start()`                 | 启动芯片工作     | 主模式/从模式        |
 | `TK8710SetDownlink2DataWithPower()` | 设置下行2数据    | 直接硬件控制         |
 | `TK8710SetDownlink1DataWithPower()` | 设置下行1数据    | 广播数据发送         |
 | `TK8710SetTxUserInfo()`             | 设置用户信息     | 频率、波束、功率     |

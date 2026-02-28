@@ -334,9 +334,9 @@ int main(void)
     printf("TRM started successfully\n");
     
     printf("Starting Driver...\n");
-    ret = TK8710Startwork(1, 0);
+    ret = TK8710Start(1, 0);
     if (ret != TK8710_OK) {
-        printf("TK8710Startwork failed: %d\n", ret);
+        printf("TK8710Start failed: %d\n", ret);
         TRM_Stop();
         TK8710ResetChip(TK8710_RST_ALL);
         TRM_Deinit();

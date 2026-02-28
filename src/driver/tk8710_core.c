@@ -276,7 +276,7 @@ int TK8710Init(const ChipConfig* initConfig)
 
     /* init_18 配置已移至 TK8710SetConfig TK8710_CFG_TYPE_SLOT_CFG */
 
-    /* 配置 irq_ctrl0: 中断使能 (注释掉，由TK8710Startwork配置) */
+    /* 配置 irq_ctrl0: 中断使能 (注释掉，由TK8710Start配置) */
     /* irqCtrl0.data = cfg->irq_ctrl0; */
     /* ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, irq_ctrl0), irqCtrl0.data); */
     /* if (ret != TK8710_OK) return ret; */
@@ -316,7 +316,7 @@ int TK8710Init(const ChipConfig* initConfig)
  * @param workMode 工作模式: 1=连续, 2=单次
  * @return 0-成功, 1-失败, 2-超时
  */
-int TK8710Startwork(uint8_t workType, uint8_t workMode)
+int TK8710Start(uint8_t workType, uint8_t workMode)
 {
     int ret;
     s_init_5 init5;
