@@ -26,7 +26,7 @@
 | **数据接收**                   |                     |            |            |
 | `TK8710GetRxUserData`              | 获取接收数据        | TRM层      | 数据接收   |
 | `TK8710GetRxUserInfo`              | 获取接收用户信息    | TRM层      | 数据接收   |
-| `TK8710GetSignalInfo`              | 获取信号信息        | TRM层      | 数据接收   |
+| `TK8710GetRxUserSignalQuality`      | 获取接收用户信号质量  | TRM层      | 数据接收   |
 | `TK8710ReleaseRxData`              | 释放接收数据资源    | TRM层      | 数据接收   |
 | **状态查询**                   |                     |            |            |
 | `TK8710GetSlotConfig`（GetConfig） | 获取时隙配置        | 应用层     | 状态查询   |
@@ -285,13 +285,15 @@ int TK8710GetRxUserInfo(uint8_t userBufferIdx, uint32_t* freqInfo, uint32_t* ahI
 ```
 
 **功能**: 获取接收用户信息 (从MD_UD中断获取的数据)
-**参数**:
+**参数**
 
 - `userBufferIdx`: 用户索引 (0-127)
-- `freqInfo`: 输出频率指针
-- `ahInfo`: 输出AH数据数组 (16个32位数据)
-- `pilotPowerInfo`: 输出Pilot功率指针
-  **返回值**: 0-成功, 1-失败, 2-超时
+- `freqInfo`: 频率信息，需要按照一定规则转换才能解读
+- `ahInfo`: AH信息
+- `pilotPowerInfo`: PilotPower信息
+
+**
+    返回值**: 0-成功, 1-失败, 2-超时
 
 **说明**:
 
@@ -301,13 +303,13 @@ int TK8710GetRxUserInfo(uint8_t userBufferIdx, uint32_t* freqInfo, uint32_t* ahI
 - TRM层使用此接口获取用户信息进行波束跟踪和管理
 - 如果获取失败，TRM层会使用默认值进行处理
 
-#### `TK8710GetSignalInfo`
+#### `TK8710GetRxUserSignalQuality`
 
 ```c
-int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq);
+int TK8710GetRxUserSignalQuality(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq);
 ```
 
-**功能**: 获取信号质量信息
+**功能**: 获取接收用户信号质量信息
 **参数**:
 
 - `userIndex`: 用户索引 (0-127)
@@ -776,7 +778,7 @@ void OnRxData(TK8710IrqResult* irqResult) {
                 // 4. 获取信号质量信息
                 uint32_t rssi, freq;
                 uint8_t snr;
-                TK8710GetSignalInfo(i, &rssi, &snr, &freq);
+                TK8710GetRxUserSignalQuality(i, &rssi, &snr, &freq);
   
                 // 5. 获取用户波束信息（TRM层使用）
                 uint32_t userFreq;
@@ -860,7 +862,7 @@ ret = TK8710RfConfig(&rfConfig);
 2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogSimpleInit()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
 4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Start()`
-5. **数据接收操作** - `TK8710GetRxUserData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
+5. **数据接收操作** - `TK8710GetRxUserData()`, `TK8710GetRxUserSignalQuality()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
 6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
 7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
 

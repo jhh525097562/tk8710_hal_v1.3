@@ -467,7 +467,7 @@ void OnDriverRxData(TK8710IrqResult* irqResult) {
                 // 获取信号质量信息
                 uint32_t rssi, freq;
                 uint8_t snr;
-                TK8710GetSignalInfo(i, &rssi, &snr, &freq);
+                TK8710GetRxUserSignalQuality(i, &rssi, &snr, &freq);
             
                 // 获取用户波束信息
                 uint32_t userFreq;
@@ -637,7 +637,7 @@ int main(void) {
 | `TK8710SetDownlink1DataWithPower()` | 设置下行1数据    | 广播数据发送         |
 | `TK8710SetTxUserInfo()`             | 设置用户信息     | 频率、波束、功率     |
 | `TK8710GetRxUserData()`                 | 获取接收数据     | 用户数据读取         |
-| `TK8710GetSignalInfo()`             | 获取信号质量     | RSSI、SNR、频率      |
+| `TK8710GetRxUserSignalQuality()`             | 获取信号质量     | RSSI、SNR、频率      |
 | `TK8710SetConfig()`                 | 设置芯片配置     | 时隙、射频等配置     |
 | `TK8710GetConfig()`                 | 获取芯片配置     | 读取当前配置         |
 | `TK8710GetSlotCfg()`                | 获取时隙配置     | 时隙参数查询         |

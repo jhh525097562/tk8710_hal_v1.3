@@ -2520,7 +2520,7 @@ int TK8710GetBrdData(uint8_t brdIndex, uint8_t** data, uint16_t* dataLen, uint8_
  * @param freq 频率值输出
  * @return 0-成功, 1-失败
  */
-int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq)
+int TK8710GetRxUserSignalQuality(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq)
 {
     if (userIndex >= 128 || rssi == NULL || snr == NULL || freq == NULL) {
         TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, rssi=%p, snr=%p, freq=%p", 

@@ -242,7 +242,7 @@ void app_irq_handler(TK8710IrqResult irqResult)
                             /* 获取信号质量信息 */
                             uint32_t rssi, freq;
                             uint8_t snr;
-                            if (TK8710GetSignalInfo(i, &rssi, &snr, &freq) == TK8710_OK) {
+                            if (TK8710GetRxUserSignalQuality(i, &rssi, &snr, &freq) == TK8710_OK) {
                                 /* SNR转换：大于256时默认为0，其他时候除以4 */
                                 uint8_t snrValue = snr > 256 ? 0 : snr / 4;
                                 

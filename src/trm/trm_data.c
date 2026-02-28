@@ -579,10 +579,10 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
             currentUser->data = userData;
             currentUser->dataLen = dataLen;
             
-            /* 获取信号质量信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetSignalInfo实现 */
+            /* 获取信号质量信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetRxUserSignalQuality实现 */
             uint32_t rssi, freqSignal;
             uint8_t snr;
-            if (TK8710GetSignalInfo(userIndex, &rssi, &snr, &freqSignal) == TK8710_OK) {
+            if (TK8710GetRxUserSignalQuality(userIndex, &rssi, &snr, &freqSignal) == TK8710_OK) {
                 /* SNR转换：uint8_t最大255，直接除以4 */
                 uint8_t snrValue = snr / 4;
                 

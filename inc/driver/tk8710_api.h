@@ -130,7 +130,7 @@ int TK8710GetRxUserInfo(uint8_t userBufferIdx, uint32_t* freqInfo, uint32_t* ahI
  * @param freq 频率值输出
  * @return 0-成功, 1-失败
  */
-int TK8710GetSignalInfo(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq);
+int TK8710GetRxUserSignalQuality(uint8_t userIndex, uint32_t* rssi, uint8_t* snr, uint32_t* freq);
 
 /**
  * @brief 释放接收数据
