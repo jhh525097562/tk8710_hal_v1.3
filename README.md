@@ -46,16 +46,17 @@ tk8710_hal_v1.3/
 │   ├── common/             # 公共模块头文件
 │   │   └── mempool.h       # 内存池管理
 │   ├── driver/             # Driver层头文件
-│   │   ├── tk8710.h        # Driver主接口
-│   │   ├── tk8710_api.h    # Driver API定义
-│   │   ├── tk8710_debug.h  # 调试接口
-│   │   ├── tk8710_internal.h # Driver内部定义
-│   │   ├── tk8710_log.h    # 日志系统
-│   │   ├── tk8710_regs.h   # 寄存器定义
-│   │   ├── tk8710_rf_regs.h # RF寄存器定义
-│   │   └── tk8710_types.h  # 数据类型定义
-│   └── trm/                # TRM层头文件
-│       ├── trm.h           # TRM主接口
+│   │   ├── tk8710.h          # Driver主头文件（向后兼容）
+│   │   ├── tk8710_api.h      # Driver公共API接口
+│   │   ├── tk8710_internal.h # Driver内部函数和调试接口
+│   │   ├── tk8710_log.h      # 日志系统
+│   │   ├── tk8710_regs.h     # 寄存器定义
+│   │   ├── tk8710_rf_regs.h  # RF寄存器定义
+│   │   └── tk8710_types.h    # 数据类型定义
+│   └── trm/                    # TRM层头文件
+│       ├── trm.h           # TRM主头文件（向后兼容）
+│       ├── trm_api.h      # TRM公共API接口
+│       ├── trm_internal.h # TRM内部函数和调试接口
 │       ├── trm_beam.h      # 波束管理
 │       ├── trm_config.h    # 配置管理
 │       ├── trm_data.h      # 数据管理
