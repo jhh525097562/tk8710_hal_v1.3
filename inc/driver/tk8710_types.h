@@ -427,6 +427,16 @@ typedef struct {
     uint8_t  gain;          /* Tone增益 */
 } TxToneConfig;
 
+/* GPIO中断回调函数类型 */
+typedef void (*TK8710GpioIrqCallback)(void* user);
+
+/* GPIO中断边沿类型枚举 */
+typedef enum {
+    TK8710_GPIO_EDGE_RISING  = 0,
+    TK8710_GPIO_EDGE_FALLING = 1,
+    TK8710_GPIO_EDGE_BOTH    = 2,
+} TK8710GpioEdge;
+
 #ifdef __cplusplus
 }
 #endif
