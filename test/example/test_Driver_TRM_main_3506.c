@@ -159,7 +159,7 @@ int test_broadcast_tx(uint8_t counter)
     }
     
     /* 使用TRM广播发送接口 */
-    int ret = TRM_SendBroadcast(0, brdData, 26, 35, TK8710_BRD_DATA_TYPE_NORMAL);  /* 下行1用户0，功率35，正常数据类型 */
+    int ret = TRM_SendBroadcast(0, brdData, 26, 35, TK8710_DATA_TYPE_BRD);  /* 下行1用户0，功率35，正常数据类型 */
     if (ret == TRM_OK) {
         printf("Broadcast data set successfully: counter=%d\n", counter);
         return 0;
@@ -679,7 +679,7 @@ int test_trm_send_data(uint32_t userId, const uint8_t* testData, uint16_t dataLe
     printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
     
     /* 发送数据 */
-    ret = TRM_SendData(userId, testData, dataLen, 20, currentFrame + 1, 0, TK8710_USER_DATA_TYPE_NORMAL);
+    ret = TRM_SendData(userId, testData, dataLen, 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
     if (ret == TRM_OK) {
         TRM_LOG_INFO("TRM发送成功 - 用户ID=0x%08X", userId);
         printf("TRM发送成功\n");
@@ -728,7 +728,7 @@ int test_trm_batch_send(uint8_t userCount)
         printf("用户ID: 0x%08X, 数据长度: %d\n", userId, sizeof(testData));
         printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
         
-        ret = TRM_SendData(userId, testData, sizeof(testData), 20, currentFrame + 1, 0, TK8710_USER_DATA_TYPE_NORMAL);
+        ret = TRM_SendData(userId, testData, sizeof(testData), 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
         if (ret == TRM_OK) {
             TRM_LOG_DEBUG("批量发送[%d/%d]成功 - 用户ID=0x%08X", i+1, userCount, userId);
             printf("TRM发送成功\n");
