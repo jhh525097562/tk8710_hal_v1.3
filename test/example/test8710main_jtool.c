@@ -226,7 +226,7 @@ void app_irq_handler(TK8710IrqResult irqResult)
                         uint16_t dataLen;
                         
                         /* 使用新的Buffer API获取数据 */
-                        if (TK8710GetRxData(i, &userData, &dataLen) == TK8710_OK) {
+                        if (TK8710GetRxUserData(i, &userData, &dataLen) == TK8710_OK) {
                             // printf("User[%d] data (len=%d): ", i, dataLen);
                             
                             // /* 打印前16字节数据 */

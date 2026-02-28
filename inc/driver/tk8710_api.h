@@ -110,7 +110,7 @@ int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint32_t* ahData
  * @param dataLen 数据长度输出
  * @return 0-成功, 1-失败
  */
-int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
+int TK8710GetRxUserData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 
 /**
  * @brief 获取接收用户信息 (从MD_UD中断获取的数据)

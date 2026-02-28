@@ -549,7 +549,7 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
         /* 获取用户数据 */
         uint8_t* userData;
         uint16_t dataLen;
-        if (TK8710GetRxData(userIndex, &userData, &dataLen) == TK8710_OK) {
+        if (TK8710GetRxUserData(userIndex, &userData, &dataLen) == TK8710_OK) {
             // TRM_LOG_DEBUG("TRM: User[%d] received %d bytes\n", userIndex, dataLen);
             
             /* 从接收数据的前4个字节提取用户ID */

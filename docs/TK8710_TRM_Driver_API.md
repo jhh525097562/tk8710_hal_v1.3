@@ -24,7 +24,7 @@
 | `TK8710SetDownlink2DataWithPower` | 设置下行2数据(用户) | TRM层      | 数据传输   |
 | `TK8710SetTxUserInfo`             | 设置发送用户信息    | TRM层      | 数据传输   |
 | **数据接收**                  |                     |            |            |
-| `TK8710GetRxData`                 | 获取接收数据        | TRM层      | 数据接收   |
+| `TK8710GetRxUserData`             | 获取接收数据        | TRM层      | 数据接收   |
 | `TK8710GetRxUserInfo`             | 获取接收用户信息    | TRM层      | 数据接收   |
 | `TK8710GetSignalInfo`             | 获取信号信息        | TRM层      | 数据接收   |
 | `TK8710ReleaseRxData`             | 释放接收数据资源    | TRM层      | 数据接收   |
@@ -264,10 +264,10 @@ int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint8_t* ahData,
 
 ### 4. 数据接收
 
-#### `TK8710GetRxData`
+#### `TK8710GetRxUserData`
 
 ```c
-int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
+int TK8710GetRxUserData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 ```
 
 **功能**: 获取接收数据
@@ -768,7 +768,7 @@ void OnRxData(TK8710IrqResult* irqResult) {
             // 2. 获取用户数据
             uint8_t* userData;
             uint16_t dataLen;
-            ret = TK8710GetRxData(i, &userData, &dataLen);
+            ret = TK8710GetRxUserData(i, &userData, &dataLen);
             if (ret == TK8710_OK) {
                 // 3. 处理数据
                 printf("User[%d] received %d bytes\n", i, dataLen);
@@ -860,7 +860,7 @@ ret = TK8710RfConfig(&rfConfig);
 2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogSimpleInit()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
 4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Start()`
-5. **数据接收操作** - `TK8710GetRxData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
+5. **数据接收操作** - `TK8710GetRxUserData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
 6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
 7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
 

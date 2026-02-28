@@ -2406,7 +2406,7 @@ static void tk8710_md_data_read_signal_info(void)
  * @param dataLen 数据长度输出
  * @return 0-成功, 1-失败
  */
-int TK8710GetRxData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen)
+int TK8710GetRxUserData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen)
 {
     if (userIndex >= 128 || data == NULL || dataLen == NULL) {
         TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, data=%p, dataLen=%p", 
