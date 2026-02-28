@@ -240,7 +240,7 @@ int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8
     
     /* 直接调用Driver发送下行1 */
     // int ret = TK8710SetTxBrdData(brdIndex, data, len);
-    int ret = TK8710SetDownlinkDataWithPower(TK8710_DOWNLINK_1, brdIndex, data, len, txPower, dataType);
+    int ret = TK8710SetTxData(TK8710_DOWNLINK_1, brdIndex, data, len, txPower, dataType);
     if (ret == TK8710_OK) {
         TRM_LOG_DEBUG("TRM广播发送成功");
     } else {
@@ -388,7 +388,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                 int beamRet = TRM_GetBeamInfo(item->userId, &beam);
                 if (beamRet == TRM_OK) {
                     /* 设置发送下行2数据 - 参考test_Driver_TRM_main_3506.c实现 */
-                    int ret = TK8710SetDownlinkDataWithPower(TK8710_DOWNLINK_2, txUserIndex, item->data, item->len, item->power, item->dataType);
+                    int ret = TK8710SetTxData(TK8710_DOWNLINK_2, txUserIndex, item->data, item->len, item->power, item->dataType);
                     if (ret != TK8710_OK) {
                         TRM_LOG_ERROR("TRM: Failed to set TX user data for user[%u]: %d", item->userId, ret);
                     } else {

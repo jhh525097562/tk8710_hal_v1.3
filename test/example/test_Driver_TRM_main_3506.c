@@ -128,7 +128,7 @@ static int test_auto_downlink_tx_all(const uint8_t* userIndices, const uint8_t* 
         }
         
         /* 设置自动发送下行2数据和功率 */
-        ret = TK8710SetDownlinkDataWithPower(TK8710_DOWNLINK_2, userIndex, txData, 26, txPower, TK8710_DATA_TYPE_DED);
+        ret = TK8710SetTxData(TK8710_DOWNLINK_2, userIndex, txData, 26, txPower, TK8710_DATA_TYPE_DED);
         if (ret != TK8710_OK) {
             printf("Failed to set TX user data for user[%d]: %d\n", userIndex, ret);
             return ret;
@@ -198,7 +198,7 @@ static int test_manual_tx_setup(const uint8_t* userIndices, uint8_t userCount)
         
         /* 设置发送下行2数据 */
         uint8_t txUserIndex = i;  /* 从第一个用户开始，依次增加 */
-        ret = TK8710SetDownlinkDataWithPower(TK8710_DOWNLINK_2, txUserIndex, txData, 26, 35, TK8710_DATA_TYPE_DED);  /* 使用连续索引，功率35 */
+        ret = TK8710SetTxData(TK8710_DOWNLINK_2, txUserIndex, txData, 26, 35, TK8710_DATA_TYPE_DED);  /* 使用连续索引，功率35 */
         if (ret != TK8710_OK) {
             printf("Failed to set TX user data for user[%d]: %d\n", txUserIndex, ret);
             return ret;
