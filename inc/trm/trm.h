@@ -19,11 +19,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* 包含所有TRM头文件 */
+/* 包含核心TRM头文件 */
 #include "trm_api.h"
 #include "trm_internal.h"
 
-/* 包含相关的TRM子模块头文件 */
+/* 包含TRM子模块头文件 (避免重复定义) */
 #include "trm_beam.h"
 #include "trm_config.h"
 #include "trm_data.h"

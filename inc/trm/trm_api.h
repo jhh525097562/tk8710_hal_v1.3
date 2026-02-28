@@ -66,14 +66,6 @@ typedef enum {
     TRM_RATE_8M = 2,
 } TRM_RateMode;
 
-/* 日志级别 */
-typedef enum {
-    TRM_LOG_LEVEL_ERROR = 0,
-    TRM_LOG_LEVEL_WARN,
-    TRM_LOG_LEVEL_INFO,
-    TRM_LOG_LEVEL_DEBUG,
-} TRMLogLevel;
-
 /* 波束信息 */
 typedef struct {
     uint32_t userId;            /* 用户ID */
@@ -125,7 +117,10 @@ typedef struct {
     uint32_t     beamTimeoutMs;     /* 波束超时时间戳使用默认?) */
     
     /* 回调函数 */
-    TRM_Callbacks callbacks;
+    struct {
+        TRM_OnRxData      onRxData;
+        TRM_OnTxComplete  onTxComplete;
+    } callbacks;
     
     /* 平台配置(预留) */
     void* platformConfig;
@@ -267,40 +262,6 @@ void TRM_SetMaxFrameCount(uint32_t maxCount);
  * @return TRM_OK成功，其他失败
  */
 int TRM_RegisterDriverCallbacks(void);
-
-/* =============================================================================
- * TRM日志系统API
- * ============================================================================= */
-
-/**
- * @brief 初始化TRM日志系统
- * @param level 日志级别
- */
-void TRM_LogInit(TRMLogLevel level);
-
-/**
- * @brief 设置TRM日志级别
- * @param level 日志级别
- */
-void TRM_LogSetLevel(TRMLogLevel level);
-
-/* =============================================================================
- * TRM日志宏
- * ============================================================================= */
-#define TRM_LOG_ERROR(fmt, ...)   TRM_LogOutput(TRM_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define TRM_LOG_WARN(fmt, ...)    TRM_LogOutput(TRM_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define TRM_LOG_INFO(fmt, ...)    TRM_LogOutput(TRM_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define TRM_LOG_DEBUG(fmt, ...)   TRM_LogOutput(TRM_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-/**
- * @brief TRM日志输出函数
- * @param level 日志级别
- * @param file 文件名
- * @param line 行号
- * @param format 格式字符串
- * @param ... 可变参数
- */
-void TRM_LogOutput(int level, const char* file, int line, const char* format, ...);
 
 #ifdef __cplusplus
 }

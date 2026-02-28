@@ -163,35 +163,15 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
 void trm_print_slot_calc_result(const TRM_SlotCalcOutput* output);
 
 /* =============================================================================
- * 内部回调函数 (供Driver调用)
+ * 调试和测试接口
  * ============================================================================= */
 
 /**
- * @brief Driver数据接收回调适配器 (内部函数)
- * @param irqResult 中断结果
+ * @brief TRM发送验证器接收数据处理 (测试接口)
+ * @param rxDataList 接收数据列表
+ * @return TRM_OK成功，其他失败
  */
-void TRM_OnDriverRxDataAdapter(const TK8710IrqResult* irqResult);
-
-/**
- * @brief Driver时隙结束回调适配器 (内部函数)
- * @param slotType 时隙类型
- * @param slotIndex 时隙索引
- * @param frameNo 帧号
- */
-void TRM_OnDriverSlotEndAdapter(uint8_t slotType, uint8_t slotIndex, uint32_t frameNo);
-
-/**
- * @brief Driver发送时隙回调适配器 (内部函数)
- * @param slotIndex 时隙索引
- * @param maxUserCount 最大用户数
- */
-void TRM_OnDriverTxSlotAdapter(uint8_t slotIndex, uint8_t maxUserCount);
-
-/**
- * @brief Driver错误回调适配器 (内部函数)
- * @param irqResult 中断结果
- */
-void TRM_OnDriverErrorAdapter(const TK8710IrqResult* irqResult);
+int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
 
 #ifdef __cplusplus
 }
