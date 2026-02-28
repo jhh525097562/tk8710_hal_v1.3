@@ -109,6 +109,23 @@ typedef struct {
     uint32_t memFreeCount;      /* 内存释放次数 */
 } TRM_Stats;
 
+/* =============================================================================
+ * TRM上层回调接口类型定义
+ * ============================================================================= */
+
+/**
+ * @brief 接收数据回调函数类型
+ * @param rxDataList 接收数据列表
+ */
+typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
+
+/**
+ * @brief 发送完成回调函数类型
+ * @param userId 用户ID
+ * @param result 发送结果
+ */
+typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+
 /* 初始化配置 */
 typedef struct {
     /* 波束配置 */
@@ -200,23 +217,6 @@ int TRM_ClearTxData(uint32_t userId);
  * @return TRM_OK成功，其他失败
  */
 int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
-
-/* =============================================================================
- * TRM上层回调接口
- * ============================================================================= */
-
-/**
- * @brief 接收数据回调函数类型
- * @param rxDataList 接收数据列表
- */
-typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
-
-/**
- * @brief 发送完成回调函数类型
- * @param userId 用户ID
- * @param result 发送结果
- */
-typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
 
 /* =============================================================================
  * 状态查询API
