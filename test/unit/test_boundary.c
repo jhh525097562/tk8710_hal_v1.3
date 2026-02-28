@@ -7,7 +7,7 @@
 #include "test_framework.h"
 #include "trm/trm.h"
 #include "driver/tk8710.h"
-#include "driver/tk8710_debug.h"
+#include "tk8710_internal.h"
 #include "driver/tk8710_log.h"
 #include <string.h>
 #include <stdlib.h>

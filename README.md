@@ -5,6 +5,7 @@ TK8710芯片硬件抽象层（Hardware Abstraction Layer），提供分层独立
 ## 🏗️ 架构设计
 
 ### 分层架构
+
 ```
 ┌─────────────────────────────────────┐
 │           应用层 (Application)        │
@@ -20,8 +21,9 @@ TK8710芯片硬件抽象层（Hardware Abstraction Layer），提供分层独立
 ```
 
 ### 模块独立性
+
 - ✅ **TRM层**：独立的业务逻辑层，可单独使用
-- ✅ **Driver层**：独立的硬件控制层，可单独使用  
+- ✅ **Driver层**：独立的硬件控制层，可单独使用
 - ✅ **松耦合**：TRM通过Driver API调用硬件功能
 - ✅ **可替换**：可替换不同的Driver实现
 
@@ -181,10 +183,10 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
     // 2. 提取用户数据和业务信息
     // 3. 更新业务状态和统计信息
     // 4. 触发相应的业务逻辑处理
-    
+  
     printf("TRM回调: 接收到数据 - 时隙=%d, 用户数=%d, 帧号=%u\n", 
            rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
-    
+  
     // 业务数据处理逻辑（具体实现根据应用需求）
     for (int i = 0; i < rxDataList->userCount; i++) {
         TRM_RxUserData* user = &rxDataList->users[i];
@@ -199,10 +201,10 @@ void OnTrmTxComplete(uint32_t userId, TRM_TxResult result) {
     // 2. 更新发送统计信息
     // 3. 处理重发或确认逻辑
     // 4. 释放相关资源
-    
+  
     printf("TRM回调: 发送完成 - 用户ID=0x%08X, 结果=%s\n", 
            userId, result == TRM_TX_SUCCESS ? "成功" : "失败");
-    
+  
     if (result == TRM_TX_SUCCESS) {
         // 发送成功处理
     } else {
@@ -217,10 +219,10 @@ void OnDriverRxData(TK8710IrqResult* irqResult) {
     // 2. 提取硬件状态信息
     // 3. 调用TRM核心处理函数
     // 4. 更新内部状态和统计
-    
+  
     printf("Driver回调: 接收数据中断 - 类型=%d, 用户数=%d\n", 
            irqResult->irqType, irqResult->userCount);
-    
+  
     // 调用TRM核心处理函数
     TRM_ProcessDriverIrq(irqResult);
 }
@@ -231,9 +233,9 @@ void OnDriverTxSlot(TK8710IrqResult* irqResult) {
     // 2. 更新发送统计信息
     // 3. 触发TRM发送逻辑
     // 4. 准备下一时隙数据
-    
+  
     printf("Driver回调: 发送时隙中断 - 时隙=%d\n", irqResult->slotIndex);
-    
+  
     // 通知TRM发送完成
     TRM_NotifyTxSlotComplete(irqResult);
 }
@@ -244,9 +246,9 @@ void OnDriverSlotEnd(TK8710IrqResult* irqResult) {
     // 2. 准备下一时隙配置
     // 3. 更新系统状态
     // 4. 触发时隙切换逻辑
-    
+  
     printf("Driver回调: 时隙结束中断 - 时隙=%d\n", irqResult->slotIndex);
-    
+  
     // 通知TRM时隙结束
     TRM_NotifySlotEnd(irqResult);
 }
@@ -257,10 +259,10 @@ void OnDriverError(TK8710IrqResult* irqResult) {
     // 2. 记录错误信息和统计
     // 3. 执行错误恢复策略
     // 4. 通知上层应用
-    
+  
     printf("Driver回调: 错误中断 - 类型=%d, 代码=%d\n", 
            irqResult->irqType, irqResult->errorCode);
-    
+  
     // 通知TRM发生错误
     TRM_NotifyError(irqResult);
 }
@@ -382,7 +384,7 @@ int main(void) {
     }
   
     printf("系统初始化完成\n");
-    
+  
     // 发送数据（TRM自动处理波束查找、队列管理等）
     uint8_t data[] = {0x01, 0x02, 0x03};
     uint32_t currentFrame = TRM_GetCurrentFrame();
@@ -390,53 +392,52 @@ int main(void) {
     if (ret == TRM_OK) {
         printf("数据发送成功\n");
     }
-    
+  
     // 发送广播数据
     uint8_t brdData[] = {0xAA, 0xBB, 0xCC};
     ret = TRM_SendBroadcast(0, brdData, sizeof(brdData), 35);
     if (ret == TRM_OK) {
         printf("广播数据发送成功\n");
     }
-    
+  
     // 运行主循环
     while (running) {
         // TRM自动处理中断、数据收发、波束管理等
         sleep(1);
-        
+    
         // 可选：获取TRM运行状态
         if (TRM_IsRunning()) {
             printf("TRM is running\n");
         }
-        
+    
         // 可选：获取统计信息
         TRM_Stats stats;
         if (TRM_GetStats(&stats) == TRM_OK) {
             printf("发送次数: %u, 接收次数: %u\n", stats.txCount, stats.rxCount);
         }
     }
-    
+  
     // 清理资源
     TRM_Stop();
     TRM_Deinit();
-    
+  
     return 0;
 }
 ```
 
 **TRM API 主要函数：**
 
-| 函数 | 说明 | 特性 |
-|------|------|------|
-| `TRM_Init()` | 初始化TRM系统 | 配置波束、时隙、回调等 |
-| `TRM_Start()` | 启动TRM系统 | 启动中断处理、数据收发 |
-| `TRM_Stop()` | 停止TRM系统 | 停止所有处理 |
-| `TRM_SendData()` | 发送用户数据 | 自动波束查找、队列管理 |
-| `TRM_SendBroadcast()` | 发送广播数据 | 广播模式数据发送 |
-| `TRM_SetBeamInfo()` | 设置波束信息 | 黄金比例哈希优化 |
-| `TRM_GetBeamInfo()` | 获取波束信息 | 线程安全读取 |
-| `TRM_IsRunning()` | 检查运行状态 | 状态查询 |
-| `TRM_GetStats()` | 获取统计信息 | 性能监控 |
-| `TRM_GetCurrentFrame()` | 获取当前帧号 | 帧同步 |
+| 函数                    | 说明          | 特性                   |
+| ----------------------- | ------------- | ---------------------- |
+| `TRM_Init()`            | 初始化TRM系统 | 配置波束、时隙、回调等 |
+| `TRM_Start()`           | 启动TRM系统   | 启动中断处理、数据收发 |
+| `TRM_Stop()`            | 停止TRM系统   | 停止所有处理           |
+| `TRM_SendData()`        | 发送用户数据  | 自动波束查找、队列管理 |
+| `TRM_SendBroadcast()`   | 发送广播数据  | 广播模式数据发送       |
+| `TRM_GetBeamInfo()`     | 获取波束信息  | 线程安全读取           |
+| `TRM_IsRunning()`       | 检查运行状态  | 状态查询               |
+| `TRM_GetStats()`        | 获取统计信息  | 性能监控               |
+| `TRM_GetCurrentFrame()` | 获取当前帧号  | 帧同步                 |
 
 ### Driver API（底层硬件层）
 
@@ -450,7 +451,7 @@ int main(void) {
 void OnDriverRxData(TK8710IrqResult* irqResult) {
     printf("Driver回调: 接收数据中断 - 类型=%d, 用户数=%d\n", 
            irqResult->irqType, irqResult->userCount);
-    
+  
     // 遍历所有有效用户
     for (uint8_t i = 0; i < 128; i++) {
         if (irqResult->crcResults[i].crcValid) {
@@ -461,18 +462,18 @@ void OnDriverRxData(TK8710IrqResult* irqResult) {
             if (ret == TK8710_OK) {
                 // 处理数据
                 printf("User[%d] received %d bytes\n", i, dataLen);
-                
+            
                 // 获取信号质量信息
                 uint32_t rssi, freq;
                 uint8_t snr;
                 TK8710GetSignalInfo(i, &rssi, &snr, &freq);
-                
+            
                 // 获取用户波束信息
                 uint32_t userFreq;
                 uint32_t ahData[16];
                 uint64_t pilotPower;
                 TK8710GetRxUserInfo(i, &userFreq, ahData, &pilotPower);
-                
+            
                 // 释放数据缓冲区
                 TK8710ReleaseRxData(i);
             }
@@ -562,32 +563,32 @@ int main(void) {
         printf("芯片启动失败: %d\n", ret);
         return -1;
     }
-    
+  
     // 7. 直接控制硬件发送
     uint8_t txData[] = {0xAA, 0xBB, 0xCC};
     uint8_t userIndex = 0;
-    
+  
     // 设置下行2数据
     ret = TK8710SetDownlink2DataWithPower(userIndex, txData, sizeof(txData), 20, TK8710_USER_DATA_TYPE_NORMAL);
     if (ret != TK8710_OK) {
         printf("设置下行数据失败: %d\n", ret);
     }
-    
+  
     // 设置用户信息（频率、波束等）
     uint32_t frequency = 2400000000;
     uint8_t ahData[64] = {0};  // AH配置数据
     uint8_t pilotPower = 20;
-    
+  
     ret = TK8710SetTxUserInfo(userIndex, frequency, ahData, pilotPower);
     if (ret != TK8710_OK) {
         printf("设置用户信息失败: %d\n", ret);
     }
-    
+  
     // 8. 运行主循环
     while (running) {
         // 应用层自定义处理逻辑
         sleep(1);
-        
+    
         // 可选：获取当前配置
         ChipConfig currentChipConfig;
         ret = TK8710GetConfig(TK8710_CONFIG_TYPE_CHIP, &currentChipConfig);
@@ -595,14 +596,14 @@ int main(void) {
             printf("当前芯片配置: 工作模式=%s\n", 
                    currentChipConfig.conti_mode ? "连续" : "单次");
         }
-        
+    
         // 可选：获取时隙配置
         const slotCfg_t* slotConfig = TK8710GetSlotCfg();
         if (slotConfig != NULL) {
             printf("时隙配置: 字节数=%u, 时间长度=%uus\n",
                    slotConfig->byteLen, slotConfig->timeLen);
         }
-        
+    
         // 可选：调试接口使用
         if (debug_mode) {
             // 中断时间统计
@@ -614,32 +615,32 @@ int main(void) {
             }
         }
     }
-    
+  
     // 清理资源
     TK8710Deinit();
-    
+  
     return 0;
 }
 ```
 
 **Driver API 主要函数：**
 
-| 函数 | 说明 | 特性 |
-|------|------|------|
-| `TK8710Init()` | 初始化Driver | SPI、中断、基础配置 |
-| `TK8710RfInit()` | 初始化射频子系统 | 频率、增益、直流校准 |
-| `TK8710GpioInit()` | 初始化GPIO中断 | 中断引脚配置 |
-| `TK8710RegisterCallbacks()` | 注册Driver回调 | 多回调架构 |
-| `TK8710Startwork()` | 启动芯片工作 | 主模式/从模式 |
-| `TK8710SetDownlink2DataWithPower()` | 设置下行2数据 | 直接硬件控制 |
-| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据 | 广播数据发送 |
-| `TK8710SetTxUserInfo()` | 设置用户信息 | 频率、波束、功率 |
-| `TK8710GetRxData()` | 获取接收数据 | 用户数据读取 |
-| `TK8710GetSignalInfo()` | 获取信号质量 | RSSI、SNR、频率 |
-| `TK8710SetConfig()` | 设置芯片配置 | 时隙、射频等配置 |
-| `TK8710GetConfig()` | 获取芯片配置 | 读取当前配置 |
-| `TK8710GetSlotCfg()` | 获取时隙配置 | 时隙参数查询 |
-| `TK8710ResetChip()` | 芯片复位 | 状态机/寄存器复位 |
+| 函数                                  | 说明             | 特性                 |
+| ------------------------------------- | ---------------- | -------------------- |
+| `TK8710Init()`                      | 初始化Driver     | SPI、中断、基础配置  |
+| `TK8710RfInit()`                    | 初始化射频子系统 | 频率、增益、直流校准 |
+| `TK8710GpioInit()`                  | 初始化GPIO中断   | 中断引脚配置         |
+| `TK8710RegisterCallbacks()`         | 注册Driver回调   | 多回调架构           |
+| `TK8710Startwork()`                 | 启动芯片工作     | 主模式/从模式        |
+| `TK8710SetDownlink2DataWithPower()` | 设置下行2数据    | 直接硬件控制         |
+| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据    | 广播数据发送         |
+| `TK8710SetTxUserInfo()`             | 设置用户信息     | 频率、波束、功率     |
+| `TK8710GetRxData()`                 | 获取接收数据     | 用户数据读取         |
+| `TK8710GetSignalInfo()`             | 获取信号质量     | RSSI、SNR、频率      |
+| `TK8710SetConfig()`                 | 设置芯片配置     | 时隙、射频等配置     |
+| `TK8710GetConfig()`                 | 获取芯片配置     | 读取当前配置         |
+| `TK8710GetSlotCfg()`                | 获取时隙配置     | 时隙参数查询         |
+| `TK8710ResetChip()`                 | 芯片复位         | 状态机/寄存器复位    |
 
 ### 调试接口使用
 
@@ -700,6 +701,7 @@ TK8710_LOG_HAL_DEBUG("寄存器读写: 地址=0x%04X, 值=0x%08X", reg_addr, val
 ## 🔧 核心特性
 
 ### 1. 黄金比例哈希波束管理
+
 ```c
 // 使用黄金比例哈希，减少冲突
 static uint32_t BeamHashFunc(uint32_t userId) {
@@ -708,18 +710,21 @@ static uint32_t BeamHashFunc(uint32_t userId) {
 ```
 
 ### 2. 延时释放机制
+
 ```c
 // 发送完成后自动延时释放波束RAM
 TRM_ScheduleBeamRamRelease(userId, 16);  // 16帧后释放
 ```
 
 ### 3. 队列监控
+
 ```c
 // 实时监控队列状态
 TRM: Queue status - BeamRelease: 123/512, TxQueue: 45/256, processed=5 this frame
 ```
 
 ### 4. 线程安全设计
+
 ```c
 // 读写分离锁机制
 TRM_GetBeamInfo()  // 读操作无锁
@@ -729,12 +734,14 @@ TRM_SetBeamInfo()  // 写操作加锁
 ## 🎯 使用场景选择
 
 ### 选择TRM API当：
+
 - ✅ 需要完整的业务逻辑
 - ✅ 需要自动波束管理
 - ✅ 需要队列和缓存管理
 - ✅ 快速开发应用
 
 ### 选择Driver API当：
+
 - ✅ 需要精细硬件控制
 - ✅ 实现自定义业务逻辑
 - ✅ 性能要求极高
@@ -761,7 +768,7 @@ TRM_SetBeamInfo()  // 写操作加锁
 
 ## 🚀 平台移植
 
-移植到新平台需要实现HAL接口（参考`port/tk8710_rk3506.c`）：
+移植到新平台需要实现HAL接口（参考 `port/tk8710_rk3506.c`）：
 
 ```c
 // SPI接口
@@ -793,6 +800,7 @@ void TK8710_Port_Free(void* ptr);
 ## 📋 版本历史
 
 - **v1.3** (2026-02-25)
+
   - ✨ 新增：TRM API和Driver API分层独立
   - ✨ 新增：黄金比例哈希波束管理
   - ✨ 新增：延时释放机制
@@ -801,8 +809,8 @@ void TK8710_Port_Free(void* ptr);
   - 🐛 修复：并发访问死锁问题
   - 🔧 优化：发送队列大小可配置
   - 🔧 优化：日志系统模块化
-
 - **v1.0** (2026-02-09)
+
   - 🎉 初始版本发布
   - 📦 Driver层：SPI协议、中断处理、芯片配置
   - 📦 TRM层：波束管理、数据收发

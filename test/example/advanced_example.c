@@ -12,7 +12,7 @@
  */
 
 #include "trm/trm.h"
-#include "driver/tk8710_debug.h"
+#include "tk8710_internal.h"
 #include "driver/tk8710_log.h"
 #include <stdio.h>
 #include <string.h>

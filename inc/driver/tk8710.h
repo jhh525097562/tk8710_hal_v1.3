@@ -5,12 +5,11 @@
  * 
  * 头文件结构:
  *   - tk8710_api.h      : 外部API (应用层使用)
- *   - tk8710_internal.h : 内部函数 (驱动内部使用)
- *   - tk8710_debug.h    : 调试接口 (测试/调试使用)
+ *   - tk8710_internal.h : 内部函数和调试接口 (驱动内部/调试使用)
  * 
  * 建议:
  *   - 应用层只需包含 tk8710_api.h
- *   - 需要调试功能时包含 tk8710_debug.h
+ *   - 需要内部功能和调试时包含 tk8710_internal.h
  *   - 包含 tk8710.h 可获得所有功能 (向后兼容)
  */
 
@@ -21,9 +20,8 @@
 #include "tk8710_log.h"
 #include "tk8710_regs.h"
 
-/* 包含所有分离的头文件 */
+/* 包含API和内部功能头文件 */
 #include "tk8710_api.h"
 #include "tk8710_internal.h"
-#include "tk8710_debug.h"
 
 #endif /* TK8710_H */

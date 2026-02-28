@@ -7,7 +7,7 @@
 
 #include "test_framework.h"
 #include "../../inc/driver/tk8710.h"
-#include "../../inc/driver/tk8710_debug.h"
+#include "../../inc/driver/tk8710_internal.h"
 #include "../../inc/driver/tk8710_log.h"
 #include <string.h>
 

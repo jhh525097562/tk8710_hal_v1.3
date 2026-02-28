@@ -11,7 +11,6 @@
 #include <stdbool.h>
 #include "../port/tk8710_hal.h"
 #include "../inc/driver/tk8710_api.h"
-#include "../inc/driver/tk8710_debug.h"
 #include "../inc/driver/tk8710_internal.h"
 #include "../inc/driver/tk8710_log.h"
 

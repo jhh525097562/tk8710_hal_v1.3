@@ -1021,7 +1021,7 @@ int TRM_ClearTxData(uint32_t userId);
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 清除失败
 
-### 3. 波束管理
+### 3. 波束获取
 
 #### `TRM_GetBeamInfo`
 
