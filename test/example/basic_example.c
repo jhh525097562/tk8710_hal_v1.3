@@ -150,7 +150,7 @@ static void sendTestDataToAllUsers(void)
             generateTestData(testData, dataLen, g_testUsers[i].userId);
             
             /* 发送数据 */
-            int ret = TRM_SendData(g_testUsers[i].userId, testData, dataLen, 20, currentFrame + 1, 0, TK8710_USER_DATA_TYPE_NORMAL);
+            int ret = TRM_SendData(g_testUsers[i].userId, testData, dataLen, 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
             if (ret == TRM_OK) {
                 printf("  发送到用户0x%08X: 成功\n", g_testUsers[i].userId);
             } else {
