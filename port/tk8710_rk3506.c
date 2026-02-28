@@ -374,9 +374,9 @@ int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void*
 /**
  * @brief GPIO中断使能控制
  */
-int TK8710GpioIrqEnable(int pin, uint8_t enable)
+int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable)
 {
-    (void)pin;
+    (void)gpioPin;
     
     if (enable) {
         /* 启动中断监听线程 */
