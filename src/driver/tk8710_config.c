@@ -491,7 +491,7 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
  * @brief 获取时隙配置
  * @return 时隙配置指针
  */
-const slotCfg_t* TK8710GetConfig(void)
+const slotCfg_t* TK8710GetSlotConfig(void)
 {
     return &g_slotCfg;
 }

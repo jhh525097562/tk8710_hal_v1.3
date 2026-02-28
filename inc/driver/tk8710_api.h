@@ -148,7 +148,7 @@ int TK8710ReleaseRxData(uint8_t userIndex);
  * @brief 获取时隙配置
  * @return 时隙配置指针
  */
-const slotCfg_t* TK8710GetConfig(void);
+const slotCfg_t* TK8710GetSlotConfig(void);
 
 /* ============================================================================
  * 回调注册API

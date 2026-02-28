@@ -29,7 +29,7 @@
 | `TK8710GetSignalInfo`             | 获取信号信息        | TRM层      | 数据接收   |
 | `TK8710ReleaseRxData`             | 释放接收数据资源    | TRM层      | 数据接收   |
 | **状态查询**                  |                     |            |            |
-| `TK8710GetConfig`（GetConfig）   | 获取时隙配置        | 应用层     | 状态查询   |
+| `TK8710GetSlotConfig`（GetConfig）   | 获取时隙配置        | 应用层     | 状态查询   |
 | **回调管理**                  |                     |            |            |
 | `TK8710RegisterCallbacks`         | 注册Driver回调函数  | TRM层      | 回调管理   |
 | **中断处理**                  |                     |            |            |

@@ -72,7 +72,7 @@ static uint8_t tk8710_get_max_users(uint8_t rateMode)
  */
 uint8_t TK8710GetRateMode(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     /* 获取当前中断结果中的速率序号，如果未初始化则使用第一个 */
     TK8710IrqResult irqResult;
     int ret = TK8710GetIrqResult(&irqResult);
@@ -97,7 +97,7 @@ uint8_t TK8710GetRateMode(void)
  */
 uint8_t TK8710GetBrdUserNum(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     return slotCfg->brdUserNum;
 }
 
@@ -129,7 +129,7 @@ int TK8710GetRateModeParams(uint8_t rateMode, RateModeParams* params)
  */
 uint8_t TK8710GetWorkType(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     return slotCfg->msMode;
 }
 
@@ -260,7 +260,7 @@ int TK8710Init(const ChipConfig* initConfig)
     init9.b.tx_bcn_en = cfg->tx_bcn_en;
     /* 更新antEn、rfSel和txBcnEn到g_slotCfg */
     {
-        slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetConfig();
+        slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
         slotCfg->antEn = cfg->ant_en;
         slotCfg->rfSel = cfg->rf_sel;
         slotCfg->txBcnEn = cfg->tx_bcn_en;
@@ -337,7 +337,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
     if (workType == TK8710_MODE_MASTER) {
         /* Master模式: 配置trx_trig0寄存器 (0x74) 启动主动传输 */
         {
-            slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetConfig();
+            slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_MASTER;
             
             /* 配置中断使能 */
@@ -371,7 +371,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
     } else if (workType == TK8710_MODE_SLAVE) {
         /* Slave模式: 配置trx_trig1寄存器 (0x78) 启动被动传输 */
         {
-            slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetConfig();
+            slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_SLAVE;
             
             /* 配置中断使能 */
@@ -433,7 +433,7 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     }
     
     /* 从g_slotCfg获取RF选择 */
-    rfSel = TK8710GetConfig()->rfSel;
+    rfSel = TK8710GetSlotConfig()->rfSel;
     TK8710_LOG_CORE_INFO("RF config: type=%d, freq=%u Hz, rxgain=0x%02X, txgain=0x%02X, rfSel=0x%02X", 
                         initrfConfig->rftype, initrfConfig->Freq, initrfConfig->rxgain, initrfConfig->txgain, rfSel);
     

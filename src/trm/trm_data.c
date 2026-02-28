@@ -280,7 +280,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     TRM_ProcessBeamRamReleases();
         
     /* 获取当前时隙配置以判断是否为多速率模式 */
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     uint8_t isMultiRate = (slotCfg && slotCfg->rateCount > 1);
     uint8_t currentRateMode = 0;
     uint8_t nextRateMode = 0;
@@ -482,7 +482,7 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
     
     /* 获取当前速率模式 - 直接从Driver中断结果中获取 */
     uint8_t currentRateMode = 0;
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     if (slotCfg && slotCfg->rateCount > 0 && irqResult) {
         /* 使用Driver提供的当前速率索引获取速率模式 */
         uint8_t currentRateIndex = irqResult->currentRateIndex;

@@ -149,7 +149,7 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
     }
     
     /* 检查系统是否为多速率模式 */
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     uint8_t isMultiRate = (slotCfg && slotCfg->rateCount > 1);
     
     if (isMultiRate) {
@@ -278,7 +278,7 @@ int TRM_TxValidatorTriggerTest(const uint8_t* testData, uint16_t dataLen, uint32
     uint32_t targetFrame = currentFrame + g_validatorConfig.frameOffset;
     
     /* 检查系统是否为多速率模式 */
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     uint8_t sendRateMode = 0;
     if (slotCfg && slotCfg->rateCount > 1) {
         /* 多速率模式：使用第一个速率模式 */

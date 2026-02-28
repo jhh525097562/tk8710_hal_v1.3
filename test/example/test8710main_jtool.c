@@ -590,7 +590,7 @@ void show_help(void)
  */
 void show_system_status(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetConfig();
+    const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     uint8_t rateMode = TK8710GetRateMode();
     uint8_t workType = TK8710GetWorkType();
     uint8_t brdUserNum = TK8710GetBrdUserNum();
