@@ -1,0 +1,173 @@
+/**
+ * @file trm_internal.h
+ * @brief TRM (Transmission Resource Management) 内部函数头文件
+ * @note 此文件包含TRM内部使用的函数，不建议应用层直接调用
+ * 
+ * 内容分类:
+ *   - 波束管理内部函数
+ *   - 系统控制内部函数
+ *   - 调试和测试接口
+ *   - 内部工具函数
+ * 
+ * 建议:
+ *   - 应用层只需包含 trm_api.h
+ *   - 需要内部功能和调试时包含此文件
+ *   - 包含 trm.h 可获得所有功能 (向后兼容)
+ */
+
+#ifndef TRM_INTERNAL_H
+#define TRM_INTERNAL_H
+
+#include <stdint.h>
+#include <stddef.h>
+#include "driver/tk8710_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* =============================================================================
+ * 内部错误码定义
+ * ============================================================================= */
+#define TRM_ERR_INTERNAL        (-8)
+#define TRM_ERR_INVALID_STATE   (-9)
+
+/* =============================================================================
+ * 波束管理内部函数
+ * ============================================================================= */
+
+/**
+ * @brief 设置用户波束信息 (内部函数)
+ * @param userId 用户ID
+ * @param beamInfo 波束信息指针
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
+
+/**
+ * @brief 清除用户波束信息 (内部函数)
+ * @param userId 用户ID，0xFFFFFFFF表示清除所有
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_ClearBeamInfo(uint32_t userId);
+
+/**
+ * @brief 设置波束超时时间 (内部函数)
+ * @param timeoutMs 超时时间(毫秒)
+ * @return 0-成功, 非0-失败
+ */
+int TRM_SetBeamTimeout(uint32_t timeoutMs);
+
+/**
+ * @brief 调度波束RAM释放 (内部函数)
+ * @param userId 用户ID
+ * @param delayFrames 延迟帧数
+ */
+void TRM_ScheduleBeamRamRelease(uint32_t userId, uint32_t delayFrames);
+
+/**
+ * @brief 处理波束RAM释放 (内部函数)
+ */
+void TRM_ProcessBeamRamReleases(void);
+
+/* =============================================================================
+ * 系统控制内部函数
+ * ============================================================================= */
+
+/**
+ * @brief 重置TRM系统 (内部函数)
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_Reset(void);
+
+/**
+ * @brief 获取TRM上下文 (内部函数)
+ * @return TRM上下文指针
+ */
+void* TRM_GetContext(void);
+
+/* =============================================================================
+ * 调试和测试接口
+ * ============================================================================= */
+
+/**
+ * @brief TRM发送验证器接收数据处理 (测试接口)
+ * @param rxDataList 接收数据列表
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
+
+/* =============================================================================
+ * 内部工具函数
+ * ============================================================================= */
+
+/**
+ * @brief 计算时隙配置 (内部函数)
+ * @param input 输入参数
+ * @param output 输出参数
+ * @return TRM_OK成功，其他失败
+ */
+int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* output);
+
+/**
+ * @brief 打印时隙计算结果 (内部函数)
+ * @param output 计算结果
+ */
+void trm_print_slot_calc_result(const TRM_SlotCalcOutput* output);
+
+/* =============================================================================
+ * 内部回调函数 (供Driver调用)
+ * ============================================================================= */
+
+/**
+ * @brief Driver数据接收回调适配器 (内部函数)
+ * @param irqResult 中断结果
+ */
+void TRM_OnDriverRxDataAdapter(const TK8710IrqResult* irqResult);
+
+/**
+ * @brief Driver时隙结束回调适配器 (内部函数)
+ * @param slotType 时隙类型
+ * @param slotIndex 时隙索引
+ * @param frameNo 帧号
+ */
+void TRM_OnDriverSlotEndAdapter(uint8_t slotType, uint8_t slotIndex, uint32_t frameNo);
+
+/**
+ * @brief Driver发送时隙回调适配器 (内部函数)
+ * @param slotIndex 时隙索引
+ * @param maxUserCount 最大用户数
+ */
+void TRM_OnDriverTxSlotAdapter(uint8_t slotIndex, uint8_t maxUserCount);
+
+/**
+ * @brief Driver错误回调适配器 (内部函数)
+ * @param irqResult 中断结果
+ */
+void TRM_OnDriverErrorAdapter(const TK8710IrqResult* irqResult);
+
+/* =============================================================================
+ * 内部数据结构定义
+ * ============================================================================= */
+
+/**
+ * @brief TRM内部上下文结构体 (内部使用)
+ */
+typedef struct {
+    uint8_t initialized;        /* 初始化标志 */
+    uint8_t running;            /* 运行标志 */
+    uint32_t currentFrame;      /* 当前帧号 */
+    uint32_t maxFrameCount;     /* 最大帧数 */
+    TRM_InitConfig config;      /* 初始化配置 */
+    TRM_Stats stats;           /* 统计信息 */
+    void* beamTable;            /* 波束表指针 */
+    void* txQueue;              /* 发送队列指针 */
+    TRM_OnRxData onRxData;     /* 接收回调 */
+    TRM_OnTxComplete onTxComplete; /* 发送完成回调 */
+} TRM_InternalContext;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* TRM_INTERNAL_H */
