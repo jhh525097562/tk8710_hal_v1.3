@@ -21,7 +21,7 @@
 | `TK8710SetConfig`                  | 设置芯片配置参数        | 应用层     | 配置管理   |
 | `TK8710GetConfig`                  | 获取芯片配置参数        | 应用层     | 配置管理   |
 | **数据传输**                   |                         |            |            |
-| `TK8710SetTxData`   | 设置下行数据(广播/用户) | TRM层      | 数据传输   |
+| `TK8710SetTxUserData` | 设置下行数据(广播/用户) | TRM层      | 数据传输   |
 | `TK8710SetTxUserInfo`              | 设置发送用户信息        | TRM层      | 数据传输   |
 | **数据接收**                   |                         |            |            |
 | `TK8710GetRxUserData`              | 获取接收数据            | TRM层      | 数据接收   |
@@ -228,10 +228,10 @@ if (ret == TK8710_OK) {
 
 ### 3. 数据传输
 
-#### `TK8710SetTxData`
+#### `TK8710SetTxUserData`
 
 ```c
-int TK8710SetTxData(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType);
+int TK8710SetTxUserData(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType);
 ```
 
 **功能**: 设置下行发送数据和功率
