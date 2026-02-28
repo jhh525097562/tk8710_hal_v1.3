@@ -1,4 +1,3 @@
-
 # TK8710 TRM和Driver API接口文档
 
 ## 概述
@@ -95,14 +94,14 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-  
+
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-  
+
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -149,7 +148,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-  
+
   ```
 
 **功能**: 获取芯片配置
@@ -696,15 +695,15 @@ TK8710RegisterCallbacks(&callbacks);
 **第四步：时隙配置和启动工作模式**
 
 ```c
-// 1. 获取当前时隙配置
+// 1. 获取当前时隙配置（可选）
 const slotCfg_t* slotCfg = TK8710GetSlotCfg();
 printf("Current slot configuration: rate=%d, users=%d\n", 
        slotCfg->rateMode, slotCfg->maxUsers);
 
-// 2. 配置时隙参数（可选）
+// 2. 配置时隙参数
 // 注意：具体的时隙配置需要根据实际需求定义slotConfig结构体
 // 这里仅作为示例，实际使用时需要提供正确的时隙配置参数
-// ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
+ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
 
 // 3. 启动芯片进入收发状态
 ret = TK8710Startwork(1, 1);  // Master模式，连续工作
@@ -1024,54 +1023,6 @@ int TRM_ClearTxData(uint32_t userId);
 
 ### 3. 波束管理
 
-#### `TRM_SetBeamInfo`
-
-```c
-int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo);
-```
-
-**功能**: 设置用户波束信息
-**参数**:
-
-- `userId`: 用户ID
-  - 范围: 0x00000000 - 0xFFFFFFFF
-- `beamInfo`: 波束信息指针
-
-**TRM_BeamInfo结构体定义**:
-
-```c
-typedef struct {
-    uint32_t userId;            /* 用户ID */
-    uint32_t freq;              /* 频率 (26位格式) */
-    uint32_t ahData[16];        /* AH数据: 8天线×2(I/Q) */
-    uint64_t pilotPower;        /* Pilot功率 */
-    uint32_t timestamp;         /* 更新时间戳*/
-    uint8_t  valid;             /* 有效标志 */
-} TRM_BeamInfo;
-```
-
-**结构体成员详细说明**:
-
-- `userId`: 用户ID，与参数一致
-- `freq`: 频率，26位格式
-  - 范围: 0 - 0x03FFFFFF
-  - 单位: Hz/128
-- `ahData`: AH数据数组，8天线×2(I/Q)
-  - 长度: 16个uint32_t
-  - 包含I/Q两路数据
-- `pilotPower`: Pilot功率
-  - 范围: 0 - 0xFFFFFFFFFFFFFFFF
-- `timestamp`: 更新时间戳
-  - 单位: 毫秒
-- `valid`: 有效标志
-  - 1: 波束信息有效
-  - 0: 波束信息无效
-    **返回值**:
-- `TRM_OK`: 设置成功
-- `TRM_ERR_PARAM`: 参数错误
-- `TRM_ERR_NO_MEM`: 内存不足
-- 其他: 设置失败
-
 #### `TRM_GetBeamInfo`
 
 ```c
@@ -1090,40 +1041,6 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_BEAM`: 未找到波束信息
 - 其他: 获取失败
-
-#### `TRM_ClearBeamInfo`
-
-```c
-int TRM_ClearBeamInfo(uint32_t userId);
-```
-
-**功能**: 清除用户波束信息
-**参数**:
-
-- `userId`: 用户ID
-  - 0xFFFFFFFF: 清除所有用户的波束信息
-  - 其他值: 清除指定用户的波束信息
-    **返回值**:
-- `TRM_OK`: 清除成功
-- `TRM_ERR_PARAM`: 参数错误
-- 其他: 清除失败
-
-#### `TRM_SetBeamTimeout`
-
-```c
-int TRM_SetBeamTimeout(uint32_t timeoutMs);
-```
-
-**功能**: 设置波束超时时间
-**参数**:
-
-- `timeoutMs`: 超时时间(毫秒)
-  - 范围: 1000 - 30000
-  - 0: 使用默认值(3000ms)
-    **返回值**:
-- `TRM_OK`: 设置成功
-- `TRM_ERR_PARAM`: 参数错误
-- 其他: 设置失败
 
 ### 5. TRM上层回调接口
 
