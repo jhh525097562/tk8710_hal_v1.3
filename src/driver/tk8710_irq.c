@@ -1870,7 +1870,7 @@ static void tk8710_s1_manual_tx_process(void)
     /* 统计与Slot3共用波束信息的广播个数 */
     uint8_t slot3SharedBrdCount = 0;
     for (uint8_t i = 0; i < 16; i++) {
-        if (g_brdBuffers[i].valid && g_brdBuffers[i].dataType == TK8710_BRD_DATA_TYPE_SLOT3) {
+        if (g_brdBuffers[i].valid && g_brdBuffers[i].beamType == TK8710_DATA_TYPE_BRD) {
             slot3SharedBrdCount++;
         }
     }
@@ -1935,7 +1935,7 @@ static void tk8710_s1_manual_tx_process(void)
         /* 统计与Slot1共用波束信息的用户个数 */
         uint8_t slot1SharedUserCount = 0;
         for (uint8_t i = 0; i < actualMaxUsers; i++) {
-            if (g_txBuffers[i].valid && g_txBuffers[i].dataType == TK8710_USER_DATA_TYPE_SLOT1) {
+            if (g_txBuffers[i].valid && g_txBuffers[i].beamType == TK8710_DATA_TYPE_DED) {
                 slot1SharedUserCount++;
             }
         }
@@ -2021,7 +2021,7 @@ static void tk8710_s1_manual_tx_process(void)
             uint8_t userIndex;
             
             /* 检查是否与Slot1共用波束信息 */
-            if (g_txBuffers[origUserIndex].dataType == TK8710_USER_DATA_TYPE_SLOT1 && 
+            if (g_txBuffers[origUserIndex].beamType == TK8710_DATA_TYPE_DED && 
                 slot1SharedIdx < totalBrdUsersForUser) {
                 /* 与Slot1共用波束的用户，使用广播用户的位置 */
                 userIndex = slot1SharedIdx;

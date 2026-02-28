@@ -10,33 +10,33 @@
 
 ### Driver API接口汇总
 
-| API函数                              | 功能描述            | 目标用户层 | 分类       |
-| ------------------------------------ | ------------------- | ---------- | ---------- |
-| **芯片初始化与控制**           |                     |            |            |
-| `TK8710Init`                       | 初始化TK8710芯片    | 应用层     | 初始化控制 |
-| `TK8710Start`                      | 启动TK8710工作      | 应用层     | 初始化控制 |
-| `TK8710RfConfig`                   | 初始化RF配置        | 应用层     | 初始化控制 |
-| `TK8710Reset`                      | 复位芯片            | 应用层     | 初始化控制 |
-| **配置管理**                   |                     |            |            |
-| `TK8710SetConfig`                  | 设置芯片配置参数    | 应用层     | 配置管理   |
-| `TK8710GetConfig`                  | 获取芯片配置参数    | 应用层     | 配置管理   |
-| **数据传输**                   |                     |            |            |
-| `TK8710SetDownlinkDataWithPower` | 设置下行数据(广播/用户) | TRM层      | 数据传输   |
-| `TK8710SetTxUserInfo`              | 设置发送用户信息    | TRM层      | 数据传输   |
-| **数据接收**                   |                     |            |            |
-| `TK8710GetRxUserData`              | 获取接收数据        | TRM层      | 数据接收   |
-| `TK8710GetRxUserInfo`              | 获取接收用户信息    | TRM层      | 数据接收   |
-| `TK8710GetRxUserSignalQuality`      | 获取接收用户信号质量  | TRM层      | 数据接收   |
-| `TK8710ReleaseRxData`              | 释放接收数据资源    | TRM层      | 数据接收   |
-| **状态查询**                   |                     |            |            |
-| `TK8710GetSlotConfig`（GetConfig） | 获取时隙配置        | 应用层     | 状态查询   |
-| **回调管理**                   |                     |            |            |
-| `TK8710RegisterCallbacks`          | 注册Driver回调函数  | TRM层      | 回调管理   |
-| **中断处理**                   |                     |            |            |
-| `TK8710GpioInit`                   | 初始化GPIO中断      | 应用层     | 中断处理   |
-| `TK8710GpioIrqEnable`              | 使能/禁用GPIO中断   | 应用层     | 中断处理   |
-| **日志系统**                   |                     |            |            |
-| `TK8710LogSimpleInit`              | 初始化日志系统      | 应用层     | 日志系统   |
+| API函数                              | 功能描述                | 目标用户层 | 分类       |
+| ------------------------------------ | ----------------------- | ---------- | ---------- |
+| **芯片初始化与控制**           |                         |            |            |
+| `TK8710Init`                       | 初始化TK8710芯片        | 应用层     | 初始化控制 |
+| `TK8710Start`                      | 启动TK8710工作          | 应用层     | 初始化控制 |
+| `TK8710RfConfig`                   | 初始化RF配置            | 应用层     | 初始化控制 |
+| `TK8710Reset`                      | 复位芯片                | 应用层     | 初始化控制 |
+| **配置管理**                   |                         |            |            |
+| `TK8710SetConfig`                  | 设置芯片配置参数        | 应用层     | 配置管理   |
+| `TK8710GetConfig`                  | 获取芯片配置参数        | 应用层     | 配置管理   |
+| **数据传输**                   |                         |            |            |
+| `TK8710SetDownlinkDataWithPower`   | 设置下行数据(广播/用户) | TRM层      | 数据传输   |
+| `TK8710SetTxUserInfo`              | 设置发送用户信息        | TRM层      | 数据传输   |
+| **数据接收**                   |                         |            |            |
+| `TK8710GetRxUserData`              | 获取接收数据            | TRM层      | 数据接收   |
+| `TK8710GetRxUserInfo`              | 获取接收用户信息        | TRM层      | 数据接收   |
+| `TK8710GetRxUserSignalQuality`     | 获取接收用户信号质量    | TRM层      | 数据接收   |
+| `TK8710ReleaseRxData`              | 释放接收数据资源        | TRM层      | 数据接收   |
+| **状态查询**                   |                         |            |            |
+| `TK8710GetSlotConfig`（GetConfig） | 获取时隙配置            | 应用层     | 状态查询   |
+| **回调管理**                   |                         |            |            |
+| `TK8710RegisterCallbacks`          | 注册Driver回调函数      | TRM层      | 回调管理   |
+| **中断处理**                   |                         |            |            |
+| `TK8710GpioInit`                   | 初始化GPIO中断          | 应用层     | 中断处理   |
+| `TK8710GpioIrqEnable`              | 使能/禁用GPIO中断       | 应用层     | 中断处理   |
+| **日志系统**                   |                         |            |            |
+| `TK8710LogSimpleInit`              | 初始化日志系统          | 应用层     | 日志系统   |
 
 **说明:**
 
@@ -209,7 +209,7 @@ int TK8710GetConfig(TK8710ConfigType type, void* params);
 **说明**:
 
 - 获取指定类型的芯片配置参数
-- 支持的配置类型与`TK8710SetConfig`相同
+- 支持的配置类型与 `TK8710SetConfig`相同
 - `params`指针类型需要根据配置类型进行相应的类型转换
 - 主要用于读取当前芯片的配置状态
 - 常用于配置验证和状态监控
@@ -237,12 +237,12 @@ int TK8710SetDownlinkDataWithPower(TK8710DownlinkType downlinkType, uint8_t inde
 **功能**: 设置下行发送数据和功率
 **参数**:
 
-- `downlinkType`: 下行类型 (0=下行1广播数据, 1=下行2专用数据)
+- `downlinkType`: 下行类型 (0=下行1数据, 1=下行2数据)
 - `index`: 索引 (下行1时范围0-15, 下行2时范围0-127)
 - `data`: 数据指针
 - `dataLen`: 数据长度
 - `txPower`: 发送功率
-- `beamType`: 波束类型 (0=广播数据, 1=专用数据)
+- `beamType`: 波束类型 (0=广播波束, 1=指定波束)
   **返回值**: 0-成功, 1-失败, 2-超时
 
 **说明**:
