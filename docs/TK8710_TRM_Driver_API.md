@@ -38,7 +38,6 @@
 | `TK8710GpioIrqEnable`              | 使能/禁用GPIO中断   | 应用层     | 中断处理   |
 | **日志系统**                   |                     |            |            |
 | `TK8710LogSimpleInit`              | 初始化日志系统      | 应用层     | 日志系统   |
-| `TK8710_LOG_*` 宏                  | 日志输出宏          | 应用层     | 日志系统   |
 
 **说明:**
 
@@ -542,30 +541,6 @@ int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
   ```
 
   **返回值**: 0-成功, 1-失败
-
-#### `TK8710_LOG_*` 宏
-
-```c
-TK8710_LOG_ERROR(module, fmt, ...);  // 错误日志
-TK8710_LOG_WARN(module, fmt, ...);   // 警告日志
-TK8710_LOG_INFO(module, fmt, ...);   // 信息日志
-TK8710_LOG_DEBUG(module, fmt, ...);  // 调试日志
-TK8710_LOG_TRACE(module, fmt, ...);  // 跟踪日志
-
-// 模块特定日志宏
-TK8710_LOG_CORE_ERROR(fmt, ...);     // 核心模块错误日志
-TK8710_LOG_CONFIG_WARN(fmt, ...);    // 配置模块警告日志
-TK8710_LOG_IRQ_INFO(fmt, ...);        // 中断模块信息日志
-TK8710_LOG_HAL_DEBUG(fmt, ...);       // HAL层调试日志
-```
-
-**功能**: 输出日志信息
-**参数**:
-
-- `module`: 模块类型 (TK8710_LOG_MODULE_*)
-- `fmt`: 格式化字符串
-- `...`: 可变参数
-  **说明**: 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 
 ### 9. 调试接口
 
@@ -1872,6 +1847,7 @@ if (ret == 0) {
 7. **日志系统**:
    - 使用 `TK8710LogSimpleInit`快速初始化日志系统
    - 生产环境建议设置为INFO或WARN级别以减少性能影响
+   - 日志系统支持模块化输出，便于调试和问题定位
    - 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
 8. **调试接口**:
    - 测试接口（ForceProcessAllUsers、ForceMaxUsersTx）仅用于开发测试，生产环境应禁用
