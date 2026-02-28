@@ -369,7 +369,7 @@ int init_rf_system(void)
     }
     
     /* 初始化射频 */
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("RF initialization failed: %d\n", ret);
         return ret;

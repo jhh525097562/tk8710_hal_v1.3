@@ -39,7 +39,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode);
  * @param initrfConfig 射频初始化配置参数
  * @return 0-成功, 1-失败, 2-超时
  */
-int TK8710RfInit(const ChiprfConfig* initrfConfig);
+int TK8710RfConfig(const ChiprfConfig* initrfConfig);
 
 /**
  * @brief 芯片复位

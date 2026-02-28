@@ -800,7 +800,7 @@ int init_rf_system(void)
     
     /* 初始化射频 */
     printf("First RF initialization attempt...\n");
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("First RF initialization failed: %d\n", ret);
         return ret;
@@ -812,7 +812,7 @@ int init_rf_system(void)
     
     /* 第二次RF初始化确保硬件完全就绪 */
     printf("Second RF initialization to ensure hardware is fully operational...\n");
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("Second RF initialization failed: %d\n", ret);
         return ret;

@@ -141,7 +141,7 @@ int main(void)
     }
     
     /* 初始化射频系统 */
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("RF init failed: %d\n", ret);
         TK8710ResetChip(TK8710_RST_ALL);

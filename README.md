@@ -326,7 +326,7 @@ int main(void) {
         }
     };
   
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("射频初始化失败: %d\n", ret);
         return -1;
@@ -536,7 +536,7 @@ int main(void) {
         .txgain = 20,                        // 发送增益
     };
   
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("射频初始化失败: %d\n", ret);
         return -1;
@@ -629,7 +629,7 @@ int main(void) {
 | 函数                                  | 说明             | 特性                 |
 | ------------------------------------- | ---------------- | -------------------- |
 | `TK8710Init()`                      | 初始化Driver     | SPI、中断、基础配置  |
-| `TK8710RfInit()`                    | 初始化射频子系统 | 频率、增益、直流校准 |
+| `TK8710RfConfig()`                    | 初始化射频子系统 | 频率、增益、直流校准 |
 | `TK8710GpioInit()`                  | 初始化GPIO中断   | 中断引脚配置         |
 | `TK8710RegisterCallbacks()`         | 注册Driver回调   | 多回调架构           |
 | `TK8710Start()`                 | 启动芯片工作     | 主模式/从模式        |

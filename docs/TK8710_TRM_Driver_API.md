@@ -15,7 +15,7 @@
 | **芯片初始化与控制**          |                     |            |            |
 | `TK8710Init`                      | 初始化TK8710芯片    | 应用层     | 初始化控制 |
 | `TK8710Start`                   | 启动TK8710工作      | 应用层     | 初始化控制 |
-| `TK8710RfInit`                    | 初始化RF配置        | 应用层     | 初始化控制 |
+| `TK8710RfConfig`                  | 初始化RF配置        | 应用层     | 初始化控制 |
 | `TK8710ResetChip`                 | 复位芯片            | 应用层     | 初始化控制 |
 | **配置管理**                  |                     |            |            |
 | `TK8710SetConfig`                 | 设置芯片配置参数    | 应用层     | 配置管理   |
@@ -117,10 +117,10 @@ int TK8710Start(uint8_t workType, uint8_t workMode);
 
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710RfInit`（rfconfig）
+#### `TK8710RfConfig`（rfconfig）
 
 ```c
-int TK8710RfInit(const ChiprfConfig* initrfConfig);
+int TK8710RfConfig(const ChiprfConfig* initrfConfig);
 ```
 
 **功能**: 初始化芯片连接射频
@@ -691,7 +691,7 @@ rfConfig.Freq = 2400000000;         // 中心频率 2.4GHz
 rfConfig.rxgain = 1;                // 接收增益
 rfConfig.txgain = 1;                // 发送增益
 
-ret = TK8710RfInit(&rfConfig);
+ret = TK8710RfConfig(&rfConfig);
 if (ret != TK8710_OK) {
     printf("RF initialization failed: %d\n", ret);
     return ret;
@@ -849,7 +849,7 @@ if (ret != TK8710_OK) {
 
 // 4. 重新初始化（必要时）
 ret = TK8710Init(&chipConfig);
-ret = TK8710RfInit(&rfConfig);
+ret = TK8710RfConfig(&rfConfig);
 ```
 
 #### 10.8 工作流程总结
@@ -857,7 +857,7 @@ ret = TK8710RfInit(&rfConfig);
 **7个主要步骤**：
 
 1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
-2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfInit()`, `TK8710LogSimpleInit()`
+2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogSimpleInit()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
 4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Start()`
 5. **数据接收操作** - `TK8710GetRxData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
@@ -1502,7 +1502,7 @@ int main(void) {
         }
     };
   
-    ret = TK8710RfInit(&rfConfig);
+    ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("射频初始化失败: %d\n", ret);
         return -1;
