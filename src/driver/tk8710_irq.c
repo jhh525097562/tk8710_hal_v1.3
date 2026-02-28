@@ -1048,50 +1048,6 @@ static void tk8710_s0_bcn_rotation_process(void)
 }
 
 /**
- * @brief 设置下行2发送数据和功率
- * @param downlink2Index 下行2索引 (0-127)
- * @param data 下行2数据指针
- * @param dataLen 数据长度
- * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常下行2(指定信息模式波束), 1=与Slot1共用波束信息
- * @return 0-成功, 1-失败
- */
-int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
-{
-    if (downlink2Index >= 128 || data == NULL || dataLen == 0) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: downlink2Index=%d, data=%p, dataLen=%d", 
-                            downlink2Index, data, dataLen);
-        return TK8710_ERR;
-    }
-    
-    /* 检查是否已存在数据，先释放 */
-    if (g_txBuffers[downlink2Index].valid && 
-        g_txBuffers[downlink2Index].data != NULL) {
-        free(g_txBuffers[downlink2Index].data);
-    }
-    
-    /* 分配内存并复制数据 */
-    uint8_t* newData = malloc(dataLen);
-    if (newData == NULL) {
-        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink2[%d] data", downlink2Index);
-        return TK8710_ERR;
-    }
-    
-    memcpy(newData, data, dataLen);
-    
-    /* 设置下行2数据Buffer */
-    g_txBuffers[downlink2Index].data = newData;
-    g_txBuffers[downlink2Index].dataLen = dataLen;
-    g_txBuffers[downlink2Index].valid = 1;
-    g_txBuffers[downlink2Index].userIndex = downlink2Index;
-    g_txBuffers[downlink2Index].txPower = txPower;
-    g_txBuffers[downlink2Index].dataType = dataType;
-    
-    TK8710_LOG_IRQ_DEBUG("Downlink2 TX data set: downlink2[%d], len=%d, power=%d, dataType=%d", 
-                        downlink2Index, dataLen, txPower, dataType);
-    return TK8710_OK;
-}
-/**
  * @brief 清除自动发送用户数据
  * @param userIndex 用户索引 (0-127), 255表示清除所有
  * @return 0-成功, 1-失败
@@ -1125,47 +1081,88 @@ int TK8710ClearTxUserData(uint8_t userIndex)
 }
 
 /**
- * @brief 设置下行1发送数据和功率
- * @param downlink1Index 下行1索引 (0-15)
- * @param data 下行1数据指针
+ * @brief 设置下行发送数据和功率
+ * @param downlinkType 下行类型: 0=下行1(广播数据), 1=下行2(专用数据)
+ * @param index 索引: 下行1时范围(0-15), 下行2时范围(0-127)
+ * @param data 数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常下行1(Driver自动生成波束), 1=与Slot3共用波束信息
+ * @param beamType 波束类型: 0=广播数据, 1=专用数据
  * @return 0-成功, 1-失败
  */
-int TK8710SetDownlink1DataWithPower(uint8_t downlink1Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType)
+int TK8710SetDownlinkDataWithPower(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType)
 {
-    if (downlink1Index >= 16 || data == NULL || dataLen == 0) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: downlink1Index=%d, data=%p, dataLen=%d", 
-                            downlink1Index, data, dataLen);
+    if (downlinkType == TK8710_DOWNLINK_1) {
+        /* 下行1 (广播数据) */
+        if (index >= 16 || data == NULL || dataLen == 0) {
+            TK8710_LOG_IRQ_ERROR("Invalid parameters for downlink1: index=%d, data=%p, dataLen=%d", 
+                                index, data, dataLen);
+            return TK8710_ERR;
+        }
+        
+        /* 检查是否已存在数据，先释放 */
+        if (g_brdBuffers[index].valid && 
+            g_brdBuffers[index].data != NULL) {
+            free(g_brdBuffers[index].data);
+        }
+        
+        /* 分配内存并复制数据 */
+        uint8_t* newData = malloc(dataLen);
+        if (newData == NULL) {
+            TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink1[%d] data", index);
+            return TK8710_ERR;
+        }
+        
+        memcpy(newData, data, dataLen);
+        
+        /* 设置下行1数据Buffer */
+        g_brdBuffers[index].data = newData;
+        g_brdBuffers[index].dataLen = dataLen;
+        g_brdBuffers[index].valid = 1;
+        g_brdBuffers[index].brdIndex = index;
+        g_brdBuffers[index].txPower = txPower;
+        g_brdBuffers[index].beamType = beamType;
+        
+        TK8710_LOG_IRQ_DEBUG("Downlink1 TX data set: downlink1[%d], len=%d, power=%d, beamType=%d", 
+                            index, dataLen, txPower, beamType);
+    } else if (downlinkType == TK8710_DOWNLINK_2) {
+        /* 下行2 (专用数据) */
+        if (index >= 128 || data == NULL || dataLen == 0) {
+            TK8710_LOG_IRQ_ERROR("Invalid parameters for downlink2: index=%d, data=%p, dataLen=%d", 
+                                index, data, dataLen);
+            return TK8710_ERR;
+        }
+        
+        /* 检查是否已存在数据，先释放 */
+        if (g_txBuffers[index].valid && 
+            g_txBuffers[index].data != NULL) {
+            free(g_txBuffers[index].data);
+        }
+        
+        /* 分配内存并复制数据 */
+        uint8_t* newData = malloc(dataLen);
+        if (newData == NULL) {
+            TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink2[%d] data", index);
+            return TK8710_ERR;
+        }
+        
+        memcpy(newData, data, dataLen);
+        
+        /* 设置下行2数据Buffer */
+        g_txBuffers[index].data = newData;
+        g_txBuffers[index].dataLen = dataLen;
+        g_txBuffers[index].valid = 1;
+        g_txBuffers[index].userIndex = index;
+        g_txBuffers[index].txPower = txPower;
+        g_txBuffers[index].beamType = beamType;
+        
+        TK8710_LOG_IRQ_DEBUG("Downlink2 TX data set: downlink2[%d], len=%d, power=%d, beamType=%d", 
+                            index, dataLen, txPower, beamType);
+    } else {
+        TK8710_LOG_IRQ_ERROR("Invalid downlink type: %d", downlinkType);
         return TK8710_ERR;
     }
     
-    /* 检查是否已存在数据，先释放 */
-    if (g_brdBuffers[downlink1Index].valid && 
-        g_brdBuffers[downlink1Index].data != NULL) {
-        free(g_brdBuffers[downlink1Index].data);
-    }
-    
-    /* 分配内存并复制数据 */
-    uint8_t* newData = malloc(dataLen);
-    if (newData == NULL) {
-        TK8710_LOG_IRQ_ERROR("Failed to allocate memory for downlink1[%d] data", downlink1Index);
-        return TK8710_ERR;
-    }
-    
-    memcpy(newData, data, dataLen);
-    
-    /* 设置下行1数据Buffer */
-    g_brdBuffers[downlink1Index].data = newData;
-    g_brdBuffers[downlink1Index].dataLen = dataLen;
-    g_brdBuffers[downlink1Index].valid = 1;
-    g_brdBuffers[downlink1Index].brdIndex = downlink1Index;
-    g_brdBuffers[downlink1Index].txPower = txPower;
-    g_brdBuffers[downlink1Index].dataType = dataType;
-    
-    TK8710_LOG_IRQ_DEBUG("Downlink1 TX data set: downlink1[%d], len=%d, power=%d, dataType=%d", 
-                        downlink1Index, dataLen, txPower, dataType);
     return TK8710_OK;
 }
 

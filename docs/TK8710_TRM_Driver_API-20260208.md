@@ -184,6 +184,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 **参数**:
 
 - `type`: 配置类型
+  
   ```c
   typedef enum {
     TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */

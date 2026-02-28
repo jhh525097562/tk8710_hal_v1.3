@@ -21,8 +21,7 @@
 | `TK8710SetConfig`                  | 设置芯片配置参数    | 应用层     | 配置管理   |
 | `TK8710GetConfig`                  | 获取芯片配置参数    | 应用层     | 配置管理   |
 | **数据传输**                   |                     |            |            |
-| `TK8710SetDownlink1DataWithPower`  | 设置下行1数据(广播) | TRM层      | 数据传输   |
-| `TK8710SetDownlink2DataWithPower`  | 设置下行2数据(用户) | TRM层      | 数据传输   |
+| `TK8710SetDownlinkDataWithPower` | 设置下行数据(广播/用户) | TRM层      | 数据传输   |
 | `TK8710SetTxUserInfo`              | 设置发送用户信息    | TRM层      | 数据传输   |
 | **数据接收**                   |                     |            |            |
 | `TK8710GetRxUserData`              | 获取接收数据        | TRM层      | 数据接收   |
@@ -229,49 +228,30 @@ if (ret == TK8710_OK) {
 
 ### 3. 数据传输
 
-#### `TK8710SetDownlink1DataWithPower`
+#### `TK8710SetDownlinkDataWithPower`
 
 ```c
-int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t power, TK8710BrdDataType dataType);
+int TK8710SetDownlinkDataWithPower(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType);
 ```
 
-**功能**: 设置下行1广播数据
+**功能**: 设置下行发送数据和功率
 **参数**:
 
-- `userIndex`: 广播用户索引 (0-15)
-- `data`: 广播数据指针
-- `dataLen`: 数据长度 (0-512字节)
-- `power`: 发射功率 (0-31)
-- `dataType`: 类型
-
-  ```c
-  #define TK8710_BRD_DATA_TYPE_NORMAL     0   /* 正常广播: 使用Driver自动生成的波束信息 */
-  #define TK8710_BRD_DATA_TYPE_SLOT3      1   /* 与Slot3共用波束信息 */
-  ```
-
+- `downlinkType`: 下行类型 (0=下行1广播数据, 1=下行2专用数据)
+- `index`: 索引 (下行1时范围0-15, 下行2时范围0-127)
+- `data`: 数据指针
+- `dataLen`: 数据长度
+- `txPower`: 发送功率
+- `beamType`: 波束类型 (0=广播数据, 1=专用数据)
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710SetDownlink2DataWithPower`
+**说明**:
 
-```c
-int TK8710SetDownlink2DataWithPower(uint8_t userIndex, const uint8_t* data, uint16_t dataLen, uint8_t power, TK8710UserDataType dataType);
-```
-
-**功能**: 设置下行2用户数据
-**参数**:
-
-- `userIndex`: 用户索引 (0-127)
-- `data`: 用户数据指针
-- `dataLen`: 数据长度 (0-512字节)
-- `power`: 发射功率 (0-31)
-- `dataType`: 数据类型
-
-  ```c
-  #define TK8710_USER_DATA_TYPE_NORMAL    0   /* 正常发送: 使用指定信息模式的波束信息 */
-  #define TK8710_USER_DATA_TYPE_SLOT1     1   /* 与Slot1共用波束信息 (Driver自动生成) */
-  ```
-
-  **返回值**: 0-成功, 1-失败, 2-超时
+- 统一的下行数据发送接口，支持广播和专用数据
+- 下行1用于广播数据，最大支持16个用户
+- 下行2用于专用数据，最大支持128个用户
+- 自动管理内存分配和数据复制
+- 支持不同的波束类型配置
 
 #### `TK8710SetTxUserInfo`
 

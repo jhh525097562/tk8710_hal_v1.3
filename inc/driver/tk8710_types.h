@@ -306,9 +306,15 @@ typedef struct {
     uint8_t  userIndex;   /* 用户索引 */
 } TK8710RxBuffer;
 
-/* 用户数据类型 */
-#define TK8710_USER_DATA_TYPE_NORMAL    0   /* 正常发送: 使用指定信息模式的波束信息 */
-#define TK8710_USER_DATA_TYPE_SLOT1     1   /* 与Slot1共用波束信息 (Driver自动生成) */
+/* 下行类型枚举 */
+typedef enum {
+    TK8710_DOWNLINK_1 = 0,  /* 下行1 (广播数据) */
+    TK8710_DOWNLINK_2 = 1,  /* 下行2 (专用数据) */
+} TK8710DownlinkType;
+
+/* 数据类型 */
+#define TK8710_DATA_TYPE_BRD     0   /* 广播数据: 使用Driver自动生成的波束信息或与Slot3共用波束信息 */
+#define TK8710_DATA_TYPE_DED     1   /* 专用数据: 使用指定信息模式的波束信息或与Slot1共用波束信息 */
 
 /* 发送数据Buffer结构体 */
 typedef struct {
@@ -317,12 +323,8 @@ typedef struct {
     uint8_t  valid;       /* 数据有效性: 1=有效, 0=无效 */
     uint8_t  userIndex;   /* 用户索引 */
     uint8_t  txPower;     /* 发送功率 */
-    uint8_t  dataType;    /* 数据类型: 0=正常发送, 1=与Slot1共用波束信息 */
+    uint8_t  beamType;    /* 波束类型: 0=广播数据, 1=专用数据 */
 } TK8710TxBuffer;
-
-/* 广播数据类型 */
-#define TK8710_BRD_DATA_TYPE_NORMAL     0   /* 正常广播: 使用Driver自动生成的波束信息 */
-#define TK8710_BRD_DATA_TYPE_SLOT3      1   /* 与Slot3共用波束信息 */
 
 /* 广播数据Buffer结构体 */
 typedef struct {
@@ -331,7 +333,7 @@ typedef struct {
     uint8_t  valid;       /* 数据有效性: 1=有效, 0=无效 */
     uint8_t  brdIndex;    /* 广播用户索引 (0-15) */
     uint8_t  txPower;     /* 发送功率 */
-    uint8_t  dataType;    /* 数据类型: 0=正常广播, 1=与Slot3共用波束信息 */
+    uint8_t  beamType;    /* 波束类型: 0=广播数据, 1=专用数据 */
 } TK8710BrdBuffer;
 
 /* 信号质量信息结构体 */

@@ -570,7 +570,7 @@ int main(void) {
     uint8_t userIndex = 0;
   
     // 设置下行2数据
-    ret = TK8710SetDownlink2DataWithPower(userIndex, txData, sizeof(txData), 20, TK8710_USER_DATA_TYPE_NORMAL);
+    ret = TK8710SetDownlinkDataWithPower(TK8710_DOWNLINK_2, userIndex, txData, sizeof(txData), 20, TK8710_DATA_TYPE_DED);
     if (ret != TK8710_OK) {
         printf("设置下行数据失败: %d\n", ret);
     }
@@ -633,8 +633,7 @@ int main(void) {
 | `TK8710GpioInit()`                  | 初始化GPIO中断   | 中断引脚配置         |
 | `TK8710RegisterCallbacks()`         | 注册Driver回调   | 多回调架构           |
 | `TK8710Start()`                 | 启动芯片工作     | 主模式/从模式        |
-| `TK8710SetDownlink2DataWithPower()` | 设置下行2数据    | 直接硬件控制         |
-| `TK8710SetDownlink1DataWithPower()` | 设置下行1数据    | 广播数据发送         |
+| `TK8710SetDownlinkDataWithPower()` | 设置下行数据    | 统一下行数据发送接口     |
 | `TK8710SetTxUserInfo()`             | 设置用户信息     | 频率、波束、功率     |
 | `TK8710GetRxUserData()`                 | 获取接收数据     | 用户数据读取         |
 | `TK8710GetRxUserSignalQuality()`             | 获取信号质量     | RSSI、SNR、频率      |

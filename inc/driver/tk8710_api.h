@@ -67,26 +67,16 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
  */
 
 /**
- * @brief 设置下行1发送数据和功率
- * @param downlink1Index 下行1索引 (0-15)
- * @param data 下行1数据指针
+ * @brief 设置下行发送数据和功率
+ * @param downlinkType 下行类型: 0=下行1(广播数据), 1=下行2(专用数据)
+ * @param index 索引: 下行1时范围(0-15), 下行2时范围(0-127)
+ * @param data 数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常下行1(Driver自动生成波束), 1=与Slot3共用波束信息
+ * @param beamType 波束类型: 0=广播数据, 1=专用数据
  * @return 0-成功, 1-失败
  */
-int TK8710SetDownlink1DataWithPower(uint8_t downlink1Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
-
-/**
- * @brief 设置下行2发送数据和功率
- * @param downlink2Index 下行2索引 (0-127)
- * @param data 下行2数据指针
- * @param dataLen 数据长度
- * @param txPower 发送功率
- * @param dataType 数据类型: 0=正常下行2(指定信息模式波束), 1=与Slot1共用波束信息
- * @return 0-成功, 1-失败
- */
-int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t dataType);
+int TK8710SetDownlinkDataWithPower(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType);
 
 /**
  * @brief 设置发送用用户信息 (指定信息发送模式)
