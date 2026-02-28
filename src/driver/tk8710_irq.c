@@ -562,7 +562,7 @@ void TK8710GetAllIrqCounters(uint32_t* counters)
  */
 static int tk8710_configure_multi_rate(uint8_t rateIndex)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     s_mac_config_0 macConfig0;
     s_mac_config_1 macConfig1;
     s_init_2 init2;
@@ -733,7 +733,7 @@ static void tk8710_md_ud_get_user_info(void)
     uint8_t i;
     
     /* 获取当前配置 */
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     RateModeParams rateParams;
     
     /* 根据速率模式获取最大用户数 */
@@ -845,7 +845,7 @@ static void tk8710_md_data_process(void)
     RateModeParams rateParams;
     
     /* 获取当前速率模式的最大用户数 */
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     if (TK8710GetRateModeParams(slotCfg->rateModes[g_irqResult.currentRateIndex], &rateParams) == TK8710_OK) {
         maxUsers = rateParams.maxUsers;
         /* 限制最大用户数不超过数组大小 */
@@ -992,7 +992,7 @@ static void tk8710_handle_slot0(void)
  */
 static void tk8710_s0_bcn_rotation_process(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     int ret;
     uint8_t currentAntenna;
     
@@ -1304,7 +1304,7 @@ int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uin
  */
 static void tk8710_handle_slot1(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     
     TK8710_LOG_IRQ_DEBUG("S1 slot interrupt handled (count: %u)", g_irqCounters[TK8710_IRQ_S1]);
     
@@ -1330,7 +1330,7 @@ static void tk8710_handle_slot1(void)
  */
 static void tk8710_s1_auto_tx_process(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     uint16_t expectedLen;
     uint8_t i;
     
@@ -1463,7 +1463,7 @@ static void tk8710_handle_slot2(void)
  */
 static void tk8710_handle_slot3(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     int ret;
     
     TK8710_LOG_IRQ_DEBUG("S3 slot interrupt handled (count: %u)", g_irqCounters[TK8710_IRQ_S3]);
@@ -1515,7 +1515,7 @@ static void tk8710_handle_acm(void)
  */
 static void tk8710_s1_manual_tx_process(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     int ret;
     
     TK8710_LOG_IRQ_DEBUG("S1 manual TX process started");
@@ -2065,7 +2065,7 @@ static void tk8710_s1_manual_tx_process(void)
  */
 static void tk8710_s1_broadcast_tx_process(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     int ret;
     
     

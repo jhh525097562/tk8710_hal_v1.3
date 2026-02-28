@@ -308,7 +308,7 @@ int main(void)
     ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
     if (ret != TK8710_OK) {
         printf("Slot config failed: %d\n", ret);
-        TK8710ResetChip(TK8710_RST_ALL);
+        TK8710Reset(TK8710_RST_ALL);
         TRM_Deinit();
         return -1;
     }
@@ -317,7 +317,7 @@ int main(void)
     ret = TK8710RfConfig(&rfConfig);
     if (ret != TK8710_OK) {
         printf("RF init failed: %d\n", ret);
-        TK8710ResetChip(TK8710_RST_ALL);
+        TK8710Reset(TK8710_RST_ALL);
         TRM_Deinit();
         return -1;
     }
@@ -327,7 +327,7 @@ int main(void)
     ret = TRM_Start();
     if (ret != TRM_OK) {
         printf("TRM_Start failed: %d\n", ret);
-        TK8710ResetChip(TK8710_RST_ALL);
+        TK8710Reset(TK8710_RST_ALL);
         TRM_Deinit();
         return -1;
     }
@@ -338,7 +338,7 @@ int main(void)
     if (ret != TK8710_OK) {
         printf("TK8710Start failed: %d\n", ret);
         TRM_Stop();
-        TK8710ResetChip(TK8710_RST_ALL);
+        TK8710Reset(TK8710_RST_ALL);
         TRM_Deinit();
         return -1;
     }
@@ -410,7 +410,7 @@ int main(void)
     printf("\nStopping system...\n");
     
     /* 停止Driver - 直接复位芯片 */
-    TK8710ResetChip(TK8710_RST_ALL);
+    TK8710Reset(TK8710_RST_ALL);
     printf("Driver stopped\n");
     
     /* 停止TRM */

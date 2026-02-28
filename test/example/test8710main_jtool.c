@@ -590,7 +590,7 @@ void show_help(void)
  */
 void show_system_status(void)
 {
-    const slotCfg_t* slotCfg = TK8710GetSlotCfg();
+    const slotCfg_t* slotCfg = TK8710GetConfig();
     uint8_t rateMode = TK8710GetRateMode();
     uint8_t workType = TK8710GetWorkType();
     uint8_t brdUserNum = TK8710GetBrdUserNum();
@@ -859,7 +859,7 @@ int main(int argc, char* argv[])
     TK8710GpioIrqEnable(0, 0);
     
     /* 重置芯片 */
-    TK8710ResetChip(TK8710_RST_STATE_MACHINE);
+    TK8710Reset(TK8710_RST_STATE_MACHINE);
     
     /* 关闭JTOOL设备 */
     ret = TK8710JtoolClose();

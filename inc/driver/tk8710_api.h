@@ -46,7 +46,7 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
  * @param rstType 复位类型: 1=仅复位状态机, 2=复位状态机+寄存器
  * @return 0-成功, 1-失败, 2-超时
  */
-int TK8710ResetChip(uint8_t rstType);
+int TK8710Reset(uint8_t rstType);
 
 /* ============================================================================
  * 配置管理API
@@ -148,7 +148,7 @@ int TK8710ReleaseRxData(uint8_t userIndex);
  * @brief 获取时隙配置
  * @return 时隙配置指针
  */
-const slotCfg_t* TK8710GetSlotCfg(void);
+const slotCfg_t* TK8710GetConfig(void);
 
 /* ============================================================================
  * 回调注册API

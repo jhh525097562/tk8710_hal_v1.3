@@ -14,9 +14,9 @@
 | ----------------------------------- | ------------------- | ---------- | ---------- |
 | **芯片初始化与控制**          |                     |            |            |
 | `TK8710Init`                      | 初始化TK8710芯片    | 应用层     | 初始化控制 |
-| `TK8710Start`                   | 启动TK8710工作      | 应用层     | 初始化控制 |
+| `TK8710Start`                     | 启动TK8710工作      | 应用层     | 初始化控制 |
 | `TK8710RfConfig`                  | 初始化RF配置        | 应用层     | 初始化控制 |
-| `TK8710ResetChip`                 | 复位芯片            | 应用层     | 初始化控制 |
+| `TK8710Reset`                     | 复位芯片            | 应用层     | 初始化控制 |
 | **配置管理**                  |                     |            |            |
 | `TK8710SetConfig`                 | 设置芯片配置参数    | 应用层     | 配置管理   |
 | **数据传输**                  |                     |            |            |
@@ -29,7 +29,7 @@
 | `TK8710GetSignalInfo`             | 获取信号信息        | TRM层      | 数据接收   |
 | `TK8710ReleaseRxData`             | 释放接收数据资源    | TRM层      | 数据接收   |
 | **状态查询**                  |                     |            |            |
-| `TK8710GetSlotCfg`（GetConfig） | 获取时隙配置        | 应用层     | 状态查询   |
+| `TK8710GetConfig`（GetConfig）   | 获取时隙配置        | 应用层     | 状态查询   |
 | **回调管理**                  |                     |            |            |
 | `TK8710RegisterCallbacks`         | 注册Driver回调函数  | TRM层      | 回调管理   |
 | **中断处理**                  |                     |            |            |
@@ -89,7 +89,7 @@ int TK8710Init(const ChipConfig* initConfig);
   ```
 - **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710Start`（start）
+#### `TK8710Start`
 
 ```c
 int TK8710Start(uint8_t workType, uint8_t workMode);
@@ -117,7 +117,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode);
 
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710RfConfig`（rfconfig）
+#### `TK8710RfConfig`
 
 ```c
 int TK8710RfConfig(const ChiprfConfig* initrfConfig);
@@ -136,14 +136,14 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-  
+
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-  
+
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -152,10 +152,10 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
 
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710ResetChip`（Reset）
+#### `TK8710Reset`
 
 ```c
-int TK8710ResetChip(uint8_t rstType);
+int TK8710Reset(uint8_t rstType);
 ```
 
 **功能**: 芯片复位
@@ -174,7 +174,7 @@ int TK8710ResetChip(uint8_t rstType);
 
 ### 2. 配置管理
 
-#### `TK8710SetConfig`（8710config）
+#### `TK8710SetConfig`
 
 ```c
 int TK8710SetConfig(TK8710ConfigType type, const void* params);
@@ -184,14 +184,14 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 **参数**:
 
 - `type`: 配置类型
-  
+
   ```c
   typedef enum {
     TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-  
+
   ```
 
 **功能**: 获取芯片配置

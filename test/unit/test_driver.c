@@ -76,7 +76,7 @@ TEST_CASE(driver_init_valid_config)
     int ret = TK8710Init(&config, NULL);
     TEST_ASSERT_EQ(ret, TK8710_OK, "Init with valid config should succeed");
     
-    TK8710ResetChip(1);
+    TK8710Reset(1);
 }
 
 TEST_CASE(driver_double_init)
@@ -91,7 +91,7 @@ TEST_CASE(driver_double_init)
     int ret2 = TK8710Init(&config, NULL);
     TEST_ASSERT_EQ(ret2, TK8710_ERR_STATE, "Double init should fail");
     
-    TK8710ResetChip(1);
+    TK8710Reset(1);
 }
 
 /*==============================================================================
@@ -111,7 +111,7 @@ TEST_CASE(driver_start_stop)
     TEST_ASSERT_EQ(ret, TK8710_OK, "Start should succeed");
     
     // 使用复位代替停止，因为没有停止控制类型
-    TK8710ResetChip(1);
+    TK8710Reset(1);
 }
 
 TEST_CASE(driver_start_without_init)
