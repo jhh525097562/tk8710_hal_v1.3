@@ -471,9 +471,9 @@ void OnDriverRxData(TK8710IrqResult* irqResult) {
             
                 // 获取用户波束信息
                 uint32_t userFreq;
-                uint32_t ahData[16];
-                uint64_t pilotPower;
-                TK8710GetRxUserInfo(i, &userFreq, ahData, &pilotPower);
+                uint32_t ahInfo[16];
+                uint64_t pilotPowerInfo;
+                TK8710GetRxUserInfo(i, &userFreq, ahInfo, &pilotPowerInfo);
             
                 // 释放数据缓冲区
                 TK8710ReleaseRxData(i);

@@ -1261,40 +1261,40 @@ int TK8710ClearTxUserInfo(uint8_t userIndex)
 
 /**
  * @brief 获取接收用户信息 (从MD_UD中断获取的数据)
- * @param userIndex 用户索引 (0-127)
- * @param freq 输出频率指针
- * @param ahData 输出AH数据数组 (16个32位数据)
- * @param pilotPower 输出Pilot功率指针
+ * @param userBufferIdx 用户索引 (0-127)
+ * @param freqInfo 输出频率指针
+ * @param ahInfo 输出AH数据数组 (16个32位数据)
+ * @param pilotPowerInfo 输出Pilot功率指针
  * @return 0-成功, 1-失败
  */
-int TK8710GetRxUserInfo(uint8_t userIndex, uint32_t* freq, uint32_t* ahData, uint64_t* pilotPower)
+int TK8710GetRxUserInfo(uint8_t userBufferIdx, uint32_t* freqInfo, uint32_t* ahInfo, uint64_t* pilotPowerInfo)
 {
-    if (userIndex >= 128 || freq == NULL || ahData == NULL || pilotPower == NULL) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, freq=%p, ahData=%p, pilotPower=%p", 
-                            userIndex, freq, ahData, pilotPower);
+    if (userBufferIdx >= 128 || freqInfo == NULL || ahInfo == NULL || pilotPowerInfo == NULL) {
+        TK8710_LOG_IRQ_ERROR("Invalid parameters: userBufferIdx=%d, freqInfo=%p, ahInfo=%p, pilotPowerInfo=%p", 
+                            userBufferIdx, freqInfo, ahInfo, pilotPowerInfo);
         return TK8710_ERR;
     }
     
-    if (!g_userInfoRxBuffers[userIndex].valid) {
-        TK8710_LOG_IRQ_ERROR("RX user info not valid for user[%d]", userIndex);
+    if (!g_userInfoRxBuffers[userBufferIdx].valid) {
+        TK8710_LOG_IRQ_ERROR("RX user info not valid for user[%d]", userBufferIdx);
         return TK8710_ERR;
     }
     
     /* 获取接收用户信息 */
-    *freq = g_userInfoRxBuffers[userIndex].freq;
-    *pilotPower = g_userInfoRxBuffers[userIndex].pilotPower;
+    *freqInfo = g_userInfoRxBuffers[userBufferIdx].freq;
+    *pilotPowerInfo = g_userInfoRxBuffers[userBufferIdx].pilotPower;
     
     /* 复制AH数据 */
     for (int i = 0; i < 16; i++) {
-        ahData[i] = g_userInfoRxBuffers[userIndex].ahData[i];
+        ahInfo[i] = g_userInfoRxBuffers[userBufferIdx].ahData[i];
     }
     
     /* 频率转换：26-bit格式转换为实际频率Hz */
-    // uint32_t freq26 = *freq & 0x03FFFFFF;  /* 取26位 */
+    // uint32_t freq26 = *freqInfo & 0x03FFFFFF;  /* 取26位 */
     // int32_t freqValue = freq26 > (1<<25) ? (int)(freq26 - (1<<26)) : freq26;
     
     // TK8710_LOG_IRQ_DEBUG("RX user info retrieved: user[%d], freq=%u (raw), freqHz=%d, pilotPower=%llu", 
-    //                     userIndex, *freq, freqValue/128, *pilotPower);
+    //                     userBufferIdx, *freqInfo, freqValue/128, *pilotPowerInfo);
     return TK8710_OK;
 }
 
