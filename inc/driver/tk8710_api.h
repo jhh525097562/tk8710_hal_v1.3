@@ -90,13 +90,13 @@ int TK8710SetDownlink2DataWithPower(uint8_t downlink2Index, const uint8_t* data,
 
 /**
  * @brief 设置发送用用户信息 (指定信息发送模式)
- * @param userIndex 用户索引 (0-127)
- * @param freq 频率
- * @param ahData AH数据数组 (16个32位数据)
- * @param pilotPower Pilot功率
+ * @param userBufferIdx 用户索引 (0-127)
+ * @param freqInfo 频率
+ * @param ahInfo AH数据数组 (16个32位数据)
+ * @param pilotPowerInfo Pilot功率
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint32_t* ahData, uint64_t pilotPower);
+int TK8710SetTxUserInfo(uint8_t userBufferIdx, uint32_t freqInfo, const uint32_t* ahInfo, uint64_t pilotPowerInfo);
 
 /* ============================================================================
  * 数据接收API

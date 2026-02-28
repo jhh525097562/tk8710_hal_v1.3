@@ -250,16 +250,16 @@ int TK8710SetDownlink2DataWithPower(uint8_t userIndex, const uint8_t* data, uint
 #### `TK8710SetTxUserInfo`
 
 ```c
-int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint8_t* ahData, uint8_t pilotPower);
+int TK8710SetTxUserInfo(uint8_t userBufferIdx, uint32_t freqInfo, const uint32_t* ahInfo, uint64_t pilotPowerInfo);
 ```
 
 **功能**: 设置发送用户信息
 **参数**:
 
-- `userIndex`: 用户索引 (0-127)
-- `freq`: 用户频率 (Hz)
-- `ahData`: AH数据指针 (64字节数组)
-- `pilotPower`: 导频功率 (0-31)
+- `userBufferIdx`: 用户索引 (0-127)
+- `freqInfo`: 频率
+- `ahInfo`: AH数据数组 (16个32位数据)
+- `pilotPowerInfo`: Pilot功率
   **返回值**: 0-成功, 1-失败, 2-超时
 
 ### 4. 数据接收
@@ -805,10 +805,10 @@ if (ret != TK8710_OK) {
 }
 
 // 2. 设置发送用户信息
-uint32_t freq = 2400000000;
-uint8_t ahData[64] = {0};  // AH配置数据
-uint8_t pilotPower = 20;
-ret = TK8710SetTxUserInfo(userIndex, freq, ahData, pilotPower);
+uint32_t freqInfo = 2400000000;
+uint32_t ahInfo[16] = {0};  // AH配置数据
+uint64_t pilotPowerInfo = 20;
+ret = TK8710SetTxUserInfo(userIndex, freqInfo, ahInfo, pilotPowerInfo);
 if (ret != TK8710_OK) {
     printf("Set TX user info failed: %d\n", ret);
 }

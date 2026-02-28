@@ -1171,31 +1171,31 @@ int TK8710SetDownlink1DataWithPower(uint8_t downlink1Index, const uint8_t* data,
 
 /**
  * @brief 设置发送用用户信息 (指定信息发送模式)
- * @param userIndex 用户索引 (0-127)
- * @param freq 频率
- * @param ahData AH数据数组 (16个32位数据)
- * @param pilotPower Pilot功率
+ * @param userBufferIdx 用户索引 (0-127)
+ * @param freqInfo 频率
+ * @param ahInfo AH数据数组 (16个32位数据)
+ * @param pilotPowerInfo Pilot功率
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxUserInfo(uint8_t userIndex, uint32_t freq, const uint32_t* ahData, uint64_t pilotPower)
+int TK8710SetTxUserInfo(uint8_t userBufferIdx, uint32_t freqInfo, const uint32_t* ahInfo, uint64_t pilotPowerInfo)
 {
-    if (userIndex >= 128 || ahData == NULL) {
-        TK8710_LOG_IRQ_ERROR("Invalid parameters: userIndex=%d, ahData=%p", userIndex, ahData);
+    if (userBufferIdx >= 128 || ahInfo == NULL) {
+        TK8710_LOG_IRQ_ERROR("Invalid parameters: userBufferIdx=%d, ahInfo=%p", userBufferIdx, ahInfo);
         return TK8710_ERR;
     }
     
     /* 设置发送用用户信息 */
-    g_userInfoTxBuffers[userIndex].freq = freq;
-    g_userInfoTxBuffers[userIndex].pilotPower = pilotPower;
-    g_userInfoTxBuffers[userIndex].valid = 1;
+    g_userInfoTxBuffers[userBufferIdx].freq = freqInfo;
+    g_userInfoTxBuffers[userBufferIdx].pilotPower = pilotPowerInfo;
+    g_userInfoTxBuffers[userBufferIdx].valid = 1;
     
     /* 复制AH数据 */
     for (int i = 0; i < 16; i++) {
-        g_userInfoTxBuffers[userIndex].ahData[i] = ahData[i];
+        g_userInfoTxBuffers[userBufferIdx].ahData[i] = ahInfo[i];
     }
     
     TK8710_LOG_IRQ_DEBUG("TX user info set: user[%d], freq=%u, pilotPower=%llu", 
-                        userIndex, freq, pilotPower);
+                        userBufferIdx, freqInfo, pilotPowerInfo);
     return TK8710_OK;
 }
 

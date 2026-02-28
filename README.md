@@ -576,11 +576,11 @@ int main(void) {
     }
   
     // 设置用户信息（频率、波束等）
-    uint32_t frequency = 2400000000;
-    uint8_t ahData[64] = {0};  // AH配置数据
-    uint8_t pilotPower = 20;
+    uint32_t freqInfo = 2400000000;
+    uint32_t ahInfo[16] = {0};  // AH配置数据
+    uint64_t pilotPowerInfo = 20;
   
-    ret = TK8710SetTxUserInfo(userIndex, frequency, ahData, pilotPower);
+    ret = TK8710SetTxUserInfo(userIndex, freqInfo, ahInfo, pilotPowerInfo);
     if (ret != TK8710_OK) {
         printf("设置用户信息失败: %d\n", ret);
     }
