@@ -19,6 +19,7 @@
 | `TK8710Reset`                      | 复位芯片            | 应用层     | 初始化控制 |
 | **配置管理**                   |                     |            |            |
 | `TK8710SetConfig`                  | 设置芯片配置参数    | 应用层     | 配置管理   |
+| `TK8710GetConfig`                  | 获取芯片配置参数    | 应用层     | 配置管理   |
 | **数据传输**                   |                     |            |            |
 | `TK8710SetDownlink1DataWithPower`  | 设置下行1数据(广播) | TRM层      | 数据传输   |
 | `TK8710SetDownlink2DataWithPower`  | 设置下行2数据(用户) | TRM层      | 数据传输   |
@@ -194,12 +195,38 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 
   ```
 
+#### `TK8710GetConfig`
+
+```c
+int TK8710GetConfig(TK8710ConfigType type, void* params);
+```
+
 **功能**: 获取芯片配置
 **参数**:
 
 - `type`: 配置类型 (同TK8710SetConfig)
 - `params`: 配置参数输出指针
   **返回值**: 0-成功, 1-失败, 2-超时
+
+**说明**:
+
+- 获取指定类型的芯片配置参数
+- 支持的配置类型与`TK8710SetConfig`相同
+- `params`指针类型需要根据配置类型进行相应的类型转换
+- 主要用于读取当前芯片的配置状态
+- 常用于配置验证和状态监控
+
+**示例**:
+
+```c
+// 获取时隙配置
+slotConfig_t slotConfig;
+ret = TK8710GetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
+if (ret == TK8710_OK) {
+    printf("当前时隙配置: antEn=0x%02X, rfSel=0x%02X\n", 
+           slotConfig.antEn, slotConfig.rfSel);
+}
+```
 
 ### 3. 数据传输
 
@@ -861,7 +888,7 @@ ret = TK8710RfConfig(&rfConfig);
 1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
 2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogSimpleInit()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
-4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Start()`
+4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710GetConfig()`, `TK8710Start()`
 5. **数据接收操作** - `TK8710GetRxUserData()`, `TK8710GetRxUserSignalQuality()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
 6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
 7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
