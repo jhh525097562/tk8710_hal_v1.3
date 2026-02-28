@@ -33,6 +33,58 @@ extern "C" {
 #define TRM_ERR_INVALID_STATE   (-9)
 
 /* =============================================================================
+ * 内部类型定义
+ * ============================================================================= */
+
+/* 时隙配置 */
+typedef struct {
+    uint8_t bcnSlotCount;       /* BCN时隙数 */
+    uint8_t brdSlotCount;       /* 广播时隙数 */
+    uint8_t ulSlotCount;        /* 上行时隙数 */
+    uint8_t dlSlotCount;        /* 下行时隙数 */
+} TRM_SlotConfig;
+
+/* 广播接收数据 */
+typedef struct {
+    uint8_t  brdIndex;          /* 广播索引 */
+    uint8_t  dataLen;           /* 数据长度 */
+    uint16_t reserved;
+    uint8_t* data;              /* 数据指针 */
+} TRM_RxBrdData;
+
+/* 时隙计算输入 */
+typedef struct {
+    uint32_t totalUsers;        /* 总用户数 */
+    uint8_t rateMode;           /* 速率模式 */
+    uint8_t slotConfig;         /* 时隙配置 */
+} TRM_SlotCalcInput;
+
+/* 时隙计算输出 */
+typedef struct {
+    uint8_t optimalSlots;       /* 最优时隙数 */
+    uint32_t maxThroughput;     /* 最大吞吐量 */
+    uint8_t recommendedConfig;  /* 推荐配置 */
+} TRM_SlotCalcOutput;
+
+/* TRM内部上下文结构体 (内部使用) */
+typedef struct {
+    uint8_t initialized;        /* 初始化标志 */
+    uint8_t running;            /* 运行标志 */
+    TrmState state;             /* TRM状态 */
+    uint32_t currentFrame;      /* 当前帧号 */
+    uint32_t maxFrameCount;     /* 最大帧数 */
+    TRM_InitConfig config;      /* 初始化配置 */
+    TRM_Stats stats;           /* 统计信息 */
+    void* beamTable;            /* 波束表指针 */
+    void* txQueue;              /* 发送队列指针 */
+    TRM_OnRxData onRxData;     /* 接收回调 */
+    TRM_OnTxComplete onTxComplete; /* 发送完成回调 */
+} TRM_InternalContext;
+
+/* 向前声明 */
+typedef struct TrmContext TrmContext;
+
+/* =============================================================================
  * 波束管理内部函数
  * ============================================================================= */
 
@@ -84,7 +136,7 @@ int TRM_Reset(void);
  * @brief 获取TRM上下文 (内部函数)
  * @return TRM上下文指针
  */
-void* TRM_GetContext(void);
+TrmContext* TRM_GetContext(void);
 
 /* =============================================================================
  * 调试和测试接口
@@ -145,26 +197,6 @@ void TRM_OnDriverTxSlotAdapter(uint8_t slotIndex, uint8_t maxUserCount);
  * @param irqResult 中断结果
  */
 void TRM_OnDriverErrorAdapter(const TK8710IrqResult* irqResult);
-
-/* =============================================================================
- * 内部数据结构定义
- * ============================================================================= */
-
-/**
- * @brief TRM内部上下文结构体 (内部使用)
- */
-typedef struct {
-    uint8_t initialized;        /* 初始化标志 */
-    uint8_t running;            /* 运行标志 */
-    uint32_t currentFrame;      /* 当前帧号 */
-    uint32_t maxFrameCount;     /* 最大帧数 */
-    TRM_InitConfig config;      /* 初始化配置 */
-    TRM_Stats stats;           /* 统计信息 */
-    void* beamTable;            /* 波束表指针 */
-    void* txQueue;              /* 发送队列指针 */
-    TRM_OnRxData onRxData;     /* 接收回调 */
-    TRM_OnTxComplete onTxComplete; /* 发送完成回调 */
-} TRM_InternalContext;
 
 #ifdef __cplusplus
 }

@@ -28,6 +28,106 @@ extern "C" {
 #define TRM_ERR_NO_BEAM         (-7)
 
 /* =============================================================================
+ * 常量定义
+ * ============================================================================= */
+#define TRM_BEAM_MAX_USERS_DEFAULT  3000    /* 默认最大用户数 */
+#define TRM_BEAM_TIMEOUT_DEFAULT    3000    /* 默认波束超时时间(ms) */
+
+/* =============================================================================
+ * 类型定义
+ * ============================================================================= */
+
+/* 波束存储模式 */
+typedef enum {
+    TRM_BEAM_MODE_FULL_STORE = 0,   /* 完整波束存储模式(CPU RAM) */
+    TRM_BEAM_MODE_MAPPING    = 1,   /* 波束映射模式(8710 RAM) */
+} TRM_BeamMode;
+
+/* 发送结果 */
+typedef enum {
+    TRM_TX_OK = 0,
+    TRM_TX_NO_BEAM,
+    TRM_TX_TIMEOUT,
+    TRM_TX_ERROR,
+} TRM_TxResult;
+
+/* TRM状态 */
+typedef enum {
+    TRM_STATE_UNINIT = 0,
+    TRM_STATE_INIT,
+    TRM_STATE_RUNNING,
+    TRM_STATE_STOPPED,
+} TrmState;
+
+/* 速率模式 */
+typedef enum {
+    TRM_RATE_2M = 0,
+    TRM_RATE_4M = 1,
+    TRM_RATE_8M = 2,
+} TRM_RateMode;
+
+/* 日志级别 */
+typedef enum {
+    TRM_LOG_LEVEL_ERROR = 0,
+    TRM_LOG_LEVEL_WARN,
+    TRM_LOG_LEVEL_INFO,
+    TRM_LOG_LEVEL_DEBUG,
+} TRMLogLevel;
+
+/* 波束信息 */
+typedef struct {
+    uint32_t userId;            /* 用户ID */
+    uint32_t freq;              /* 频率 (26位格式) */
+    uint32_t ahData[16];        /* AH数据: 8天线×2(I/Q) */
+    uint64_t pilotPower;        /* Pilot功率 */
+    uint32_t timestamp;         /* 更新时间戳*/
+    uint8_t  valid;             /* 有效标志 */
+} TRM_BeamInfo;
+
+/* 接收用户数据 */
+typedef struct {
+    uint32_t userId;            /* 用户ID */
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  dataLen;           /* 数据长度 */
+    uint8_t  rateMode;          /* 接收速率模式 */
+    int16_t  rssi;              /* 信号强度 */
+    uint8_t  snr;               /* 信噪比 */
+    uint8_t  reserved;
+    uint8_t* data;              /* 数据指针 */
+    int32_t  freq;              /* 频率 */
+    TRM_BeamInfo beam;          /* 波束信息 */
+} TRM_RxUserData;
+
+/* 接收数据列表 */
+typedef struct {
+    uint8_t  slotIndex;         /* 时隙索引 */
+    uint8_t  userCount;         /* 用户数量 */
+    uint16_t reserved;
+    uint32_t frameNo;           /* 帧号 */
+    TRM_RxUserData* users;      /* 用户数据数组 */
+} TRM_RxDataList;
+
+/* 统计信息 */
+typedef struct {
+    uint32_t txCount;           /* 发送次数 */
+    uint32_t txSuccessCount;    /* 发送成功次数 */
+    uint32_t rxCount;           /* 接收次数 */
+    uint32_t beamCount;         /* 当前波束数量 */
+    uint32_t memAllocCount;     /* 内存分配次数 */
+    uint32_t memFreeCount;      /* 内存释放次数 */
+} TRM_Stats;
+
+/* 初始化配置 */
+typedef struct {
+    TRM_BeamMode beamMode;      /* 波束存储模式 */
+    uint32_t beamMaxUsers;      /* 最大用户数 */
+    uint32_t beamTimeoutMs;     /* 波束超时时间(ms) */
+    void* chipConfig;           /* 芯片配置指针 */
+    void* slotConfig;           /* 时隙配置指针 */
+    void* rfConfig;             /* 射频配置指针 */
+} TRM_InitConfig;
+
+/* =============================================================================
  * 系统初始化与控制API
  * ============================================================================= */
 
