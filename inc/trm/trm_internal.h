@@ -36,6 +36,12 @@ extern "C" {
  * 内部类型定义
  * ============================================================================= */
 
+/* 回调函数集合 */
+typedef struct {
+    TRM_OnRxData      onRxData;
+    TRM_OnTxComplete  onTxComplete;
+} TRM_Callbacks;
+
 /* 时隙配置 */
 typedef struct {
     uint8_t bcnSlotCount;       /* BCN时隙数 */
@@ -66,23 +72,12 @@ typedef struct {
     uint8_t recommendedConfig;  /* 推荐配置 */
 } TRM_SlotCalcOutput;
 
-/* TRM内部上下文结构体 (内部使用) */
+/* TRM上下文 */
 typedef struct {
-    uint8_t initialized;        /* 初始化标志 */
-    uint8_t running;            /* 运行标志 */
-    TrmState state;             /* TRM状态 */
-    uint32_t currentFrame;      /* 当前帧号 */
-    uint32_t maxFrameCount;     /* 最大帧数 */
-    TRM_InitConfig config;      /* 初始化配置 */
-    TRM_Stats stats;           /* 统计信息 */
-    void* beamTable;            /* 波束表指针 */
-    void* txQueue;              /* 发送队列指针 */
-    TRM_OnRxData onRxData;     /* 接收回调 */
-    TRM_OnTxComplete onTxComplete; /* 发送完成回调 */
-} TRM_InternalContext;
-
-/* 向前声明 */
-typedef struct TrmContext TrmContext;
+    TrmState state;
+    TRM_InitConfig config;
+    TRM_Stats stats;
+} TrmContext;
 
 /* =============================================================================
  * 波束管理内部函数

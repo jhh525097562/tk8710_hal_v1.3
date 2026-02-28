@@ -119,12 +119,16 @@ typedef struct {
 
 /* 初始化配置 */
 typedef struct {
-    TRM_BeamMode beamMode;      /* 波束存储模式 */
-    uint32_t beamMaxUsers;      /* 最大用户数 */
-    uint32_t beamTimeoutMs;     /* 波束超时时间(ms) */
-    void* chipConfig;           /* 芯片配置指针 */
-    void* slotConfig;           /* 时隙配置指针 */
-    void* rfConfig;             /* 射频配置指针 */
+    /* 波束配置 */
+    TRM_BeamMode beamMode;          /* 波束存储模式 */
+    uint32_t     beamMaxUsers;      /* 最大用户数(使用默认?) */
+    uint32_t     beamTimeoutMs;     /* 波束超时时间戳使用默认?) */
+    
+    /* 回调函数 */
+    TRM_Callbacks callbacks;
+    
+    /* 平台配置(预留) */
+    void* platformConfig;
 } TRM_InitConfig;
 
 /* =============================================================================
