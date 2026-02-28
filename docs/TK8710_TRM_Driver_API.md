@@ -6,36 +6,38 @@
 
 ---
 
-## Driver API接口汇总
+## Driver API接口
 
-| API函数 | 功能描述 | 目标用户层 | 分类 |
-|---------|---------|-----------|------|
-| **芯片初始化与控制** | | | |
-| `TK8710Init` | 初始化TK8710芯片 | 应用层 | 初始化控制 |
-| `TK8710Startwork` | 启动TK8710工作 | 应用层 | 初始化控制 |
-| `TK8710RfInit` | 初始化RF配置 | 应用层 | 初始化控制 |
-| `TK8710ResetChip` | 复位芯片 | 应用层 | 初始化控制 |
-| **配置管理** | | | |
-| `TK8710SetConfig` | 设置芯片配置参数 | 应用层 | 配置管理 |
-| **数据传输** | | | |
-| `TK8710SetDownlink1DataWithPower` | 设置下行1数据(广播) | TRM层 | 数据传输 |
-| `TK8710SetDownlink2DataWithPower` | 设置下行2数据(用户) | TRM层 | 数据传输 |
-| `TK8710SetTxUserInfo` | 设置发送用户信息 | TRM层 | 数据传输 |
-| **数据接收** | | | |
-| `TK8710GetRxData` | 获取接收数据 | TRM层 | 数据接收 |
-| `TK8710GetRxUserInfo` | 获取接收用户信息 | TRM层 | 数据接收 |
-| `TK8710GetSignalInfo` | 获取信号信息 | TRM层 | 数据接收 |
-| `TK8710ReleaseRxData` | 释放接收数据资源 | TRM层 | 数据接收 |
-| **状态查询** | | | |
-| `TK8710GetSlotCfg` | 获取时隙配置 | 应用层 | 状态查询 |
-| **回调管理** | | | |
-| `TK8710RegisterCallbacks` | 注册Driver回调函数 | TRM层 | 回调管理 |
-| **中断处理** | | | |
-| `TK8710GpioInit` | 初始化GPIO中断 | 应用层 | 中断处理 |
-| `TK8710GpioIrqEnable` | 使能/禁用GPIO中断 | 应用层 | 中断处理 |
-| **日志系统** | | | |
-| `TK8710LogSimpleInit` | 初始化日志系统 | 应用层 | 日志系统 |
-| `TK8710_LOG_*` 宏 | 日志输出宏 | 应用层 | 日志系统 |
+### Driver API接口汇总
+
+| API函数                             | 功能描述            | 目标用户层 | 分类       |
+| ----------------------------------- | ------------------- | ---------- | ---------- |
+| **芯片初始化与控制**          |                     |            |            |
+| `TK8710Init`                      | 初始化TK8710芯片    | 应用层     | 初始化控制 |
+| `TK8710Start`                   | 启动TK8710工作      | 应用层     | 初始化控制 |
+| `TK8710RfInit`                    | 初始化RF配置        | 应用层     | 初始化控制 |
+| `TK8710ResetChip`                 | 复位芯片            | 应用层     | 初始化控制 |
+| **配置管理**                  |                     |            |            |
+| `TK8710SetConfig`                 | 设置芯片配置参数    | 应用层     | 配置管理   |
+| **数据传输**                  |                     |            |            |
+| `TK8710SetDownlink1DataWithPower` | 设置下行1数据(广播) | TRM层      | 数据传输   |
+| `TK8710SetDownlink2DataWithPower` | 设置下行2数据(用户) | TRM层      | 数据传输   |
+| `TK8710SetTxUserInfo`             | 设置发送用户信息    | TRM层      | 数据传输   |
+| **数据接收**                  |                     |            |            |
+| `TK8710GetRxData`                 | 获取接收数据        | TRM层      | 数据接收   |
+| `TK8710GetRxUserInfo`             | 获取接收用户信息    | TRM层      | 数据接收   |
+| `TK8710GetSignalInfo`             | 获取信号信息        | TRM层      | 数据接收   |
+| `TK8710ReleaseRxData`             | 释放接收数据资源    | TRM层      | 数据接收   |
+| **状态查询**                  |                     |            |            |
+| `TK8710GetSlotCfg`（GetConfig） | 获取时隙配置        | 应用层     | 状态查询   |
+| **回调管理**                  |                     |            |            |
+| `TK8710RegisterCallbacks`         | 注册Driver回调函数  | TRM层      | 回调管理   |
+| **中断处理**                  |                     |            |            |
+| `TK8710GpioInit`                  | 初始化GPIO中断      | 应用层     | 中断处理   |
+| `TK8710GpioIrqEnable`             | 使能/禁用GPIO中断   | 应用层     | 中断处理   |
+| **日志系统**                  |                     |            |            |
+| `TK8710LogSimpleInit`             | 初始化日志系统      | 应用层     | 日志系统   |
+| `TK8710_LOG_*` 宏                 | 日志输出宏          | 应用层     | 日志系统   |
 
 **说明:**
 
@@ -49,12 +51,6 @@
 - **回调管理**: 中断回调函数管理
 - **中断处理**: GPIO中断相关功能
 - **日志系统**: 日志输出和管理功能
-
----
-
-## Driver API接口
-
-### 1. Driver API接口 (5大类，17+函数)
 
 ### 1. 芯片初始化与控制
 
@@ -93,10 +89,10 @@ int TK8710Init(const ChipConfig* initConfig);
   ```
 - **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710Startwork`
+#### `TK8710Start`（start）
 
 ```c
-int TK8710Startwork(uint8_t workType, uint8_t workMode);
+int TK8710Start(uint8_t workType, uint8_t workMode);
 ```
 
 **功能**: 芯片进入收发状态
@@ -121,7 +117,7 @@ int TK8710Startwork(uint8_t workType, uint8_t workMode);
 
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710RfInit`
+#### `TK8710RfInit`（rfconfig）
 
 ```c
 int TK8710RfInit(const ChiprfConfig* initrfConfig);
@@ -140,14 +136,14 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-
+  
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-
+  
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -156,7 +152,7 @@ int TK8710RfInit(const ChiprfConfig* initrfConfig);
 
   **返回值**: 0-成功, 1-失败, 2-超时
 
-#### `TK8710ResetChip`
+#### `TK8710ResetChip`（Reset）
 
 ```c
 int TK8710ResetChip(uint8_t rstType);
@@ -178,7 +174,7 @@ int TK8710ResetChip(uint8_t rstType);
 
 ### 2. 配置管理
 
-#### `TK8710SetConfig`
+#### `TK8710SetConfig`（8710config）
 
 ```c
 int TK8710SetConfig(TK8710ConfigType type, const void* params);
@@ -188,13 +184,14 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 **参数**:
 
 - `type`: 配置类型
+  
   ```c
   typedef enum {
     TK8710_CFG_TYPE_CHIP_INFO,        /* 芯片信息配置 */
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-
+  
   ```
 
 **功能**: 获取芯片配置
@@ -219,7 +216,7 @@ int TK8710SetDownlink1DataWithPower(uint8_t userIndex, const uint8_t* data, uint
 - `data`: 广播数据指针
 - `dataLen`: 数据长度 (0-512字节)
 - `power`: 发射功率 (0-31)
-- `dataType`: 数据类型
+- `dataType`: 类型
 
   ```c
   #define TK8710_BRD_DATA_TYPE_NORMAL     0   /* 正常广播: 使用Driver自动生成的波束信息 */
@@ -482,7 +479,7 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 
 ### 8. 日志系统
 
-#### `TK8710LogSimpleInit`
+#### `TK8710LogSimpleInit`（config）
 
 ```c
 int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
@@ -752,7 +749,7 @@ printf("Current slot configuration: rate=%d, users=%d\n",
 ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotConfig);
 
 // 3. 启动芯片进入收发状态
-ret = TK8710Startwork(1, 1);  // Master模式，连续工作
+ret = TK8710Start(1, 1);  // Master模式，连续工作
 if (ret != TK8710_OK) {
     printf("Start work failed: %d\n", ret);
     return ret;
@@ -862,7 +859,7 @@ ret = TK8710RfInit(&rfConfig);
 1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
 2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfInit()`, `TK8710LogSimpleInit()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
-4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Startwork()`
+4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710Start()`
 5. **数据接收操作** - `TK8710GetRxData()`, `TK8710GetSignalInfo()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
 6. **数据发送操作** - `TK8710SetDownlink2Data()`, `TK8710SetTxUserInfo()`, `TK8710SetBrdData()`
 7. **系统控制与维护** - `TK8710GetChipInfo()`, `TK8710GetWorkState()`, `TK8710ResetChip()`
@@ -880,36 +877,35 @@ ret = TK8710RfInit(&rfConfig);
 
 ### TRM API接口汇总
 
-| API函数 | 功能描述 | 目标用户层 | 分类 |
-|---------|---------|-----------|------|
-| **系统初始化与控制** | | | |
-| `TRM_Init` | 初始化TRM系统 | 应用层 | 初始化控制 |
-| `TRM_Start` | 启动TRM系统 | 应用层 | 初始化控制 |
-| `TRM_Stop` | 停止TRM系统 | 应用层 | 初始化控制 |
-| `TRM_Deinit` | 清理TRM系统资源 | 应用层 | 初始化控制 |
-| **数据发送** | | | |
-| `TRM_SendData` | 发送用户数据 | 应用层 | 数据发送 |
-| `TRM_SendBroadcast` | 发送广播数据 | 应用层 | 数据发送 |
-| `TRM_ClearTxData` | 清除发送数据 | 应用层 | 数据发送 |
-| **波束获取** | | | |
-| `TRM_GetBeamInfo` | 获取用户波束信息 | 应用层 | 波束获取 |
-| **回调接口** | | | |
-| `TRM_OnRxData` | 接收数据回调函数类型 | 应用层 | 回调接口 |
-| `TRM_OnTxComplete` | 发送完成回调函数类型 | 应用层 | 回调接口 |
-| **状态查询** | | | |
-| `TRM_IsRunning` | 获取TRM运行状态 | 应用层 | 状态查询 |
-| `TRM_GetStats` | 获取TRM统计信息 | 应用层 | 状态查询 |
-| `TRM_GetCurrentFrame` | 获取当前帧号 | Driver层 | 状态查询 |
-| `TRM_SetCurrentFrame` | 设置当前帧号 | Driver层 | 状态查询 |
-| `TRM_SetMaxFrameCount` | 设置最大帧数 | Driver层 | 状态查询 |
-| **回调函数管理** | | | |
-| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数 | Driver层 | 回调管理 |
-| **日志系统** | | | |
-| `TRM_LogInit` | 初始化TRM日志系统 | 应用层 | 日志系统 |
-| `TRM_LogSetLevel` | 设置TRM日志级别 | 应用层 | 日志系统 |
-| `TRM_LOG_*` 宏 | TRM日志输出宏 | 应用层 | 日志系统 |
-| **调试接口** | | | |
-| `TRM_TxValidatorOnRxData` | 发送验证器接收数据处理 | Driver层 | 调试接口 |
+| API函数                         | 功能描述               | 目标用户层 | 分类       |
+| ------------------------------- | ---------------------- | ---------- | ---------- |
+| **系统初始化与控制**      |                        |            |            |
+| `TRM_Init`                    | 初始化TRM系统          | 应用层     | 初始化控制 |
+| `TRM_Start`                   | 启动TRM系统            | 应用层     | 初始化控制 |
+| `TRM_Stop`                    | 停止TRM系统            | 应用层     | 初始化控制 |
+| `TRM_Deinit`                  | 清理TRM系统资源        | 应用层     | 初始化控制 |
+| **数据发送**              |                        |            |            |
+| `TRM_SendData`                | 发送用户数据           | 应用层     | 数据发送   |
+| `TRM_SendBroadcast`           | 发送广播数据           | 应用层     | 数据发送   |
+| **波束获取**              |                        |            |            |
+| `TRM_GetBeamInfo`             | 获取用户波束信息       | 应用层     | 波束获取   |
+| **回调接口**              |                        |            |            |
+| `TRM_OnRxData`                | 接收数据回调函数类型   | 应用层     | 回调接口   |
+| `TRM_OnTxComplete`            | 发送完成回调函数类型   | 应用层     | 回调接口   |
+| **状态查询**              |                        |            |            |
+| `TRM_IsRunning`               | 获取TRM运行状态        | 应用层     | 状态查询   |
+| `TRM_GetStats`                | 获取TRM统计信息        | 应用层     | 状态查询   |
+| `TRM_GetCurrentFrame`         | 获取当前帧号           | 应用层     | 状态查询   |
+| `TRM_SetCurrentFrame`         | 设置当前帧号           | 应用层     | 状态查询   |
+| `TRM_SetMaxFrameCount`        | 设置最大帧数           | 应用层     | 状态查询   |
+| **回调函数管理**          |                        |            |            |
+| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数     | Driver层   | 回调管理   |
+| **日志系统**              |                        |            |            |
+| `TRM_LogInit`                 | 初始化TRM日志系统      | 应用层     | 日志系统   |
+| `TRM_LogSetLevel`             | 设置TRM日志级别        | 应用层     | 日志系统   |
+| `TRM_LOG_*` 宏                | TRM日志输出宏          | 应用层     | 日志系统   |
+| **调试接口**              |                        |            |            |
+| `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理 | Driver层   | 调试接口   |
 
 **说明:**
 
@@ -1168,7 +1164,7 @@ typedef struct {
 - `rxDataList->users` 包含所有接收到的用户数据
 - 处理完成后需要及时释放相关资源
 
-#### `TRM_OnTxComplete`
+#### `TRM_OnTxComplete`(返回队列剩余资源)
 
 ```c
 typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
@@ -1446,7 +1442,7 @@ typedef struct {
 
 ```c
 #include "tk8710_api.h"
-#include "trm.h"
+#include "trm_api.h"
 
 int main(void) {
     int ret;
@@ -1551,7 +1547,7 @@ int main(void) {
     TK8710SetConfig(TK8710_CONFIG_TYPE_SLOT, &slotConfig);
   
     // 启动芯片工作
-    ret = TK8710Startwork(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         printf("芯片启动失败: %d\n", ret);
         return -1;
