@@ -11,9 +11,6 @@
 #include <stddef.h>
 #include "driver/tk8710_types.h"
 
-/* GPIO中断回调函数类型 */
-typedef void (*TK8710GpioIrqCallback)(void* user);
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,13 +23,6 @@ typedef struct {
     uint8_t  lsb_first;     /* 0=MSB优先, 1=LSB优先 */
     uint8_t  cs_pin;        /* CS引脚号 */
 } SpiConfig;
-
-/* GPIO 边沿触发类型 */
-typedef enum {
-    TK8710_GPIO_EDGE_RISING  = 0,
-    TK8710_GPIO_EDGE_FALLING = 1,
-    TK8710_GPIO_EDGE_BOTH    = 2,
-} TK8710GpioEdge;
 
 /**
  * @brief 初始化SPI接口
@@ -84,11 +74,11 @@ int TK8710GpioInit(int pin, TK8710GpioEdge edge, TK8710GpioIrqCallback cb, void*
 
 /**
  * @brief 使能GPIO中断
- * @param pin GPIO引脚号
- * @param enable 1=使能, 0=禁用
- * @return 0-成功, 非0-失败
+ * @param gpioPin GPIO引脚号
+ * @param enable 1-使能, 0-禁用
+ * @return 0-成功, 1-失败
  */
-int TK8710GpioIrqEnable(int pin, uint8_t enable);
+int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 
 /**
  * @brief GPIO输出控制
