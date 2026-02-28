@@ -878,6 +878,54 @@ ret = TK8710RfInit(&rfConfig);
 
 ## TRM API接口
 
+### TRM API接口汇总
+
+| API函数 | 功能描述 | 目标用户层 | 分类 |
+|---------|---------|-----------|------|
+| **系统初始化与控制** | | | |
+| `TRM_Init` | 初始化TRM系统 | 应用层 | 初始化控制 |
+| `TRM_Start` | 启动TRM系统 | 应用层 | 初始化控制 |
+| `TRM_Stop` | 停止TRM系统 | 应用层 | 初始化控制 |
+| `TRM_Deinit` | 清理TRM系统资源 | 应用层 | 初始化控制 |
+| **数据发送** | | | |
+| `TRM_SendData` | 发送用户数据 | 应用层 | 数据发送 |
+| `TRM_SendBroadcast` | 发送广播数据 | 应用层 | 数据发送 |
+| `TRM_ClearTxData` | 清除发送数据 | 应用层 | 数据发送 |
+| **波束获取** | | | |
+| `TRM_GetBeamInfo` | 获取用户波束信息 | 应用层 | 波束获取 |
+| **回调接口** | | | |
+| `TRM_OnRxData` | 接收数据回调函数类型 | 应用层 | 回调接口 |
+| `TRM_OnTxComplete` | 发送完成回调函数类型 | 应用层 | 回调接口 |
+| **状态查询** | | | |
+| `TRM_IsRunning` | 获取TRM运行状态 | 应用层 | 状态查询 |
+| `TRM_GetStats` | 获取TRM统计信息 | 应用层 | 状态查询 |
+| `TRM_GetCurrentFrame` | 获取当前帧号 | Driver层 | 状态查询 |
+| `TRM_SetCurrentFrame` | 设置当前帧号 | Driver层 | 状态查询 |
+| `TRM_SetMaxFrameCount` | 设置最大帧数 | Driver层 | 状态查询 |
+| **回调函数管理** | | | |
+| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数 | Driver层 | 回调管理 |
+| **日志系统** | | | |
+| `TRM_LogInit` | 初始化TRM日志系统 | 应用层 | 日志系统 |
+| `TRM_LogSetLevel` | 设置TRM日志级别 | 应用层 | 日志系统 |
+| `TRM_LOG_*` 宏 | TRM日志输出宏 | 应用层 | 日志系统 |
+| **调试接口** | | | |
+| `TRM_TxValidatorOnRxData` | 发送验证器接收数据处理 | Driver层 | 调试接口 |
+
+**说明:**
+
+- **应用层**: 直接供应用层开发者使用的API
+- **Driver层**: 主要供Driver层内部使用的API，应用层一般不直接调用
+- **初始化控制**: TRM系统初始化和基本控制功能
+- **数据发送**: 数据发送相关功能
+- **波束获取**: 波束信息获取功能
+- **回调接口**: 应用层回调函数类型定义
+- **状态查询**: TRM状态查询功能
+- **回调管理**: Driver回调函数管理
+- **日志系统**: TRM日志输出和管理功能
+- **调试接口**: TRM调试和测试功能
+
+---
+
 ### 1. 系统初始化与控制
 
 #### `TRM_Init`
