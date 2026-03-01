@@ -1139,7 +1139,7 @@ int start_work(void)
     printf("Starting TK8710 work...\n");
     
     /* 启动主模式连续工作 */
-    ret = TK8710Start(TK8710_MODE_MASTER | TK8710_WORK_TYPE_CONTINUOUS);
+    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         printf("Start work failed: %d\n", ret);
         return ret;
