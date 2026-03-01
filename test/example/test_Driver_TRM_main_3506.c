@@ -582,20 +582,12 @@ int start_trm_system(void)
         return -1;
     }
     
-    TRM_LOG_INFO("启动TRM系统");
     printf("Starting TRM system...\n");
     
-    /* 启动TRM */
-    ret = TRM_Start();
-    if (ret != TRM_OK) {
-        TRM_LOG_ERROR("TRM启动失败: 错误码=%d", ret);
-        printf("TRM start failed: %d\n", ret);
-        return ret;
-    }
+    /* TRM已初始化，无需启动 */
+    printf("TRM is ready (initialized state)\n");
     
-    TRM_LOG_INFO("TRM系统启动成功");
-    printf("TRM system started successfully\n");
-    return TK8710_OK;
+    return TRM_OK;
 }
 
 /**
@@ -615,13 +607,8 @@ int stop_trm_system(void)
     TRM_LOG_INFO("停止TRM系统");
     printf("Stopping TRM system...\n");
     
-    /* 停止TRM */
-    ret = TRM_Stop();
-    if (ret != TRM_OK) {
-        TRM_LOG_ERROR("TRM停止失败: 错误码=%d", ret);
-        printf("TRM stop failed: %d\n", ret);
-        return ret;
-    }
+    /* TRM无需停止，已初始化即可使用 */
+    printf("TRM is ready (no stop needed)\n");
     
     TRM_LOG_INFO("TRM系统停止成功");
     printf("TRM system stopped successfully\n");
@@ -637,7 +624,7 @@ int cleanup_trm_system(void)
     TRM_LOG_INFO("开始清理TRM系统");
     
     if (g_trmEnabled) {
-        stop_trm_system();
+        /* TRM无需停止，直接清理 */
     }
     
     printf("Cleaning up TRM system...\n");

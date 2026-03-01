@@ -323,29 +323,22 @@ int main(void)
     }
     
     /* 4. 平行启动系统 */
-    printf("Starting TRM...\n");
-    ret = TRM_Start();
-    if (ret != TRM_OK) {
-        printf("TRM_Start failed: %d\n", ret);
-        TK8710Reset(TK8710_RST_ALL);
-        TRM_Deinit();
-        return -1;
-    }
-    printf("TRM started successfully\n");
+    printf("Starting system...\n");
     
-    printf("Starting Driver...\n");
     ret = TK8710Start(1, 0);
     if (ret != TK8710_OK) {
         printf("TK8710Start failed: %d\n", ret);
-        TRM_Stop();
         TK8710Reset(TK8710_RST_ALL);
         TRM_Deinit();
         return -1;
     }
+    
     printf("Driver started successfully\n");
     
-    /* 检查状?*/
-    printf("TRM running: %s\n", TRM_IsRunning() ? "Yes" : "No");
+    /* 检查状态 */
+    TRM_Stats stats;
+    TRM_GetStats(&stats);
+    printf("TRM initialized: %s\n", stats.state == TRM_STATE_INIT ? "Yes" : "No");
     printf("Driver running: %s\n", "Yes");  /* Driver没有状态查询API */
     
     /* 获取统计信息 */
@@ -412,10 +405,6 @@ int main(void)
     /* 停止Driver - 直接复位芯片 */
     TK8710Reset(TK8710_RST_ALL);
     printf("Driver stopped\n");
-    
-    /* 停止TRM */
-    ret = TRM_Stop();
-    printf("TRM_Stop result: %d\n", ret);
     
     /* 平行反初始化 */
     printf("Deinitializing system...\n");
