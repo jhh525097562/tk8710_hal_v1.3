@@ -8,7 +8,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "../port/tk8710_hal.h"
+
+/* 前向声明 */
+typedef struct SpiConfig SpiConfig;
 
 #ifdef __cplusplus
 extern "C" {
