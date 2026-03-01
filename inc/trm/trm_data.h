@@ -17,16 +17,6 @@ extern "C" {
  * 数据管理接口
  *============================================================================*/
 
-/**
- * @brief 发送广播数据
- * @param brdIndex 广播索引
- * @param data 数据指针
- * @param len 数据长度
- * @param txPower 发送功率
- * @param dataType 数据类型 (TK8710_BRD_DATA_TYPE_NORMAL 或 TK8710_BRD_DATA_TYPE_SLOT3)
- * @return 0-成功, 非0-失败
- */
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
 
 /**
  * @brief 清除发送数据

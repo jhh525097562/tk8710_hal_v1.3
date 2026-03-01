@@ -335,7 +335,7 @@ void TK8710ReleaseRxData(uint8_t userIndex);
 
 - `userIndex`: 用户索引 (0-127)
 
-### 5. 状态查询
+### 5. 时隙配置查询
 
 #### `TK8710GetSlotCfg`
 
@@ -859,34 +859,6 @@ ret = TK8710RfConfig(&rfConfig);
 
 ## TRM API接口
 
-### TRM错误码定义
-
-TRM API使用统一的错误码系统，所有函数返回值遵循以下定义：
-
-```c
-#define TRM_OK                  0   /* 操作成功 */
-#define TRM_ERR_PARAM          (-1) /* 参数错误 */
-#define TRM_ERR_STATE          (-2) /* 状态错误 */
-#define TRM_ERR_TIMEOUT        (-3) /* 超时错误 */
-#define TRM_ERR_NO_MEM         (-4) /* 内存不足 */
-#define TRM_ERR_NOT_INIT       (-5) /* 未初始化 */
-#define TRM_ERR_QUEUE_FULL     (-6) /* 队列已满 */
-#define TRM_ERR_NO_BEAM        (-7) /* 未找到波束信息 */
-#define TRM_ERR_DRIVER         (-8) /* Driver层错误 */
-```
-
-**错误码说明**：
-
-- `TRM_OK (0)`: 操作成功完成
-- `TRM_ERR_PARAM (-1)`: 输入参数无效或超出范围
-- `TRM_ERR_STATE (-2)`: TRM状态不允许此操作
-- `TRM_ERR_TIMEOUT (-3)`: 操作超时
-- `TRM_ERR_NO_MEM (-4)`: 内存分配失败
-- `TRM_ERR_NOT_INIT (-5)`: TRM系统未初始化
-- `TRM_ERR_QUEUE_FULL (-6)`: 发送队列已满
-- `TRM_ERR_NO_BEAM (-7)`: 未找到指定的波束信息
-- `TRM_ERR_DRIVER (-8)`: 底层Driver操作失败
-
 ### TRM API接口汇总
 
 | API函数                         | 功能描述                    | 目标用户层 | 分类       |
@@ -1075,7 +1047,7 @@ ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, userData, sizeof(userData
 int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 ```
 
-**功能**: 获取用户波束信息
+**功能**: 获取用户波束信息，仅用于未来定位技术开发，暂时用不上
 **参数**:
 
 - `userId`: 用户ID
@@ -1127,6 +1099,7 @@ typedef enum {
   - 1: 波束信息有效
 
 **返回值**:
+
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_BEAM`: 未找到波束信息

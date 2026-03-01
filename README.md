@@ -396,7 +396,7 @@ int main(void) {
   
     // 发送广播数据
     uint8_t brdData[] = {0xAA, 0xBB, 0xCC};
-    ret = TRM_SendBroadcast(0, brdData, sizeof(brdData), 35);
+    ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, 0, brdData, sizeof(brdData), 35, 0, 0, TK8710_DATA_TYPE_BRD);
     if (ret == TRM_OK) {
         printf("广播数据发送成功\n");
     }
@@ -434,7 +434,6 @@ int main(void) {
 | `TRM_Start()`           | 启动TRM系统   | 启动中断处理、数据收发 |
 | `TRM_Stop()`            | 停止TRM系统   | 停止所有处理           |
 | `TRM_SendData()`        | 发送用户数据  | 自动波束查找、队列管理 |
-| `TRM_SendBroadcast()`   | 发送广播数据  | 广播模式数据发送       |
 | `TRM_GetBeamInfo()`     | 获取波束信息  | 线程安全读取           |
 | `TRM_IsRunning()`       | 检查运行状态  | 状态查询               |
 | `TRM_GetStats()`        | 获取统计信息  | 性能监控               |

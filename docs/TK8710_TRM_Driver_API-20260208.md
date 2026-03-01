@@ -910,7 +910,6 @@ ret = TK8710RfInit(&rfConfig);
 | `TRM_Deinit`                  | 清理TRM系统资源        | 应用层     | 初始化控制 |
 | **数据发送**              |                        |            |            |
 | `TRM_SendData`                | 发送用户数据           | 应用层     | 数据发送   |
-| `TRM_SendBroadcast`           | 发送广播数据           | 应用层     | 数据发送   |
 | `TRM_ClearTxData`             | 清除发送数据           | 应用层     | 数据发送   |
 | **波束获取**              |                        |            |            |
 | `TRM_GetBeamInfo`             | 获取用户波束信息       | 应用层     | 波束获取   |
@@ -1085,37 +1084,6 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 - `TRM_OK`: 发送成功(数据已入队)
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_QUEUE_FULL`: 发送队列已满
-- `TRM_ERR_NOT_INIT`: TRM未初始化
-- 其他: 发送失败
-
-#### `TRM_SendBroadcast`
-
-```c
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
-```
-
-**功能**: 发送广播数据
-**参数**:
-
-- `brdIndex`: 广播索引 （qdm 广播的设置在哪里进行呢，因为要设置频率；driver API上的userIndex最好改为bufferIndex）（qdm：不需要，TRM根据规则按需要提取，对于广播波束，不需要提取）（qdm DL-A和B, 广播波束数量，每个波束的参数是在driver中配置好的，一定用buffer的前面的 ）（qdm `TK8710SetConfig` 展开写，要反应广播波束的数量和参数）
-  - 范围: 0 - 15，（qdm：0对应公共广播，TRM对公共广播会改写数据中的帧号）（qdm:**是否需要其它广播**）
-  - 对应不同的广播用户
-- `data`: 数据指针，指向要发送的广播数据缓冲区
-  - 不能为NULL
-  - 数据长度不超过512字节
-- `len`: 数据长度，字节数
-  - 范围: 1 - 512
-  - 必须小于等于实际数据缓冲区大小
-- `txPower`: 发射功率
-  - 范围: 0 - 31
-  - 0: 最小功率
-  - 31: 最大功率
-- `dataType`: 数据类型
-  - `TK8710_BRD_DATA_TYPE_NORMAL`: 正常广播数据
-  - `TK8710_BRD_DATA_TYPE_SLOT3`: 与Slot3共用波束信息
-    **返回值**:
-- `TRM_OK`: 发送成功
-- `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NOT_INIT`: TRM未初始化
 - 其他: 发送失败
 

@@ -275,11 +275,6 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     return TRM_OK;
 }
 
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t BeamType)
-{
-    /* 调用统一的发送接口 */
-    return TRM_SetTxUserData(TK8710_DOWNLINK_1, brdIndex, data, len, txPower, 0, 0, BeamType);
-}
 
 int TRM_ClearTxData(uint32_t userId)
 {
