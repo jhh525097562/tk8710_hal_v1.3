@@ -75,8 +75,8 @@ int TRM_Init(const TRM_InitConfig* config)
     
     /* 保存配置 */
     memcpy(&g_trmCtx.config, config, sizeof(TRM_InitConfig));
-    TRM_LOG_DEBUG("保存TRM配置: beamMaxUsers=%u, beamTimeoutMs=%u", 
-                  config->beamMaxUsers, config->beamTimeoutMs);
+    TRM_LOG_DEBUG("保存TRM配置: beamMaxUsers=%u, beamTimeoutMs=%u, maxFrameCount=%u", 
+                  config->beamMaxUsers, config->beamTimeoutMs, config->maxFrameCount);
     
     /* 设置默认值 */
     if (g_trmCtx.config.beamMaxUsers == 0) {
@@ -87,6 +87,14 @@ int TRM_Init(const TRM_InitConfig* config)
         g_trmCtx.config.beamTimeoutMs = TRM_BEAM_TIMEOUT_DEFAULT;
         TRM_LOG_DEBUG("使用默认波束超时时间: %u ms", g_trmCtx.config.beamTimeoutMs);
     }
+    if (g_trmCtx.config.maxFrameCount == 0) {
+        g_trmCtx.config.maxFrameCount = 100;  /* 默认最大帧数 */
+        TRM_LOG_DEBUG("使用默认最大帧数: %u", g_trmCtx.config.maxFrameCount);
+    }
+    
+    /* 设置全局帧管理参数 */
+    g_trmMaxFrameCount = g_trmCtx.config.maxFrameCount;
+    TRM_LOG_DEBUG("设置全局最大帧数: %u", g_trmMaxFrameCount);
     
     /* 初始化波束管理 */
     TRM_BeamInit(g_trmCtx.config.beamMaxUsers, g_trmCtx.config.beamTimeoutMs);

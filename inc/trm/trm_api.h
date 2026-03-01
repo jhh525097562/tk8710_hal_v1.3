@@ -134,6 +134,9 @@ typedef struct {
     uint32_t     beamMaxUsers;      /* 最大用户数(使用默认?) */
     uint32_t     beamTimeoutMs;     /* 波束超时时间戳使用默认?) */
     
+    /* 帧管理配置 */
+    uint32_t     maxFrameCount;     /* 最大帧数 */
+    
     /* 回调函数 */
     struct {
         TRM_OnRxData      onRxData;

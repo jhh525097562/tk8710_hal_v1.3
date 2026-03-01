@@ -10,33 +10,33 @@
 
 ### Driver API接口汇总
 
-| API函数                          | 功能描述                | 目标用户层 | 分类       |
-| -------------------------------- | ----------------------- | ---------- | ---------- |
-| **芯片初始化与控制**       |                         |            |            |
-| `TK8710Init`                   | 初始化TK8710芯片        | 应用层     | 初始化控制 |
-| `TK8710Start`                  | 启动TK8710工作          | 应用层     | 初始化控制 |
-| `TK8710RfConfig`               | 初始化RF配置            | 应用层     | 初始化控制 |
-| `TK8710Reset`                  | 复位芯片                | 应用层     | 初始化控制 |
-| **配置管理**               |                         |            |            |
-| `TK8710SetConfig`              | 设置芯片配置参数        | 应用层     | 配置管理   |
-| `TK8710GetConfig`              | 获取芯片配置参数        | 应用层     | 配置管理   |
-| **数据传输**               |                         |            |            |
-| `TRM_SetTxUserData`          | 统一发送数据接口(广播/用户) | TRM层      | 数据传输   |
-| `TK8710SetTxUserInfo`          | 设置发送用户信息        | TRM层      | 数据传输   |
-| **数据接收**               |                         |            |            |
-| `TK8710GetRxUserData`          | 获取接收数据            | TRM层      | 数据接收   |
-| `TK8710GetRxUserInfo`          | 获取接收用户信息        | TRM层      | 数据接收   |
-| `TK8710GetRxUserSignalQuality` | 获取接收用户信号质量    | TRM层      | 数据接收   |
-| `TK8710ReleaseRxData`          | 释放接收数据资源        | TRM层      | 数据接收   |
-| **状态查询**               |                         |            |            |
-| `TK8710GetSlotConfig`          | 获取时隙配置            | 应用层     | 状态查询   |
-| **回调管理**               |                         |            |            |
-| `TK8710RegisterCallbacks`      | 注册Driver回调函数      | TRM层      | 回调管理   |
-| **中断处理**               |                         |            |            |
-| `TK8710GpioInit`               | 初始化GPIO中断          | 应用层     | 中断处理   |
-| `TK8710GpioIrqEnable`          | 使能/禁用GPIO中断       | 应用层     | 中断处理   |
-| **日志系统**               |                         |            |            |
-| `TK8710LogConfig`              | 初始化日志系统          | 应用层     | 日志系统   |
+| API函数                          | 功能描述                    | 目标用户层 | 分类       |
+| -------------------------------- | --------------------------- | ---------- | ---------- |
+| **芯片初始化与控制**       |                             |            |            |
+| `TK8710Init`                   | 初始化TK8710芯片            | 应用层     | 初始化控制 |
+| `TK8710Start`                  | 启动TK8710工作              | 应用层     | 初始化控制 |
+| `TK8710RfConfig`               | 初始化RF配置                | 应用层     | 初始化控制 |
+| `TK8710Reset`                  | 复位芯片                    | 应用层     | 初始化控制 |
+| **配置管理**               |                             |            |            |
+| `TK8710SetConfig`              | 设置芯片配置参数            | 应用层     | 配置管理   |
+| `TK8710GetConfig`              | 获取芯片配置参数            | 应用层     | 配置管理   |
+| **数据传输**               |                             |            |            |
+| `TRM_SetTxUserData`            | 统一发送数据接口(广播/用户) | TRM层      | 数据传输   |
+| `TK8710SetTxUserInfo`          | 设置发送用户信息            | TRM层      | 数据传输   |
+| **数据接收**               |                             |            |            |
+| `TK8710GetRxUserData`          | 获取接收数据                | TRM层      | 数据接收   |
+| `TK8710GetRxUserInfo`          | 获取接收用户信息            | TRM层      | 数据接收   |
+| `TK8710GetRxUserSignalQuality` | 获取接收用户信号质量        | TRM层      | 数据接收   |
+| `TK8710ReleaseRxData`          | 释放接收数据资源            | TRM层      | 数据接收   |
+| **状态查询**               |                             |            |            |
+| `TK8710GetSlotConfig`          | 获取时隙配置                | 应用层     | 状态查询   |
+| **回调管理**               |                             |            |            |
+| `TK8710RegisterCallbacks`      | 注册Driver回调函数          | TRM层      | 回调管理   |
+| **中断处理**               |                             |            |            |
+| `TK8710GpioInit`               | 初始化GPIO中断              | 应用层     | 中断处理   |
+| `TK8710GpioIrqEnable`          | 使能/禁用GPIO中断           | 应用层     | 中断处理   |
+| **日志系统**               |                             |            |            |
+| `TK8710LogConfig`              | 初始化日志系统              | 应用层     | 日志系统   |
 
 **说明:**
 
@@ -861,34 +861,34 @@ ret = TK8710RfConfig(&rfConfig);
 
 ### TRM API接口汇总
 
-| API函数                         | 功能描述               | 目标用户层 | 分类       |
-| ------------------------------- | ---------------------- | ---------- | ---------- |
-| **系统初始化与控制**      |                        |            |            |
-| `TRM_Init`                    | 初始化TRM系统          | 应用层     | 初始化控制 |
-| `TRM_Start`                   | 启动TRM系统            | 应用层     | 初始化控制 |
-| `TRM_Stop`                    | 停止TRM系统            | 应用层     | 初始化控制 |
-| `TRM_Deinit`                  | 清理TRM系统资源        | 应用层     | 初始化控制 |
-| **数据发送**              |                        |            |            |
-| `TRM_SetTxUserData`          | 统一发送数据接口(广播/用户) | TRM层      | 数据发送   |
-| **波束获取**              |                        |            |            |
-| `TRM_GetBeamInfo`             | 获取用户波束信息       | 应用层     | 波束获取   |
-| **回调接口**              |                        |            |            |
-| `TRM_OnRxData`                | 接收数据回调函数类型   | 应用层     | 回调接口   |
-| `TRM_OnTxComplete`            | 发送完成回调函数类型   | 应用层     | 回调接口   |
-| **状态查询**              |                        |            |            |
-| `TRM_IsRunning`               | 获取TRM运行状态        | 应用层     | 状态查询   |
-| `TRM_GetStats`                | 获取TRM统计信息        | 应用层     | 状态查询   |
-| `TRM_GetCurrentFrame`         | 获取当前帧号           | 应用层     | 状态查询   |
-| `TRM_SetCurrentFrame`         | 设置当前帧号           | 应用层     | 状态查询   |
-| `TRM_SetMaxFrameCount`        | 设置最大帧数           | 应用层     | 状态查询   |
-| **回调函数管理**          |                        |            |            |
-| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数     | Driver层   | 回调管理   |
-| **日志系统**              |                        |            |            |
-| `TRM_LogInit`                 | 初始化TRM日志系统      | 应用层     | 日志系统   |
-| `TRM_LogSetLevel`             | 设置TRM日志级别        | 应用层     | 日志系统   |
-| `TRM_LOG_*` 宏                | TRM日志输出宏          | 应用层     | 日志系统   |
-| **调试接口**              |                        |            |            |
-| `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理 | Driver层   | 调试接口   |
+| API函数                         | 功能描述                    | 目标用户层 | 分类       |
+| ------------------------------- | --------------------------- | ---------- | ---------- |
+| **系统初始化与控制**      |                             |            |            |
+| `TRM_Init`                    | 初始化TRM系统               | 应用层     | 初始化控制 |
+| `TRM_Start`                   | 启动TRM系统                 | 应用层     | 初始化控制 |
+| `TRM_Stop`                    | 停止TRM系统                 | 应用层     | 初始化控制 |
+| `TRM_Deinit`                  | 清理TRM系统资源             | 应用层     | 初始化控制 |
+| **数据发送**              |                             |            |            |
+| `TRM_SetTxUserData`           | 统一发送数据接口(广播/用户) | TRM层      | 数据发送   |
+| **波束获取**              |                             |            |            |
+| `TRM_GetBeamInfo`             | 获取用户波束信息            | 应用层     | 波束获取   |
+| **回调接口**              |                             |            |            |
+| `TRM_OnRxData`                | 接收数据回调函数类型        | 应用层     | 回调接口   |
+| `TRM_OnTxComplete`            | 发送完成回调函数类型        | 应用层     | 回调接口   |
+| **状态查询**              |                             |            |            |
+| `TRM_IsRunning`               | 获取TRM运行状态             | 应用层     | 状态查询   |
+| `TRM_GetStats`                | 获取TRM统计信息             | 应用层     | 状态查询   |
+| `TRM_GetCurrentFrame`         | 获取当前帧号                | 应用层     | 状态查询   |
+| `TRM_SetCurrentFrame`         | 设置当前帧号                | 应用层     | 状态查询   |
+| `TRM_SetMaxFrameCount`        | 设置最大帧数                | 应用层     | 状态查询   |
+| **回调函数管理**          |                             |            |            |
+| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层   | 回调管理   |
+| **日志系统**              |                             |            |            |
+| `TRM_LogInit`                 | 初始化TRM日志系统           | 应用层     | 日志系统   |
+| `TRM_LogSetLevel`             | 设置TRM日志级别             | 应用层     | 日志系统   |
+| `TRM_LOG_*` 宏                | TRM日志输出宏               | 应用层     | 日志系统   |
+| **调试接口**              |                             |            |            |
+| `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | Driver层   | 调试接口   |
 
 **说明:**
 
@@ -926,6 +926,9 @@ typedef struct {
     TRM_BeamMode beamMode;          /* 波束存储模式 */
     uint32_t     beamMaxUsers;      /* 最大用户数，0表示使用默认值(3000) */
     uint32_t     beamTimeoutMs;     /* 波束超时时间(毫秒)，0表示使用默认值(3000ms) */
+    
+    /* 帧管理配置 */
+    uint32_t     maxFrameCount;     /* 最大帧数，0表示使用默认值(100) */
   
     /* 回调函数 */
     TRM_Callbacks callbacks;
@@ -942,6 +945,7 @@ typedef struct {
   - `TRM_BEAM_MODE_MAPPING`: 波束映射模式(8710 RAM)
 - `beamMaxUsers`: 最大用户数，0表示使用默认值(3000)
 - `beamTimeoutMs`: 波束超时时间(毫秒)，0表示使用默认值(3000ms)
+- `maxFrameCount`: 最大帧数，0表示使用默认值(100)
 - `callbacks`: 回调函数集合，详见TRM_Callbacks结构体
 - `platformConfig`: 平台配置指针(预留)
 
@@ -1035,16 +1039,16 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
 - `frameNo`: 目标发送帧号 (仅用户数据使用)
   - 范围: 0 - g_trmMaxFrameCount-1
   - 广播模式时忽略此参数
-- `targetRateMode`: 目标速率模式 (仅用户数据使用)
+- `targetRateMode`: 目标速率模式
   - 0: 使用帧号匹配模式
   - 5-11: 使用速率模式匹配(对应不同速率)
   - 18: 使用速率模式匹配(特殊速率)
-  - 广播模式时忽略此参数
 - `BeamType`: 波束类型
   - `TK8710_DATA_TYPE_BRD` (0): 广播波束 - 使用Driver自动生成的波束信息或与Slot3共用波束信息
   - `TK8710_DATA_TYPE_DED` (1): 指定波束 - 使用指定信息模式的波束信息或与Slot1共用波束信息
 
 **返回值**:
+
 - `TRM_OK`: 发送成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_QUEUE_FULL`: 发送队列已满(仅用户数据)
@@ -1480,6 +1484,7 @@ int main(void) {
         .beamMode = TRM_BEAM_MODE_FULL_STORE,
         .beamMaxUsers = 3000,
         .beamTimeoutMs = 10000,
+        .maxFrameCount = 200,  /* 设置最大帧数为200 */
         .callbacks = {
             .onRxData = OnTrmRxData,
             .onTxComplete = OnTrmTxComplete
