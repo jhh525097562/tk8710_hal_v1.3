@@ -537,6 +537,14 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     return sentCount;
 }
 
+/* 内部初始化函数 */
+void TRM_DataInit(void)
+{
+    memset(&g_txQueue, 0, sizeof(g_txQueue));
+    memset(&g_beamReleaseQueue, 0, sizeof(g_beamReleaseQueue));
+    g_trmCurrentFrame = 0;
+}
+
 /* 内部反初始化函数 */
 void TRM_DataDeinit(void)
 {
