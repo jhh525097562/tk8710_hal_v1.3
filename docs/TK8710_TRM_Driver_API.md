@@ -2,30 +2,15 @@
 
 ## 概述
 
-TK8710 HAL层提供了完整的硬件抽象接口，由以下两个主要模块组成：
-
-- **Driver模块**: 提供底层硬件控制接口，包括芯片初始化、配置管理、数据传输、中断处理等
-- **TRM模块**: 提供传输资源管理接口，包括发送队列管理、波束管理、接收数据处理等
-
 本文档整理了TK8710 HAL层中TRM(Transmission Resource Management)模块和Driver模块的主要API接口，包括接口参数说明和使用方法。
 
-### API使用特点
+TK8710 HAL API是由多个Driver API和TRM API组合而成的完整硬件抽象层接口：
 
-- **分层设计**: Driver API负责底层硬件操作，TRM API负责上层资源管理
-- **协同工作**: TRM模块内部调用Driver模块实现具体功能
-- **灵活组合**: 应用层可以直接使用Driver API，也可以通过TRM API简化开发
-- **回调机制**: 提供完整的事件回调系统，支持异步处理
+- **Driver API**: 提供底层芯片控制、数据传输、中断处理等基础功能
+- **TRM API**: 在Driver API之上构建，提供传输资源管理、波束管理、队列管理等高级功能
+- **组合使用**: 应用层通常需要同时使用Driver API和TRM API来实现完整的通信功能
 
-### 使用示例参考
-
-为了帮助开发者快速上手，HAL层提供了多个使用示例：
-
-- `test/example/basic_example.c`: 基础使用示例，展示基本的收发功能
-- `test/example/advanced_example.c`: 高级功能示例，展示日志、调试、统计等功能
-- `test/example/parallel_arch_example.c`: 并行架构示例，展示TRM和Driver的协同工作
-- `test/example/test_Driver_TRM_main_3506.c`: 完整测试程序，展示完整的初始化、配置、工作流程
-
-开发者可以根据实际需求参考相应的示例代码，快速集成TK8710 HAL功能。
+本文档末尾提供了完整的使用示例，展示如何组合使用这些API来构建应用。
 
 ---
 
@@ -1813,6 +1798,194 @@ if (ret == 0) {
    - 中断时间统计会影响性能，仅在调试时启用
    - 调试控制接口获取的数据量较大，注意缓冲区大小
    - FFT和捕获数据获取可能影响正常通信，应在非关键时段使用
+
+---
+
+## 使用示例
+
+### 基本使用流程
+
+以下示例展示了如何组合使用Driver API和TRM API来构建一个完整的TK8710应用：
+
+```c
+#include "trm/trm.h"
+#include "driver/tk8710_api.h"
+#include "driver/tk8710_log.h"
+
+/* 应用层回调函数 */
+static void OnRxData(const TRM_RxDataList* rxDataList)
+{
+    printf("接收到 %u 个用户的数据\n", rxDataList->userCount);
+    
+    /* 处理接收数据 */
+    for (uint8_t i = 0; i < rxDataList->userCount; i++) {
+        const TRM_RxUserData* user = &rxDataList->users[i];
+        printf("用户[%u]: ID=0x%08X, 长度=%u\n", 
+               i, user->userId, user->dataLen);
+        
+        /* 释放接收数据Buffer */
+        TK8710ReleaseRxData(i);
+    }
+}
+
+static void OnTxComplete(const TRM_TxCompleteResult* txResult)
+{
+    printf("发送完成: 总用户=%u, 剩余队列=%u\n", 
+           txResult->totalUsers, txResult->remainingQueue);
+    
+    /* 处理发送结果 */
+    for (uint32_t i = 0; i < txResult->userCount; i++) {
+        const TRM_TxUserResult* user = &txResult->users[i];
+        printf("  用户ID: 0x%08X, 结果: %s\n", 
+               user->userId, user->result == TRM_TX_OK ? "成功" : "失败");
+    }
+}
+
+/* 中断处理函数 */
+void app_irq_handler(TK8710IrqResult irqResult)
+{
+    /* 调用Driver层中断处理 */
+    TK8710_IRQHandler();
+}
+
+int main(void)
+{
+    int ret;
+    
+    /* 1. 初始化日志系统 */
+    TK8710LogConfig_t logConfig = {
+        .level = TK8710_LOG_INFO,
+        .module_mask = TK8710_LOG_MODULE_ALL,
+        .callback = NULL,
+        .enable_timestamp = 1,
+        .enable_module_name = 1
+    };
+    TK8710LogInit(&logConfig);
+    
+    /* 2. 初始化Driver */
+    ret = TK8710Init();
+    if (ret != TK8710_OK) {
+        printf("TK8710初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 3. 配置RF参数 */
+    ChiprfConfig rfConfig = {
+        .rftype = TK8710_RF_TYPE_1255_32M,
+        .Freq = 503100000,
+        .rxgain = 0x7e,
+        .txgain = 0x2a
+    };
+    ret = TK8710RfConfig(&rfConfig);
+    if (ret != TK8710_OK) {
+        printf("RF配置失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 4. 配置时隙参数 */
+    slotCfg_t slotConfig = {
+        .msMode = TK8710_MODE_MASTER,
+        .rateCount = 1,
+        .rateModes[0] = TK8710_RATE_MODE_8,
+        .txAutoMode = 1,
+        .txBcnEn = 0x7f
+    };
+    ret = TK8710SetConfig(&slotConfig);
+    if (ret != TK8710_OK) {
+        printf("时隙配置失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 5. 初始化TRM */
+    TRM_InitConfig trmConfig = {
+        .beamMode = TRM_BEAM_MODE_FULL_STORE,
+        .beamMaxUsers = 3000,
+        .beamTimeoutMs = 3000,
+        .maxFrameCount = 1000,
+        .callbacks = {
+            .onRxData = OnRxData,
+            .onTxComplete = OnTxComplete
+        },
+        .platformConfig = NULL
+    };
+    ret = TRM_Init(&trmConfig);
+    if (ret != TRM_OK) {
+        printf("TRM初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 6. 注册TRM到Driver的回调 */
+    ret = TRM_RegisterDriverCallbacks();
+    if (ret != TRM_OK) {
+        printf("注册Driver回调失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 7. 初始化GPIO中断 */
+    ret = TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, app_irq_handler, NULL);
+    if (ret != TK8710_OK) {
+        printf("GPIO初始化失败: %d\n", ret);
+        return -1;
+    }
+    
+    ret = TK8710GpioIrqEnable(0, 1);
+    if (ret != TK8710_OK) {
+        printf("GPIO中断使能失败: %d\n", ret);
+        return -1;
+    }
+    
+    /* 8. 启动芯片 */
+    ret = TK8710Start();
+    if (ret != TK8710_OK) {
+        printf("芯片启动失败: %d\n", ret);
+        return -1;
+    }
+    
+    printf("TK8710初始化完成，开始运行...\n");
+    
+    /* 9. 主循环 - 发送数据 */
+    uint8_t testData[32];
+    uint32_t userId = 0x12345678;
+    uint32_t frameCounter = 0;
+    
+    while (1) {
+        /* 生成测试数据 */
+        for (int i = 0; i < 32; i++) {
+            testData[i] = (uint8_t)(frameCounter + i);
+        }
+        
+        /* 使用TRM发送数据 */
+        ret = TRM_SendData(userId, testData, sizeof(testData), 25, 
+                          frameCounter + 1, 0, TK8710_DATA_TYPE_DED);
+        if (ret != TRM_OK) {
+            printf("发送数据失败: %d\n", ret);
+        }
+        
+        frameCounter++;
+        
+        /* 延时1秒 */
+        sleep(1);
+    }
+    
+    return 0;
+}
+```
+
+### API组合使用要点
+
+1. **初始化顺序**: Driver → TRM → 回调注册 → 中断配置
+2. **数据发送**: 优先使用 `TRM_SendData`，它会自动处理队列管理
+3. **数据接收**: 在 `OnRxData` 回调中处理，记得释放Buffer
+4. **发送结果**: 在 `OnTxComplete` 回调中处理批量发送结果
+5. **中断处理**: 应用层中断函数只需调用 `TK8710_IRQHandler()`
+6. **资源管理**: TRM会自动管理波束和队列资源
+
+### 更多示例
+
+- **基础示例**: 参考 `test/example/basic_example.c`
+- **高级示例**: 参考 `test/example/advanced_example.c`
+- **并行架构**: 参考 `test/example/parallel_arch_example.c`
+- **完整测试**: 参考 `test/example/test_Driver_TRM_main_3506.c`
 
 ---
 
