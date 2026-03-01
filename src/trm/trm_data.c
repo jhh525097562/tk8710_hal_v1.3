@@ -301,6 +301,11 @@ int TRM_ClearTxData(uint32_t userId)
 int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult)
 {
     uint8_t sentCount = 0;
+    uint32_t successCount = 0;    /* 成功发送的用户数 */
+    uint32_t failedCount = 0;     /* 发送失败的用户数 */
+    uint32_t txResults[TX_QUEUE_SIZE]; /* 存储发送结果的用户ID */
+    TRM_TxResult txResultTypes[TX_QUEUE_SIZE]; /* 存储发送结果类型 */
+    uint32_t resultCount = 0;     /* 结果统计数量 */
     
     /* 首先处理波束RAM延时释放 */
     TRM_ProcessBeamRamReleases();
@@ -426,6 +431,14 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                             TRM_LOG_DEBUG("TRM: Driver send setup successful for user[%u] with txIndex=%u, targetRate=%d", 
                                         item->userId, txUserIndex, item->targetRateMode);
                             sentCount++;
+                            successCount++;
+                            
+                            /* 记录发送成功结果 */
+                            if (resultCount < TX_QUEUE_SIZE) {
+                                txResults[resultCount] = item->userId;
+                                txResultTypes[resultCount] = TRM_TX_OK;
+                                resultCount++;
+                            }
                             
                             /* 使用完波束后，延时释放波束RAM - 减少延迟以应对高负载 */
                             TRM_ScheduleBeamRamRelease(item->userId, 4);//16 -> 4
@@ -438,8 +451,17 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         txUserIndex = 0;
                     }
                 } else {
+                    
                     /* 波束信息不存在或过期，跳过发送但记录日志 */
                     TRM_LOG_WARN("TRM: No valid beam info for user ID=0x%08X, error=%d, skipping send", item->userId, beamRet);
+                    failedCount++;
+                    
+                    /* 记录发送失败结果 */
+                    if (resultCount < TX_QUEUE_SIZE) {
+                        txResults[resultCount] = item->userId;
+                        txResultTypes[resultCount] = TRM_TX_NO_BEAM;
+                        resultCount++;
+                    }
                 }
                 
                 /* 移除已发送的队列项 */
@@ -464,6 +486,18 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     
     TRM_LOG_DEBUG("TRM: ProcessTxSlot completed - sentCount=%d, queueCount=%u, multiRate=%s, processed=%u", 
                  sentCount, g_txQueue.count, isMultiRate ? "true" : "false", processedCount);
+    
+    /* 调用发送完成回调，通知上层发送结果及剩余队列数 */
+    if (resultCount > 0) {
+        TrmContext* ctx = TRM_GetContext();
+        if (ctx && ctx->config.callbacks.onTxComplete) {
+            for (uint32_t i = 0; i < resultCount; i++) {
+                ctx->config.callbacks.onTxComplete(txResults[i], txResultTypes[i]);
+            }
+            TRM_LOG_DEBUG("TRM: Called %u TxComplete callbacks, remaining queue count: %u", 
+                         resultCount, g_txQueue.count);
+        }
+    }
     
     return sentCount;
 }
