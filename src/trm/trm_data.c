@@ -537,18 +537,30 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     return sentCount;
 }
 
-/* 内部初始化函数 */
-void TRM_DataInit(void)
+/* 内部反初始化函数 */
+void TRM_DataDeinit(void)
 {
     memset(&g_txQueue, 0, sizeof(g_txQueue));
     memset(&g_beamReleaseQueue, 0, sizeof(g_beamReleaseQueue));
     g_trmCurrentFrame = 0;
 }
 
-/* 内部反初始化函数 */
-void TRM_DataDeinit(void)
+/**
+ * @brief 获取发送队列当前数量
+ * @return 发送队列当前数量
+ */
+uint32_t TRM_GetTxQueueCount(void)
 {
-    TRM_ClearTxData(0xFFFFFFFF);
+    return g_txQueue.count;
+}
+
+/**
+ * @brief 获取发送队列最大容量
+ * @return 发送队列最大容量
+ */
+uint32_t TRM_GetTxQueueCapacity(void)
+{
+    return TX_QUEUE_SIZE;
 }
 
 /*==============================================================================

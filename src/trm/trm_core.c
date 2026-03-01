@@ -163,6 +163,14 @@ int TRM_GetStats(TRM_Stats* stats)
     /* 设置当前状态 */
     stats->state = g_trmCtx.state;
     
+    /* 更新剩余发送队列数量 */
+    extern uint32_t TRM_GetTxQueueCount(void);  /* 获取发送队列当前数量 */
+    extern uint32_t TRM_GetTxQueueCapacity(void); /* 获取发送队列最大容量 */
+    
+    uint32_t currentCount = TRM_GetTxQueueCount();
+    uint32_t maxCapacity = TRM_GetTxQueueCapacity();
+    stats->txQueueRemaining = (maxCapacity > currentCount) ? (maxCapacity - currentCount) : 0;
+    
     return TRM_OK;
 }
 
