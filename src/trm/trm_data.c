@@ -374,9 +374,17 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                     if (item->frameNo == g_trmCurrentFrame) {
                         shouldSend = 1;
                     } else if (item->frameNo < g_trmCurrentFrame) {
-                        /* 过期的帧号，直接丢弃 */
+                        /* 过期的帧号，记录超时失败并丢弃 */
                         TRM_LOG_WARN("TRM: Discarding expired data - user=%u, target_frame=%u, current_frame=%u", 
                                    item->userId, item->frameNo, g_trmCurrentFrame);
+                        
+                        /* 记录发送超时结果 */
+                        if (resultCount < TX_QUEUE_SIZE) {
+                            txResults[resultCount].userId = item->userId;
+                            txResults[resultCount].result = TRM_TX_TIMEOUT;
+                            resultCount++;
+                        }
+                        
                         item->valid = 0;
                         g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
                         g_txQueue.count--;
@@ -389,9 +397,17 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         continue;
                     }
                 } else {
-                    /* 单速率模式下指定了速率模式，不支持，直接丢弃 */
+                    /* 单速率模式下指定了速率模式，不支持，记录错误并丢弃 */
                     TRM_LOG_WARN("TRM: Single-rate mode does not support rate mode specification, discarding data - user=%u, targetRate=%d", 
                                item->userId, item->targetRateMode);
+                    
+                    /* 记录发送错误结果 - 参数错误 */
+                    if (resultCount < TX_QUEUE_SIZE) {
+                        txResults[resultCount].userId = item->userId;
+                        txResults[resultCount].result = TRM_TX_ERROR;
+                        resultCount++;
+                    }
+                    
                     item->valid = 0;
                     g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
                     g_txQueue.count--;
@@ -421,11 +437,25 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                     int ret = TK8710SetTxUserData(TK8710_DOWNLINK_2, txUserIndex, item->data, item->len, item->power, item->dataType);
                     if (ret != TK8710_OK) {
                         TRM_LOG_ERROR("TRM: Failed to set TX user data for user[%u]: %d", item->userId, ret);
+                        
+                        /* 记录发送失败结果 - Driver错误 */
+                        if (resultCount < TX_QUEUE_SIZE) {
+                            txResults[resultCount].userId = item->userId;
+                            txResults[resultCount].result = TRM_TX_ERROR;
+                            resultCount++;
+                        }
                     } else {
                         /* 设置发送用户信息 - 使用波束信息 */
                         ret = TK8710SetTxUserInfo(txUserIndex, beam.freq, beam.ahData, beam.pilotPower);
                         if (ret != TK8710_OK) {
                             TRM_LOG_ERROR("TRM: Failed to set TX user info for user[%u]: %d", item->userId, ret);
+                            
+                            /* 记录发送失败结果 - Driver错误 */
+                            if (resultCount < TX_QUEUE_SIZE) {
+                                txResults[resultCount].userId = item->userId;
+                                txResults[resultCount].result = TRM_TX_ERROR;
+                                resultCount++;
+                            }
                         } else {
                             TRM_LOG_DEBUG("TRM: Driver send setup successful for user[%u] with txIndex=%u, targetRate=%d", 
                                         item->userId, txUserIndex, item->targetRateMode);
