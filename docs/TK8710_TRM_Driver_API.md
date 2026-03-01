@@ -901,6 +901,8 @@ ret = TK8710RfConfig(&rfConfig);
 
 ### 1. 系统初始化与控制
 
+TRM系统采用简化的生命周期管理，只需要初始化和清理操作，无需单独的启动/停止控制。TRM专注于数据管理职责，硬件控制由Driver层负责。
+
 #### `TRM_Init`
 
 ```c
@@ -969,39 +971,17 @@ typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
 - `TRM_ERR_NO_MEM`: 内存不足
 - 其他: 初始化失败
 
-#### `TRM_Start`
-
-```c
-int TRM_Start(void);
-```
-
-**功能**: 启动TRM系统，开始处理数据发送和接收
-**返回值**:
-
-- `TRM_OK`: 启动成功
-- `TRM_ERR_STATE`: 状态错误(未初始化或已启动)
-- 其他: 启动失败
-
-#### `TRM_Stop`
-
-```c
-int TRM_Stop(void);
-```
-
-**功能**: 停止TRM系统，停止数据处理
-**返回值**:
-
-- `TRM_OK`: 停止成功
-- `TRM_ERR_STATE`: 状态错误(未启动)
-- 其他: 停止失败
-
 #### `TRM_Deinit`
 
 ```c
-void TRM_Deinit(void);
+int TRM_Deinit(void);
 ```
 
 **功能**: 清理TRM系统，释放所有资源
+**返回值**:
+
+- `TRM_OK`: 清理成功
+- 其他: 清理失败
 
 ### 2. 数据发送
 
