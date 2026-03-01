@@ -305,7 +305,7 @@ int main(void)
     printf("==========================\n");
     
     /* 初始化日志 */
-    TK8710LogSimpleConfig(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
+    TK8710LogConfig(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
     
     /* 基础波束管理测试 */
     TEST_SUITE_BEGIN("Basic Beam Management Tests");

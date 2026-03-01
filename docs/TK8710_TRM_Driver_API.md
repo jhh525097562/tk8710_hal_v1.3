@@ -36,7 +36,7 @@
 | `TK8710GpioInit`                   | 初始化GPIO中断          | 应用层     | 中断处理   |
 | `TK8710GpioIrqEnable`              | 使能/禁用GPIO中断       | 应用层     | 中断处理   |
 | **日志系统**                   |                         |            |            |
-| `TK8710LogSimpleConfig`              | 初始化日志系统          | 应用层     | 日志系统   |
+| `TK8710LogConfig`              | 初始化日志系统          | 应用层     | 日志系统   |
 
 **说明:**
 

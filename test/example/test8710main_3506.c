@@ -733,7 +733,7 @@ int main(int argc, char* argv[])
     
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
-    TK8710LogSimpleConfig(TK8710_LOG_ERROR, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE
+    TK8710LogConfig(TK8710_LOG_ERROR, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE
     
     /* 2. 初始化中断系统 */
     ret = init_interrupt_system();

@@ -132,7 +132,7 @@ const char* TK8710LogGetModuleName(TK8710LogModule module);
  * @param module_mask 模块掩码
  * @return 0-成功, 1-失败
  */
-int TK8710LogSimpleConfig(TK8710LogLevel level, uint32_t module_mask);
+int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask);
 
 /**
  * @brief 获取级别名称
