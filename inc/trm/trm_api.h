@@ -107,6 +107,7 @@ typedef struct {
     uint32_t    beamCount;         /* 当前波束数量 */
     uint32_t    memAllocCount;     /* 内存分配次数 */
     uint32_t    memFreeCount;      /* 内存释放次数 */
+    uint32_t    txQueueRemaining;   /* 剩余发送队列数量 */
 } TRM_Stats;
 
 /* =============================================================================
