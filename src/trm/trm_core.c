@@ -182,18 +182,17 @@ int TRM_Reset(void)
     return TRM_OK;
 }
 
-int TRM_IsRunning(void)
-{
-    return (g_trmCtx.state == TRM_STATE_RUNNING) ? 1 : 0;
-}
-
 int TRM_GetStats(TRM_Stats* stats)
 {
     if (stats == NULL) {
         return TRM_ERR_PARAM;
     }
     
+    /* 复制统计信息 */
     memcpy(stats, &g_trmCtx.stats, sizeof(TRM_Stats));
+    
+    /* 设置当前状态 */
+    stats->state = g_trmCtx.state;
     
     return TRM_OK;
 }

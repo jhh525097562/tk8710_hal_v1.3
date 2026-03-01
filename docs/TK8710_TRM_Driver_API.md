@@ -876,7 +876,6 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_OnRxData`                | 接收数据回调函数类型        | 应用层     | 回调接口   |
 | `TRM_OnTxComplete`            | 发送完成回调函数类型        | 应用层     | 回调接口   |
 | **状态查询**              |                             |            |            |
-| `TRM_IsRunning`               | 获取TRM运行状态             | 应用层     | 状态查询   |
 | `TRM_GetStats`                | 获取TRM统计信息             | 应用层     | 状态查询   |
 | `TRM_GetCurrentFrame`         | 获取当前帧号                | 应用层     | 状态查询   |
 | `TRM_SetCurrentFrame`         | 设置当前帧号                | 应用层     | 状态查询   |
@@ -886,7 +885,7 @@ ret = TK8710RfConfig(&rfConfig);
 | **日志系统**              |                             |            |            |
 | `TRM_LogInit`                 | 初始化TRM日志系统           | 应用层     | 日志系统   |
 | `TRM_LogSetLevel`             | 设置TRM日志级别             | 应用层     | 日志系统   |
-| `TRM_LOG_*` 宏                | TRM日志输出宏               | 应用层     | 日志系统   |
+|                                 |                             |            |            |
 | **调试接口**              |                             |            |            |
 | `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | Driver层   | 调试接口   |
 
@@ -926,7 +925,7 @@ typedef struct {
     TRM_BeamMode beamMode;          /* 波束存储模式 */
     uint32_t     beamMaxUsers;      /* 最大用户数，0表示使用默认值(3000) */
     uint32_t     beamTimeoutMs;     /* 波束超时时间(毫秒)，0表示使用默认值(3000ms) */
-    
+  
     /* 帧管理配置 */
     uint32_t     maxFrameCount;     /* 最大帧数，0表示使用默认值(100) */
   
@@ -1177,26 +1176,29 @@ int TRM_GetStats(TRM_Stats* stats);
 
 ```c
 typedef struct {
-    uint32_t txCount;           /* 发送次数 */
-    uint32_t txSuccessCount;    /* 发送成功次数 */
-    uint32_t rxCount;           /* 接收次数 */
-    uint32_t beamCount;         /* 当前波束数量 */
-    uint32_t memAllocCount;     /* 内存分配次数 */
-    uint32_t memFreeCount;      /* 内存释放次数 */
+    TrmState    state;             /* TRM运行状态 */
+    uint32_t    txCount;           /* 发送次数 */
+    uint32_t    txSuccessCount;    /* 发送成功次数 */
+    uint32_t    rxCount;           /* 接收次数 */
+    uint32_t    beamCount;         /* 当前波束数量 */
+    uint32_t    memAllocCount;     /* 内存分配次数 */
+    uint32_t    memFreeCount;      /* 内存释放次数 */
 } TRM_Stats;
 ```
 
 **结构体成员详细说明**:
 
-- `txCount`: 发送次数
-  - 累计的数据发送尝试次数
-- `txSuccessCount`: 发送成功次数
-  - 累计的数据发送成功次数
-- `rxCount`: 接收次数
-  - 累计的数据接收次数
+- `state`: TRM运行状态
+  - `TRM_STATE_UNINIT`: 未初始化
+  - `TRM_STATE_INIT`: 已初始化
+  - `TRM_STATE_RUNNING`: 运行中
+  - `TRM_STATE_STOPPED`: 已停止
+- `txCount`: 发送次数统计
+- `txSuccessCount`: 发送成功次数统计
+- `rxCount`: 接收次数统计
 - `beamCount`: 当前波束数量
-  - 当前系统中存储的波束信息数量
-- `memAllocCount`: 内存分配次数
+- `memAllocCount`: 内存分配次数统计
+- `memFreeCount`: 内存释放次数统计
   - 累计的内存分配操作次数
 - `memFreeCount`: 内存释放次数
   - 累计的内存释放操作次数
@@ -1294,34 +1296,6 @@ void TRM_LogSetLevel(TRMLogLevel level);
 
 - `level`: 日志级别 (同TRM_LogInit)
   **说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
-
-#### `TRM_LOG_*` 宏
-
-```c
-TRM_LOG_ERROR(fmt, ...);   // 错误日志
-TRM_LOG_WARN(fmt, ...);    // 警告日志
-TRM_LOG_INFO(fmt, ...);    // 信息日志
-TRM_LOG_DEBUG(fmt, ...);   // 调试日志
-TRM_LOG_TRACE(fmt, ...);   // 跟踪日志
-```
-
-**功能**: TRM日志输出宏
-**参数**:
-
-- `fmt`: 格式化字符串
-- `...`: 可变参数
-  **说明**:
-- 自动包含文件名、行号、函数名等调试信息
-- 根据当前设置的日志级别过滤输出
-- 完全独立于TK8710日志系统，无任何耦合
-
-**TRM日志系统特性**:
-
-- ✅ **完全独立**: 无TK8710日志系统依赖
-- ✅ **线程安全**: 支持多线程环境使用
-- ✅ **级别过滤**: 支持动态调整日志级别
-- ✅ **调试信息**: 自动包含文件、行号、函数信息
-- ✅ **时间戳**: 可选的时间戳功能
 
 ### 9. TRM调试接口
 
@@ -1518,6 +1492,28 @@ int main(void) {
   
     printf("系统初始化完成\n");
     return 0;
+}
+
+// 获取TRM统计信息（包含运行状态）
+TRM_Stats stats;
+int ret = TRM_GetStats(&stats);
+if (ret == TRM_OK) {
+    printf("TRM状态: %s\n", 
+           stats.state == TRM_STATE_RUNNING ? "运行中" : "未运行");
+    printf("发送统计: %u/%u 成功\n", stats.txSuccessCount, stats.txCount);
+    printf("接收统计: %u\n", stats.rxCount);
+    printf("波束数量: %u\n", stats.beamCount);
+    printf("内存统计: 分配%u次, 释放%u次\n", 
+           stats.memAllocCount, stats.memFreeCount);
+}
+
+// 检查是否运行中
+TRM_Stats stats;
+TRM_GetStats(&stats);
+if (stats.state == TRM_STATE_RUNNING) {
+    printf("TRM正在运行\n");
+} else {
+    printf("TRM未运行，状态: %d\n", stats.state);
 }
 ```
 

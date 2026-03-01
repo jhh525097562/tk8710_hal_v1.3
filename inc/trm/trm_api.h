@@ -102,12 +102,13 @@ typedef struct {
 
 /* 统计信息 */
 typedef struct {
-    uint32_t txCount;           /* 发送次数 */
-    uint32_t txSuccessCount;    /* 发送成功次数 */
-    uint32_t rxCount;           /* 接收次数 */
-    uint32_t beamCount;         /* 当前波束数量 */
-    uint32_t memAllocCount;     /* 内存分配次数 */
-    uint32_t memFreeCount;      /* 内存释放次数 */
+    TrmState    state;             /* TRM运行状态 */
+    uint32_t    txCount;           /* 发送次数 */
+    uint32_t    txSuccessCount;    /* 发送成功次数 */
+    uint32_t    rxCount;           /* 接收次数 */
+    uint32_t    beamCount;         /* 当前波束数量 */
+    uint32_t    memAllocCount;     /* 内存分配次数 */
+    uint32_t    memFreeCount;      /* 内存释放次数 */
 } TRM_Stats;
 
 /* =============================================================================
@@ -208,12 +209,6 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 /* =============================================================================
  * 状态查询API
  * ============================================================================= */
-
-/**
- * @brief 获取TRM运行状态
- * @return 1表示运行中，0表示未运行
- */
-int TRM_IsRunning(void);
 
 /**
  * @brief 获取TRM统计信息
