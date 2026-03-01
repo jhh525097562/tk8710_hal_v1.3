@@ -192,6 +192,9 @@ typedef struct {
     uint32_t power2rssi;    /* RSSI换算 */
     uint32_t irq_ctrl0;     /* 中断使能 */
     uint32_t irq_ctrl1;     /* 中断清理 */
+    
+    /* SPI配置 (可选, 为NULL时使用默认配置) */
+    SpiConfig* spiConfig;   /* SPI接口配置, 为NULL时使用默认16MHz/Mode0 */
 } ChipConfig;
 
 /* 射频发送直流配置 (每天线i/q两路) */

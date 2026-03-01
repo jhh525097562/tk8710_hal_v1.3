@@ -54,6 +54,7 @@ static const ChipConfig g_defaultChipConfig = {
     .power2rssi  = 0,
     .irq_ctrl0   = 0x7FF,
     .irq_ctrl1   = 0,
+    .spiConfig   = NULL    /* 使用默认SPI配置 */
 };
 
 /* 注：工作类型、速率模式、天线使能、RF选择、广播用户数均已迁移到g_slotCfg中 */
@@ -251,15 +252,23 @@ int TK8710Init(const ChipConfig* initConfig)
     };
     TK8710LogInit(&defaultLogConfig);
     
-    /* 初始化默认SPI接口 */
-    SpiConfig defaultSpiConfig = {
-        .speed = 16000000,    /* 16MHz */
-        .mode = 0,           /* Mode 0 */
-        .bits = 8,           /* 8位数据 */
-        .lsb_first = 0,      /* MSB优先 */
-        .cs_pin = 0          /* CS引脚0 */
-    };
-    TK8710SpiInit(&defaultSpiConfig);
+    /* 初始化SPI接口 */
+    SpiConfig spiConfigToUse;
+    if (cfg->spiConfig != NULL) {
+        /* 使用自定义SPI配置 */
+        spiConfigToUse = *cfg->spiConfig;
+        TK8710_LOG_CORE_INFO("Using custom SPI config: speed=%u, mode=%u, bits=%u", 
+                             spiConfigToUse.speed, spiConfigToUse.mode, spiConfigToUse.bits);
+    } else {
+        /* 使用默认SPI配置 */
+        spiConfigToUse.speed = 16000000;    /* 16MHz */
+        spiConfigToUse.mode = 0;           /* Mode 0 */
+        spiConfigToUse.bits = 8;           /* 8位数据 */
+        spiConfigToUse.lsb_first = 0;      /* MSB优先 */
+        spiConfigToUse.cs_pin = 0;          /* CS引脚0 */
+        TK8710_LOG_CORE_INFO("Using default SPI config: 16MHz, Mode0, MSB");
+    }
+    TK8710SpiInit(&spiConfigToUse);
     
     /* 初始化默认GPIO中断 */
     TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, default_gpio_irq_handler, NULL);
