@@ -216,6 +216,7 @@ static int tk8710_rf_read(uint8_t rfSel, uint16_t addr, uint32_t* data)
  */
 int TK8710Init(const ChipConfig* initConfig)
 {
+    
     int ret;
     s_init_0 init0;
     s_init_1 init1;
@@ -229,6 +230,16 @@ int TK8710Init(const ChipConfig* initConfig)
     s_irq_ctrl0 irqCtrl0;
     s_irq_ctrl1 irqCtrl1;
     const ChipConfig* cfg = initConfig ? initConfig : &g_defaultChipConfig;
+    
+    /* 初始化默认日志系统（如果尚未初始化） */
+    TK8710LogConfig_t defaultLogConfig = {
+        .level = TK8710_LOG_INFO,
+        .module_mask = TK8710_LOG_MODULE_ALL,
+        .callback = NULL,
+        .enable_timestamp = 1,
+        .enable_module_name = 1
+    };
+    TK8710LogInit(&defaultLogConfig);
     
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
