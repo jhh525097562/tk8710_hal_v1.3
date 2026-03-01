@@ -51,17 +51,17 @@ typedef struct {
     TK8710LogCallback callback;     /* 日志输出回调 */
     uint8_t enable_timestamp;       /* 是否启用时间戳 */
     uint8_t enable_module_name;     /* 是否启用模块名 */
-} TK8710LogConfig;
+} TK8710LogConfig_t;
 
 /* 全局日志配置变量声明 */
-extern TK8710LogConfig g_logConfig;
+extern TK8710LogConfig_t g_logConfig;
 
 /**
  * @brief 初始化日志系统
  * @param config 日志配置
  * @return 0-成功, 1-失败
  */
-int TK8710LogInit(const TK8710LogConfig* config);
+int TK8710LogInit(const TK8710LogConfig_t* config);
 
 /**
  * @brief 设置日志级别

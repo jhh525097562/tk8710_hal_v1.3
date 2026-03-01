@@ -49,7 +49,7 @@ int main(void)
     int ret;
     
     /* 1. 初始化日志系统 */
-    TK8710LogConfig logConfig = {
+    TK8710LogConfig_t logConfig = {
         .level = TK8710_LOG_DEBUG,
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,

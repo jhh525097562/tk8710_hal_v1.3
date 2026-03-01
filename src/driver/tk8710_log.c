@@ -11,7 +11,7 @@
 #include <time.h>
 
 /* 全局日志配置 */
-TK8710LogConfig g_logConfig = {
+TK8710LogConfig_t g_logConfig = {
     .level = TK8710_LOG_WARN,           /* 默认警告级别 */
     .module_mask = TK8710_LOG_MODULE_ALL, /* 默认所有模块 */
     .callback = NULL,                    /* 默认无回调 */
@@ -96,14 +96,14 @@ static void default_log_output(TK8710LogLevel level, TK8710LogModule module,
 /**
  * @brief 初始化日志系统
  */
-int TK8710LogInit(const TK8710LogConfig* config)
+int TK8710LogInit(const TK8710LogConfig_t* config)
 {
     if (config == NULL) {
         return 1; /* 错误：参数为空 */
     }
     
     /* 复制配置 */
-    memcpy(&g_logConfig, config, sizeof(TK8710LogConfig));
+    memcpy(&g_logConfig, config, sizeof(TK8710LogConfig_t));
     
     /* 如果没有设置回调，使用默认输出 */
     if (g_logConfig.callback == NULL) {
@@ -229,7 +229,7 @@ const char* TK8710LogGetLevelName(TK8710LogLevel level)
  */
 int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
 {
-    TK8710LogConfig log_cfg = {
+    TK8710LogConfig_t logConfig = {
         .level = level,
         .module_mask = module_mask,
         .callback = NULL,
@@ -237,5 +237,5 @@ int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
         .enable_module_name = 1
     };
     
-    return TK8710LogInit(&log_cfg);
+    return TK8710LogInit(&logConfig);
 }
