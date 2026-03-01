@@ -870,7 +870,6 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_Deinit`                  | 清理TRM系统资源        | 应用层     | 初始化控制 |
 | **数据发送**              |                        |            |            |
 | `TRM_SetTxUserData`          | 统一发送数据接口(广播/用户) | TRM层      | 数据发送   |
-| `TRM_ClearTxData`             | 清除发送数据            | TRM层      | 数据发送   |
 | **波束获取**              |                        |            |            |
 | `TRM_GetBeamInfo`             | 获取用户波束信息       | 应用层     | 波束获取   |
 | **回调接口**              |                        |            |            |
@@ -1062,23 +1061,6 @@ int ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, 0, brdData, sizeof(brdData), 20, 
 // 发送用户数据
 ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, userData, sizeof(userData), 25, frameNo, 0, TK8710_DATA_TYPE_DED);
 ```
-
-#### `TRM_ClearTxData`
-
-```c
-int TRM_ClearTxData(uint32_t userId);
-```
-
-**功能**: 清除发送数据
-**参数**:
-
-- `userId`: 用户ID
-  - 0xFFFFFFFF: 清除所有用户的发送数据
-  - 其他值: 清除指定用户的发送数据
-    **返回值**:
-- `TRM_OK`: 清除成功
-- `TRM_ERR_PARAM`: 参数错误
-- 其他: 清除失败
 
 ### 3. 波束获取
 

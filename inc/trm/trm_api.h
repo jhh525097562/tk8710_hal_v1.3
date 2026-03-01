@@ -190,13 +190,6 @@ void TRM_Deinit(void);
  */
 int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 
-/**
- * @brief 清除发送数据
- * @param userId 用户ID，0xFFFFFFFF表示清除所有
- * @return TRM_OK成功，其他失败
- */
-int TRM_ClearTxData(uint32_t userId);
-
 /* =============================================================================
  * 波束获取API
  * ============================================================================= */

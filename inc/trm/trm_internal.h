@@ -181,7 +181,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
 int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
 
 /**
- * @brief 清除发送数据
+ * @brief 清除发送数据 - 内部函数
  * @param userId 用户ID，0xFFFFFFFF表示清除所有
  * @return TRM_OK成功，其他失败
  */
