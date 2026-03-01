@@ -176,6 +176,20 @@ void TRM_Deinit(void);
  * ============================================================================= */
 
 /**
+ * @brief 统一发送数据接口（支持用户数据和广播数据）
+ * @param downlinkType 下行类型 (TK8710_DOWNLINK_1=广播, TK8710_DOWNLINK_2=用户数据)
+ * @param userIdOrIndex 用户ID或广播索引
+ * @param data 数据指针
+ * @param len 数据长度
+ * @param txPower 发送功率
+ * @param frameNo 帧号 (仅用户数据使用，广播时忽略)
+ * @param targetRateMode 目标速率模式 (仅用户数据使用，广播时忽略)
+ * @param dataType 数据类型
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
+
+/**
  * @brief 发送用户数据（缓存到发送队列）
  * @param userId 用户ID
  * @param data 发送数据指针
