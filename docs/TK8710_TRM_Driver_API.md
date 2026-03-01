@@ -859,6 +859,34 @@ ret = TK8710RfConfig(&rfConfig);
 
 ## TRM API接口
 
+### TRM错误码定义
+
+TRM API使用统一的错误码系统，所有函数返回值遵循以下定义：
+
+```c
+#define TRM_OK                  0   /* 操作成功 */
+#define TRM_ERR_PARAM          (-1) /* 参数错误 */
+#define TRM_ERR_STATE          (-2) /* 状态错误 */
+#define TRM_ERR_TIMEOUT        (-3) /* 超时错误 */
+#define TRM_ERR_NO_MEM         (-4) /* 内存不足 */
+#define TRM_ERR_NOT_INIT       (-5) /* 未初始化 */
+#define TRM_ERR_QUEUE_FULL     (-6) /* 队列已满 */
+#define TRM_ERR_NO_BEAM        (-7) /* 未找到波束信息 */
+#define TRM_ERR_DRIVER         (-8) /* Driver层错误 */
+```
+
+**错误码说明**：
+
+- `TRM_OK (0)`: 操作成功完成
+- `TRM_ERR_PARAM (-1)`: 输入参数无效或超出范围
+- `TRM_ERR_STATE (-2)`: TRM状态不允许此操作
+- `TRM_ERR_TIMEOUT (-3)`: 操作超时
+- `TRM_ERR_NO_MEM (-4)`: 内存分配失败
+- `TRM_ERR_NOT_INIT (-5)`: TRM系统未初始化
+- `TRM_ERR_QUEUE_FULL (-6)`: 发送队列已满
+- `TRM_ERR_NO_BEAM (-7)`: 未找到指定的波束信息
+- `TRM_ERR_DRIVER (-8)`: 底层Driver操作失败
+
 ### TRM API接口汇总
 
 | API函数                         | 功能描述                    | 目标用户层 | 分类       |
@@ -898,7 +926,7 @@ ret = TK8710RfConfig(&rfConfig);
 
 ---
 
-### 1. 系统初始化与控制
+### 1. 系统初始化
 
 TRM系统采用简化的生命周期管理，只需要初始化和清理操作，无需单独的启动/停止控制。TRM专注于数据管理职责，硬件控制由Driver层负责。
 
@@ -1054,7 +1082,48 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
   - 范围: 0x00000000 - 0xFFFFFFFF
 - `beamInfo`: 波束信息输出指针
   - 函数会填充此结构体
-    **返回值**:
+
+**TRM_BeamInfo结构体定义**:
+
+```c
+typedef struct {
+    uint8_t  azimuth;            /* 方位角 (度) */
+    uint8_t  elevation;          /* 仰角 (度) */
+    uint8_t  power;              /* 功率等级 */
+    uint8_t  width;              /* 波束宽度 */
+    uint16_t reserved;          /* 保留字段 */
+    uint64_t pilotPower;         /* Pilot功率 */
+    uint32_t timestamp;          /* 更新时间戳 */
+    uint8_t  valid;              /* 有效标志 */
+} TRM_BeamInfo;
+```
+
+**TRM_BeamMode枚举定义**:
+
+```c
+typedef enum {
+    TRM_BEAM_MODE_FULL_STORE = 0,   /* 完整波束存储模式(CPU RAM) */
+    TRM_BEAM_MODE_MAPPING    = 1,   /* 波束映射模式(8710 RAM) */
+} TRM_BeamMode;
+```
+
+**结构体成员详细说明**:
+
+- `azimuth`: 方位角 (度)
+  - 范围: 0 - 255
+- `elevation`: 仰角 (度)
+  - 范围: 0 - 255
+- `power`: 功率等级
+  - 范围: 0 - 255
+- `width`: 波束宽度
+  - 范围: 0 - 255
+- `pilotPower`: Pilot功率
+- `timestamp`: 更新时间戳
+- `valid`: 有效标志
+  - 0: 无效
+  - 1: 有效
+
+**返回值**:
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - `TRM_ERR_NO_BEAM`: 未找到波束信息
@@ -1123,7 +1192,7 @@ typedef enum {
 
 ### 6. 状态查询
 
-TRM系统提供统一的状态查询接口，通过`TRM_GetStats`函数可以获取完整的系统状态和统计信息，包括运行状态、发送/接收统计、波束信息等。
+TRM系统提供统一的状态查询接口，通过 `TRM_GetStats`函数可以获取完整的系统状态和统计信息，包括运行状态、发送/接收统计、波束信息等。
 
 #### `TRM_GetStats`
 
@@ -1148,6 +1217,15 @@ typedef struct {
     uint32_t    memAllocCount;     /* 内存分配次数 */
     uint32_t    memFreeCount;      /* 内存释放次数 */
 } TRM_Stats;
+```
+
+**TrmState枚举定义**:
+
+```c
+typedef enum {
+    TRM_STATE_UNINIT = 0,  /* 未初始化 */
+    TRM_STATE_INIT,        /* 已初始化（可用状态） */
+} TrmState;
 ```
 
 **结构体成员详细说明**:
