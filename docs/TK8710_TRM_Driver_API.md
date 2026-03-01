@@ -1162,6 +1162,7 @@ typedef struct {
     uint32_t    beamCount;         /* 当前波束数量 */
     uint32_t    memAllocCount;     /* 内存分配次数 */
     uint32_t    memFreeCount;      /* 内存释放次数 */
+    uint32_t    txQueueRemaining;  /* 剩余发送队列数量 */
 } TRM_Stats;
 ```
 
@@ -1180,14 +1181,21 @@ typedef enum {
   - `TRM_STATE_UNINIT`: 未初始化
   - `TRM_STATE_INIT`: 已初始化（可用状态）
 - `txCount`: 发送次数统计
+  - 累计的发送操作次数
 - `txSuccessCount`: 发送成功次数统计
+  - 累计的发送成功次数
 - `rxCount`: 接收次数统计
+  - 累计的接收操作次数
 - `beamCount`: 当前波束数量
+  - 当前系统中有效的波束信息数量
 - `memAllocCount`: 内存分配次数统计
-- `memFreeCount`: 内存释放次数统计
   - 累计的内存分配操作次数
-- `memFreeCount`: 内存释放次数
+- `memFreeCount`: 内存释放次数统计
   - 累计的内存释放操作次数
+- `txQueueRemaining`: 剩余发送队列数量
+  - 发送队列中剩余的可用空间（0-1024）
+  - 用于流量控制和负载均衡
+  - 实时计算：最大容量 - 当前使用量
     **返回值**:
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
@@ -1439,6 +1447,14 @@ if (ret == TRM_OK) {
     printf("波束数量: %u\n", stats.beamCount);
     printf("内存统计: 分配%u次, 释放%u次\n", 
            stats.memAllocCount, stats.memFreeCount);
+    printf("发送队列剩余容量: %u/1024\n", stats.txQueueRemaining);
+    
+    // 流量控制示例
+    if (stats.txQueueRemaining < 100) {
+        printf("警告: 发送队列接近满载!\n");
+        // 可以触发流量控制策略
+    }
+}
 }
 
 // 检查是否运行中
