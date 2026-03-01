@@ -1040,9 +1040,9 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
   - 5-11: 使用速率模式匹配(对应不同速率)
   - 18: 使用速率模式匹配(特殊速率)
   - 广播模式时忽略此参数
-- `dataType`: 数据类型
-  - `TK8710_DATA_TYPE_DED`: 专用数据
-  - `TK8710_DATA_TYPE_BRD`: 广播数据
+- `BeamType`: 波束类型
+  - `TK8710_DATA_TYPE_BRD` (0): 广播波束 - 使用Driver自动生成的波束信息或与Slot3共用波束信息
+  - `TK8710_DATA_TYPE_DED` (1): 指定波束 - 使用指定信息模式的波束信息或与Slot1共用波束信息
 
 **返回值**:
 - `TRM_OK`: 发送成功

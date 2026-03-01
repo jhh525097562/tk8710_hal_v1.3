@@ -181,10 +181,10 @@ void TRM_ProcessBeamRamReleases(void)
  * @param txPower 发送功率
  * @param frameNo 帧号 (仅用户数据使用，广播时忽略)
  * @param targetRateMode 目标速率模式 (仅用户数据使用，广播时忽略)
- * @param dataType 数据类型
+ * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType)
+int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType)
 {
     if (data == NULL || len == 0) {
         TRM_LOG_ERROR("TRM_SetTxUserData失败: 参数错误 - data=%p, len=%d", data, len);
@@ -193,10 +193,10 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
     
     if (downlinkType == TK8710_DOWNLINK_1) {
         /* 广播数据模式 - 直接调用Driver发送 */
-        TRM_LOG_DEBUG("TRM_SetTxUserData发送广播 - 索引=%d, 长度=%d, 功率=%d, 数据类型=%d", 
-                      (uint8_t)userIdOrIndex, len, txPower, dataType);
+        TRM_LOG_DEBUG("TRM_SetTxUserData发送广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
+                      (uint8_t)userIdOrIndex, len, txPower, BeamType);
         
-        int ret = TK8710SetTxUserData(TK8710_DOWNLINK_1, (uint8_t)userIdOrIndex, data, len, txPower, dataType);
+        int ret = TK8710SetTxUserData(TK8710_DOWNLINK_1, (uint8_t)userIdOrIndex, data, len, txPower, BeamType);
         if (ret == TK8710_OK) {
             TRM_LOG_DEBUG("TRM广播发送成功");
         } else {
@@ -210,7 +210,7 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
         TRM_LOG_DEBUG("TRM_SetTxUserData发送用户数据 - 用户ID=0x%08X, 长度=%d, 功率=%d, 帧号=%u, 速率模式=%d", 
                       userIdOrIndex, len, txPower, frameNo, targetRateMode);
         
-        return TRM_SendData(userIdOrIndex, data, len, txPower, frameNo, targetRateMode, dataType);
+        return TRM_SendData(userIdOrIndex, data, len, txPower, frameNo, targetRateMode, BeamType);
         
     } else {
         TRM_LOG_ERROR("TRM_SetTxUserData失败: 无效的下行类型 - downlinkType=%d", downlinkType);
@@ -275,10 +275,10 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     return TRM_OK;
 }
 
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType)
+int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t BeamType)
 {
     /* 调用统一的发送接口 */
-    return TRM_SetTxUserData(TK8710_DOWNLINK_1, brdIndex, data, len, txPower, 0, 0, dataType);
+    return TRM_SetTxUserData(TK8710_DOWNLINK_1, brdIndex, data, len, txPower, 0, 0, BeamType);
 }
 
 int TRM_ClearTxData(uint32_t userId)

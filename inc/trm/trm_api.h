@@ -185,10 +185,10 @@ void TRM_Deinit(void);
  * @param txPower 发送功率
  * @param frameNo 帧号 (仅用户数据使用，广播时忽略)
  * @param targetRateMode 目标速率模式 (仅用户数据使用，广播时忽略)
- * @param dataType 数据类型
+ * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
+int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType);
 
 /* =============================================================================
  * 波束获取API

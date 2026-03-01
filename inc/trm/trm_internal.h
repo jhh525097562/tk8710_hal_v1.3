@@ -164,10 +164,10 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList);
  * @param txPower 发送功率
  * @param frameNo 帧号
  * @param targetRateMode 目标速率模式
- * @param dataType 数据类型
+ * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType);
 
 /**
  * @brief 发送广播数据 - 内部函数
@@ -175,10 +175,10 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
  * @param data 数据指针
  * @param len 数据长度
  * @param txPower 发送功率
- * @param dataType 数据类型
+ * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
+int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t BeamType);
 
 /**
  * @brief 清除发送数据 - 内部函数
