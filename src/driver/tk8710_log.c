@@ -229,7 +229,7 @@ const char* TK8710LogGetLevelName(TK8710LogLevel level)
  */
 int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
 {
-    TK8710LogConfig logConfig = {
+    TK8710LogConfig log_cfg = {
         .level = level,
         .module_mask = module_mask,
         .callback = NULL,
@@ -237,5 +237,5 @@ int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
         .enable_module_name = 1
     };
     
-    return TK8710LogInit(&logConfig);
+    return TK8710LogInit(&log_cfg);
 }
