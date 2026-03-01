@@ -231,6 +231,7 @@ int TK8710Init(const ChipConfig* initConfig)
     s_irq_ctrl1 irqCtrl1;
     const ChipConfig* cfg = initConfig ? initConfig : &g_defaultChipConfig;
     
+    
     /* 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
         .level = TK8710_LOG_INFO,
@@ -240,6 +241,19 @@ int TK8710Init(const ChipConfig* initConfig)
         .enable_module_name = 1
     };
     TK8710LogInit(&defaultLogConfig);
+    
+    /* 初始化默认SPI接口 */
+    SpiConfig defaultSpiConfig = {
+        .speed = 16000000,    /* 16MHz */
+        .mode = 0,           /* Mode 0 */
+        .bits = 8,           /* 8位数据 */
+        .lsb_first = 0,      /* MSB优先 */
+        .cs_pin = 0          /* CS引脚0 */
+    };
+    TK8710SpiInit(&defaultSpiConfig);
+    
+    /* 初始化默认GPIO中断 */
+    TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, NULL, NULL);
     
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
