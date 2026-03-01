@@ -26,6 +26,7 @@ extern "C" {
 #define TRM_ERR_NOT_INIT        (-5)
 #define TRM_ERR_QUEUE_FULL      (-6)
 #define TRM_ERR_NO_BEAM         (-7)
+#define TRM_ERR_DRIVER          (-8)
 
 /* =============================================================================
  * 常量定义
