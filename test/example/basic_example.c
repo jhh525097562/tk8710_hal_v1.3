@@ -342,7 +342,6 @@ int main(void)
     printf("Driver running: %s\n", "Yes");  /* Driver没有状态查询API */
     
     /* 获取统计信息 */
-    TRM_Stats stats;
     TRM_GetStats(&stats);
     printf("Stats: tx=%u, txSuccess=%u, rx=%u, beams=%u\n",
            stats.txCount, stats.txSuccessCount, stats.rxCount, stats.beamCount);
