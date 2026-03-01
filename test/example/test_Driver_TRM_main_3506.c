@@ -1270,26 +1270,6 @@ int main(int argc, char* argv[])
     signal(SIGTERM, signal_handler);
 #endif
     
-    /* 0. 初始化SPI接口 (RK3506 spidev) */
-    printf("Initializing SPI interface (RK3506)...\n");
-    SpiConfig spiCfg;
-    spiCfg.speed = 16000000;  /* 16MHz */
-    spiCfg.mode = 0;         /* Mode 0 */
-    spiCfg.bits = 8;         /* 8位数据 */
-    spiCfg.lsb_first = 0;    /* MSB优先 */
-    spiCfg.cs_pin = 0;       /* CS引脚0 */
-    
-    ret = TK8710SpiInit(&spiCfg);
-    if (ret != 0) {
-        printf("SPI initialization failed: %d\n", ret);
-        printf("Please check:\n");
-        printf("  1. /dev/spidev0.0 exists\n");
-        printf("  2. SPI driver is loaded\n");
-        printf("  3. User has permission to access SPI device\n");
-        return -1;
-    }
-    printf("SPI initialized successfully (16MHz, Mode0, MSB)\n\n");
-    
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
     TK8710LogConfig(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
