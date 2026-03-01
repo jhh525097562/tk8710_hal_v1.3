@@ -56,8 +56,6 @@ typedef enum {
 typedef enum {
     TRM_STATE_UNINIT = 0,
     TRM_STATE_INIT,
-    TRM_STATE_RUNNING,
-    TRM_STATE_STOPPED,
 } TrmState;
 
 /* 速率模式 */
@@ -160,21 +158,10 @@ typedef struct {
 int TRM_Init(const TRM_InitConfig* config);
 
 /**
- * @brief 启动TRM系统
+ * @brief 清理TRM系统资源
  * @return TRM_OK成功，其他失败
  */
-int TRM_Start(void);
-
-/**
- * @brief 停止TRM系统
- * @return TRM_OK成功，其他失败
- */
-int TRM_Stop(void);
-
-/**
- * @brief 清理TRM系统，释放所有资源
- */
-void TRM_Deinit(void);
+int TRM_Deinit(void);
 
 /* =============================================================================
  * 数据发送API

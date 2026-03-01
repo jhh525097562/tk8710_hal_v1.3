@@ -865,8 +865,6 @@ ret = TK8710RfConfig(&rfConfig);
 | ------------------------------- | --------------------------- | ---------- | ---------- |
 | **系统初始化与控制**      |                             |            |            |
 | `TRM_Init`                    | 初始化TRM系统               | 应用层     | 初始化控制 |
-| `TRM_Start`                   | 启动TRM系统                 | 应用层     | 初始化控制 |
-| `TRM_Stop`                    | 停止TRM系统                 | 应用层     | 初始化控制 |
 | `TRM_Deinit`                  | 清理TRM系统资源             | 应用层     | 初始化控制 |
 | **数据发送**              |                             |            |            |
 | `TRM_SetTxUserData`           | 统一发送数据接口(广播/用户) | TRM层      | 数据发送   |
@@ -1190,9 +1188,7 @@ typedef struct {
 
 - `state`: TRM运行状态
   - `TRM_STATE_UNINIT`: 未初始化
-  - `TRM_STATE_INIT`: 已初始化
-  - `TRM_STATE_RUNNING`: 运行中
-  - `TRM_STATE_STOPPED`: 已停止
+  - `TRM_STATE_INIT`: 已初始化（可用状态）
 - `txCount`: 发送次数统计
 - `txSuccessCount`: 发送成功次数统计
 - `rxCount`: 接收次数统计
@@ -1483,13 +1479,6 @@ int main(void) {
         return -1;
     }
   
-    // 8. 启动TRM系统
-    ret = TRM_Start();
-    if (ret != TRM_OK) {
-        printf("TRM启动失败: %d\n", ret);
-        return -1;
-    }
-  
     printf("系统初始化完成\n");
     return 0;
 }
@@ -1499,7 +1488,7 @@ TRM_Stats stats;
 int ret = TRM_GetStats(&stats);
 if (ret == TRM_OK) {
     printf("TRM状态: %s\n", 
-           stats.state == TRM_STATE_RUNNING ? "运行中" : "未运行");
+           stats.state == TRM_STATE_INIT ? "已初始化" : "未初始化");
     printf("发送统计: %u/%u 成功\n", stats.txSuccessCount, stats.txCount);
     printf("接收统计: %u\n", stats.rxCount);
     printf("波束数量: %u\n", stats.beamCount);
@@ -1510,10 +1499,10 @@ if (ret == TRM_OK) {
 // 检查是否运行中
 TRM_Stats stats;
 TRM_GetStats(&stats);
-if (stats.state == TRM_STATE_RUNNING) {
-    printf("TRM正在运行\n");
+if (stats.state == TRM_STATE_INIT) {
+    printf("TRM已初始化，可用\n");
 } else {
-    printf("TRM未运行，状态: %d\n", stats.state);
+    printf("TRM未初始化，状态: %d\n", stats.state);
 }
 ```
 

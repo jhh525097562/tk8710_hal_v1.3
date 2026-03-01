@@ -119,10 +119,7 @@ void TRM_Deinit(void)
     
     TRM_LOG_INFO("开始清理TRM系统");
     
-    /* 停止 */
-    if (g_trmCtx.state == TRM_STATE_RUNNING) {
-        TRM_Stop();
-    }
+    /* TRM不直接控制Driver停止，由DriverManager控制 */
     
     /* 清理波束管理 */
     TRM_BeamDeinit();
@@ -136,31 +133,6 @@ void TRM_Deinit(void)
     TRM_LOG_INFO("TRM系统清理完成，状态: UNINIT");
 }
 
-int TRM_Start(void)
-{
-    if (g_trmCtx.state != TRM_STATE_INIT && 
-        g_trmCtx.state != TRM_STATE_STOPPED) {
-        TRM_LOG_ERROR("TRM启动失败: 状态错误，当前状态: %d", g_trmCtx.state);
-        return TRM_ERR_STATE;
-    }
-    
-    TRM_LOG_INFO("启动TRM系统");
-    
-    /* TRM不直接控制Driver启动，由DriverManager控制 */
-    g_trmCtx.state = TRM_STATE_RUNNING;
-    
-    TRM_LOG_INFO("TRM系统启动完成，状态: RUNNING");
-    return TRM_OK;
-}
-
-int TRM_Stop(void)
-{
-    if (g_trmCtx.state != TRM_STATE_RUNNING) {
-        TRM_LOG_ERROR("TRM停止失败: 状态错误，当前状态: %d", g_trmCtx.state);
-        return TRM_ERR_STATE;
-    }
-    
-    TRM_LOG_INFO("停止TRM系统");
     
     /* TRM不直接控制Driver停止，由DriverManager控制 */
     g_trmCtx.state = TRM_STATE_STOPPED;
