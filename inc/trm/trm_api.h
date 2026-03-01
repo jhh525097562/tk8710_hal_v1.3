@@ -204,24 +204,6 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
  */
 int TRM_GetStats(TRM_Stats* stats);
 
-/**
- * @brief 获取当前系统帧号
- * @return 当前帧号
- */
-uint32_t TRM_GetCurrentFrame(void);
-
-/**
- * @brief 设置当前系统帧号
- * @param frameNo 帧号
- */
-void TRM_SetCurrentFrame(uint32_t frameNo);
-
-/**
- * @brief 设置最大帧数
- * @param maxCount 最大帧数
- */
-void TRM_SetMaxFrameCount(uint32_t maxCount);
-
 /* =============================================================================
  * 回调函数管理API
  * ============================================================================= */

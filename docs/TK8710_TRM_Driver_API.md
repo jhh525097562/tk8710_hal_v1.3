@@ -875,9 +875,6 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_OnTxComplete`            | 发送完成回调函数类型        | 应用层     | 回调接口   |
 | **状态查询**              |                             |            |            |
 | `TRM_GetStats`                | 获取TRM统计信息             | 应用层     | 状态查询   |
-| `TRM_GetCurrentFrame`         | 获取当前帧号                | 应用层     | 状态查询   |
-| `TRM_SetCurrentFrame`         | 设置当前帧号                | 应用层     | 状态查询   |
-| `TRM_SetMaxFrameCount`        | 设置最大帧数                | 应用层     | 状态查询   |
 | **回调函数管理**          |                             |            |            |
 | `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层   | 回调管理   |
 | **日志系统**              |                             |            |            |
@@ -1202,42 +1199,6 @@ typedef struct {
 - `TRM_OK`: 获取成功
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 获取失败
-
-#### `TRM_GetCurrentFrame`
-
-```c
-uint32_t TRM_GetCurrentFrame(void);
-```
-
-**功能**: 获取当前帧号
-**返回值**: 当前帧号
-
-- 范围: 0 - g_trmMaxFrameCount-1
-
-#### `TRM_SetCurrentFrame`
-
-```c
-void TRM_SetCurrentFrame(uint32_t frameNo);
-```
-
-**功能**: 设置当前帧号
-**参数**:
-
-- `frameNo`: 帧号
-  - 范围: 0 - g_trmMaxFrameCount-1
-
-#### `TRM_SetMaxFrameCount`
-
-```c
-void TRM_SetMaxFrameCount(uint32_t maxCount);
-```
-
-**功能**: 设置最大帧数（超帧大小）
-**参数**:
-
-- `maxCount`: 最大帧数
-  - 范围: 1 - 10000
-  - 默认值: 1000
 
 ### 7. 回调函数管理
 
@@ -1623,7 +1584,7 @@ void RegisterDriverCallbacks(void) {
 ```c
 // 单速率模式发送(使用帧号匹配)
 uint8_t testData[] = {0x01, 0x02, 0x03};
-uint32_t currentFrame = TRM_GetCurrentFrame();
+uint32_t currentFrame = 0;  // 由Driver层提供帧号
 ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, testData, sizeof(testData), 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
 
 // 多速率模式发送(使用速率模式匹配)

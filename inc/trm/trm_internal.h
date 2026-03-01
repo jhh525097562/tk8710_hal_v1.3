@@ -192,6 +192,24 @@ int TRM_ClearTxData(uint32_t userId);
  * ============================================================================= */
 
 /**
+ * @brief 获取当前系统帧号
+ * @return 当前帧号
+ */
+uint32_t TRM_GetCurrentFrame(void);
+
+/**
+ * @brief 设置当前系统帧号
+ * @param frameNo 帧号
+ */
+void TRM_SetCurrentFrame(uint32_t frameNo);
+
+/**
+ * @brief 设置最大帧数
+ * @param maxCount 最大帧数
+ */
+void TRM_SetMaxFrameCount(uint32_t maxCount);
+
+/**
  * @brief 计算时隙配置 (内部函数)
  * @param input 输入参数
  * @param output 输出参数
