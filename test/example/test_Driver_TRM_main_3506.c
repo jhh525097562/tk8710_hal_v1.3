@@ -475,18 +475,10 @@ static void gpio_irq_wrapper(TK8710IrqResult irqResult)
  */
 int init_interrupt_system(void)
 {
-    int ret;
-    
     printf("Initializing interrupt system...\n");
     
-    /* GPIO中断已在TK8710Init中初始化，这里只需要使能中断 */
-    printf("GPIO interrupt already initialized in TK8710Init\n");
-    
-    /* 使能中断 */
-    ret = TK8710GpioIrqEnable(0, 1);
-    if (ret != TK8710_OK) {
-        printf("GPIO interrupt enable failed: %d\n", ret);
-    }
+    /* GPIO中断已在TK8710Init中完整初始化和使能 */
+    printf("GPIO interrupt already initialized and enabled in TK8710Init\n");
     
     printf("Interrupt system initialization completed\n");
     return TK8710_OK;

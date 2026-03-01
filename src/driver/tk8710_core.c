@@ -256,6 +256,9 @@ int TK8710Init(const ChipConfig* initConfig)
     extern void gpio_irq_wrapper(TK8710IrqResult irqResult);
     TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, gpio_irq_wrapper, NULL);
     
+    /* 使能GPIO中断 */
+    TK8710GpioIrqEnable(0, 1);
+    
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
     /* 注意：中断回调由TK8710IrqInit设置，这里不需要重复设置 */
