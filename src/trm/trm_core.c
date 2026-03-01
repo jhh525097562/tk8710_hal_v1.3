@@ -56,6 +56,9 @@ static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult);
 
 int TRM_Init(const TRM_InitConfig* config)
 {
+    /* 初始化默认TRM日志系统（如果尚未初始化） */
+    TRM_LogInit(TRM_LOG_INFO);
+    
     if (config == NULL) {
         TRM_LOG_ERROR("TRM初始化失败: 配置参数为空");
         return TRM_ERR_PARAM;
