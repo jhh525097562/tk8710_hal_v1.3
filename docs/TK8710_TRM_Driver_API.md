@@ -960,7 +960,7 @@ typedef struct {
 typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
 
 /* 发送完成回调 */
-typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+typedef void (*TRM_OnTxComplete)(const TRM_TxCompleteResult* txResult);
 ```
 
 **返回值**:
@@ -1137,34 +1137,51 @@ typedef struct {
 - `rxDataList->users` 包含所有接收到的用户数据
 - 处理完成后需要及时释放相关资源
 
-#### `TRM_OnTxComplete`(返回队列剩余资源)
+#### `TRM_OnTxComplete`(批量发送完成回调)
 
 ```c
-typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+typedef void (*TRM_OnTxComplete)(const TRM_TxCompleteResult* txResult);
 ```
 
 **功能**: 发送完成回调函数
 **参数**:
 
-- `userId`: 用户ID
-- `result`: 发送结果
+- `txResult`: 发送完成结果结构体指针
+
+```c
+/* 单个用户发送结果 */
+typedef struct {
+    uint32_t userId;         /* 用户ID */
+    TRM_TxResult result;     /* 发送结果 */
+} TRM_TxUserResult;
+
+/* 发送完成回调结果 */
+typedef struct {
+    uint32_t totalUsers;           /* 发送用户总数 */
+    uint32_t remainingQueue;        /* 剩余发送队列数量 */
+    uint32_t userCount;             /* 结果数组中的用户数量 */
+    const TRM_TxUserResult* users;  /* 用户结果数组指针 */
+} TRM_TxCompleteResult;
+```
 
 ```c
 typedef enum {
     TRM_TX_OK = 0,              /* 发送成功 */
-    TRM_TX_ERR_TIMEOUT,         /* 发送超时 */
-    TRM_TX_ERR_RETRY,           /* 发送重试 */
-    TRM_TX_ERR_PARAM,           /* 参数错误 */
-    TRM_TX_ERR_BUSY,            /* 发送忙 */
-    TRM_TX_ERR_FAIL,            /* 发送失败 */
+    TRM_TX_NO_BEAM,             /* 无波束信息 */
+    TRM_TX_TIMEOUT,             /* 发送超时 */
+    TRM_TX_ERROR,               /* 发送错误 */
 } TRM_TxResult;
 ```
 
 **说明**:
 
-- 当数据发送完成时调用，通知发送结果
-- `userId` 标识发送的用户
-- `result` 指示发送是否成功及失败原因
+- 当数据发送完成时调用，一次性通知所有用户的发送结果
+- `txResult->totalUsers` 表示本次发送的用户总数
+- `txResult->remainingQueue` 表示当前剩余的发送队列数量
+- `txResult->users` 数组包含每个用户的详细发送结果
+- `txResult->userCount` 表示结果数组中的实际用户数量
+- 相比单用户回调，批量回调减少了回调调用次数，提高性能
+- 上层应用可以根据队列状态进行流量控制
 
 ### 6. 状态查询
 
