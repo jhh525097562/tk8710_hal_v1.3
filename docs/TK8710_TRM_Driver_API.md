@@ -1124,17 +1124,7 @@ typedef enum {
 
 ### 6. 状态查询
 
-#### `TRM_IsRunning`
-
-```c
-int TRM_IsRunning(void);
-```
-
-**功能**: 检查TRM是否运行中
-**返回值**:
-
-- 1: 运行中
-- 0: 未运行
+TRM系统提供统一的状态查询接口，通过`TRM_GetStats`函数可以获取完整的系统状态和统计信息，包括运行状态、发送/接收统计、波束信息等。
 
 #### `TRM_GetStats`
 
