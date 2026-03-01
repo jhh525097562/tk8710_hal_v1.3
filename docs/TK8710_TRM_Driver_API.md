@@ -1087,14 +1087,12 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 
 ```c
 typedef struct {
-    uint8_t  azimuth;            /* 方位角 (度) */
-    uint8_t  elevation;          /* 仰角 (度) */
-    uint8_t  power;              /* 功率等级 */
-    uint8_t  width;              /* 波束宽度 */
-    uint16_t reserved;          /* 保留字段 */
-    uint64_t pilotPower;         /* Pilot功率 */
-    uint32_t timestamp;          /* 更新时间戳 */
-    uint8_t  valid;              /* 有效标志 */
+    uint32_t userId;            /* 用户ID */
+    uint32_t freq;              /* 频率 (26位格式) */
+    uint32_t ahData[16];        /* AH数据: 8天线×2(I/Q) */
+    uint64_t pilotPower;        /* Pilot功率 */
+    uint32_t timestamp;         /* 更新时间戳*/
+    uint8_t  valid;             /* 有效标志 */
 } TRM_BeamInfo;
 ```
 
@@ -1109,19 +1107,24 @@ typedef enum {
 
 **结构体成员详细说明**:
 
-- `azimuth`: 方位角 (度)
-  - 范围: 0 - 255
-- `elevation`: 仰角 (度)
-  - 范围: 0 - 255
-- `power`: 功率等级
-  - 范围: 0 - 255
-- `width`: 波束宽度
-  - 范围: 0 - 255
+- `userId`: 用户ID
+  - 范围: 0x00000000 - 0xFFFFFFFF
+  - 唯一标识用户的32位ID
+- `freq`: 频率 (26位格式)
+  - 26位格式的频率值
+  - 具体格式由硬件规范定义
+- `ahData[16]`: AH数据数组
+  - 8天线×2(I/Q)数据格式
+  - 共16个32位值，包含天线的I/Q数据
 - `pilotPower`: Pilot功率
+  - 导频信号的功率值
+  - 用于波束质量评估
 - `timestamp`: 更新时间戳
+  - 波束信息更新的时间戳
+  - 用于判断波束信息的时效性
 - `valid`: 有效标志
-  - 0: 无效
-  - 1: 有效
+  - 0: 波束信息无效
+  - 1: 波束信息有效
 
 **返回值**:
 - `TRM_OK`: 获取成功
@@ -1329,6 +1332,16 @@ typedef struct {
     int32_t  freq;              /* 频率 */
     TRM_BeamInfo beam;          /* 波束信息 */
 } TRM_RxUserData;
+```
+
+**TRM_RateMode枚举定义**:
+
+```c
+typedef enum {
+    TRM_RATE_2M = 0,            /* 2M速率模式 */
+    TRM_RATE_4M = 1,            /* 4M速率模式 */
+    TRM_RATE_8M = 2,            /* 8M速率模式 */
+} TRM_RateMode;
 ```
 
 **结构体成员详细说明**:
