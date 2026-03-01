@@ -635,7 +635,7 @@ if (ret != TK8710_OK) {
     return ret;
 }
 
-// 3. 日志系统初始化
+// 3. 日志系配置（可选）
 TK8710LogConfig(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 ```
 
@@ -831,7 +831,7 @@ ret = TK8710RfConfig(&rfConfig);
 | **回调函数管理**          |                             |            |            |
 | `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层   | 回调管理   |
 | **日志系统**              |                             |            |            |
-| `TRM_LogInit`                 | 初始化TRM日志系统           | 应用层     | 日志系统   |
+| `TRM_LogConfig`               | 配置TRM日志系统             | 应用层     | 日志系统   |
 |                                 |                             |            |            |
 | **调试接口**              |                             |            |            |
 | `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | Driver层   | 调试接口   |
@@ -1212,28 +1212,33 @@ int TRM_RegisterDriverCallbacks(void);
 
 ### 8. TRM日志系统
 
-#### `TRM_LogInit`
+#### `TRM_LogConfig`
 
 ```c
-void TRM_LogInit(TRMLogLevel level);
+int TRM_LogConfig(TRMLogLevel level);
 ```
 
-**功能**: 初始化TRM日志系统
+**功能**: 配置TRM日志系统
 **参数**:
 
 - `level`: 日志级别
   ```c
   typedef enum {
-      TRM_LOG_NONE = 0,    /* 无日志 */
-      TRM_LOG_ERROR = 1,   /* 错误 */
-      TRM_LOG_WARN = 2,    /* 警告 */
-      TRM_LOG_INFO = 3,    /* 信息 */
-      TRM_LOG_DEBUG = 4,   /* 调试 */
-      TRM_LOG_TRACE = 5    /* 跟踪 */
+      TRM_LOG_ERROR = 0,  /* 错误级别 */
+      TRM_LOG_WARN  = 1,  /* 警告级别 */
+      TRM_LOG_INFO  = 2,  /* 信息级别 */
+      TRM_LOG_DEBUG = 3,  /* 调试级别 */
+      TRM_LOG_TRACE = 4,  /* 跟踪级别 */
   } TRMLogLevel;
   ```
+  **返回值**: 0-成功, 1-失败
 
-**说明**: 初始化TRM独立日志系统，设置默认日志级别
+**说明**:
+
+- 配置TRM模块的日志输出级别
+- 自动启用时间戳、模块名和文件信息
+- 默认使用标准输出作为日志输出
+- 可以通过 `TRM_LogSetCallback` 设置自定义输出回调
 
 ### 9. TRM调试接口
 
@@ -1372,7 +1377,7 @@ int main(void) {
         return -1;
     }
   
-    // 4. 日志系统初始化
+    // 4. 日志系统初始化（可选）
     ret = TK8710LogConfig(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
     if (ret != TK8710_OK) {
         printf("日志系统初始化失败: %d\n", ret);

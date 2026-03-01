@@ -164,6 +164,26 @@ void TRM_LogInit(TRMLogLevel level)
 }
 
 /**
+ * @brief 配置TRM日志系统
+ * @param level 日志级别
+ * @return 0-成功, 1-失败
+ */
+int TRM_LogConfig(TRMLogLevel level)
+{
+    g_trmLogConfig.level = level;
+    g_trmLogConfig.enable_timestamp = 1;
+    g_trmLogConfig.enable_module_name = 1;
+    g_trmLogConfig.enable_file_info = 1;
+    g_trmLogCallback = NULL;
+    
+    TRM_LogOutput(TRM_LOG_INFO, "TRM", __FILE__, __LINE__, __func__, 
+                  "TRM日志系统配置完成 - 级别:%s", TRM_LogGetLevelName(level));
+    
+    return 0;
+}
+
+
+/**
  * @brief 设置TRM日志级别
  * @param level 日志级别
  */

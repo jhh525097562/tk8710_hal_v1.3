@@ -81,6 +81,7 @@ typedef void (*TRMLogCallback)(TRMLogLevel level, const char* tag,
 
 /* TRM日志系统初始化和控制函数 */
 void TRM_LogInit(TRMLogLevel level);
+int TRM_LogConfig(TRMLogLevel level);
 void TRM_LogSetLevel(TRMLogLevel level);
 void TRM_LogSetCallback(TRMLogCallback callback);
 void TRM_LogEnableTimestamp(uint8_t enable);
