@@ -11,6 +11,15 @@
 #include <string.h>
 #include <stddef.h>
 
+/* 默认GPIO中断包装函数 */
+static void default_gpio_irq_handler(TK8710IrqResult irqResult)
+{
+    (void)irqResult;  /* 默认处理不需要IRQ结果参数 */
+    
+    /* 调用Driver层中断处理函数 */
+    TK8710_IRQHandler();
+}
+
 /* 速率模式参数查找表 */
 static const RateModeParams g_rateModeParams[] = {
     /* mode, signalBwKHz, systemBwKHz(x10), maxUsers, maxPayloadLen */
@@ -253,8 +262,7 @@ int TK8710Init(const ChipConfig* initConfig)
     TK8710SpiInit(&defaultSpiConfig);
     
     /* 初始化默认GPIO中断 */
-    extern void gpio_irq_wrapper(TK8710IrqResult irqResult);
-    TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, gpio_irq_wrapper, NULL);
+    TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, default_gpio_irq_handler, NULL);
     
     /* 使能GPIO中断 */
     TK8710GpioIrqEnable(0, 1);
