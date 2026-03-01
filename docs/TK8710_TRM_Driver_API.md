@@ -2,7 +2,30 @@
 
 ## 概述
 
+TK8710 HAL层提供了完整的硬件抽象接口，由以下两个主要模块组成：
+
+- **Driver模块**: 提供底层硬件控制接口，包括芯片初始化、配置管理、数据传输、中断处理等
+- **TRM模块**: 提供传输资源管理接口，包括发送队列管理、波束管理、接收数据处理等
+
 本文档整理了TK8710 HAL层中TRM(Transmission Resource Management)模块和Driver模块的主要API接口，包括接口参数说明和使用方法。
+
+### API使用特点
+
+- **分层设计**: Driver API负责底层硬件操作，TRM API负责上层资源管理
+- **协同工作**: TRM模块内部调用Driver模块实现具体功能
+- **灵活组合**: 应用层可以直接使用Driver API，也可以通过TRM API简化开发
+- **回调机制**: 提供完整的事件回调系统，支持异步处理
+
+### 使用示例参考
+
+为了帮助开发者快速上手，HAL层提供了多个使用示例：
+
+- `test/example/basic_example.c`: 基础使用示例，展示基本的收发功能
+- `test/example/advanced_example.c`: 高级功能示例，展示日志、调试、统计等功能
+- `test/example/parallel_arch_example.c`: 并行架构示例，展示TRM和Driver的协同工作
+- `test/example/test_Driver_TRM_main_3506.c`: 完整测试程序，展示完整的初始化、配置、工作流程
+
+开发者可以根据实际需求参考相应的示例代码，快速集成TK8710 HAL功能。
 
 ---
 
@@ -1137,7 +1160,7 @@ typedef struct {
 - `rxDataList->users` 包含所有接收到的用户数据
 - 处理完成后需要及时释放相关资源
 
-#### `TRM_OnTxComplete`(批量发送完成回调)
+#### `TRM_OnTxComplete`
 
 ```c
 typedef void (*TRM_OnTxComplete)(const TRM_TxCompleteResult* txResult);
