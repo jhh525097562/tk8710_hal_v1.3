@@ -9,8 +9,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* 前向声明 */
-typedef struct SpiConfig SpiConfig;
+/* SPI 配置结构体 */
+typedef struct {
+    uint32_t speed;         /* SPI时钟频率 */
+    uint8_t  mode;          /* SPI模式 (0-3) */
+    uint8_t  bits;          /* 数据位宽 */
+    uint8_t  lsb_first;     /* 0=MSB优先, 1=LSB优先 */
+    uint8_t  cs_pin;        /* CS引脚号 */
+} SpiConfig;
 
 #ifdef __cplusplus
 extern "C" {
