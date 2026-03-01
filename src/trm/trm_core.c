@@ -110,11 +110,11 @@ int TRM_Init(const TRM_InitConfig* config)
     return TRM_OK;
 }
 
-void TRM_Deinit(void)
+int TRM_Deinit(void)
 {
     if (g_trmCtx.state == TRM_STATE_UNINIT) {
         TRM_LOG_WARN("TRM未初始化，无需清理");
-        return;
+        return TRM_OK;
     }
     
     TRM_LOG_INFO("开始清理TRM系统");
@@ -131,13 +131,7 @@ void TRM_Deinit(void)
     
     g_trmCtx.state = TRM_STATE_UNINIT;
     TRM_LOG_INFO("TRM系统清理完成，状态: UNINIT");
-}
-
     
-    /* TRM不直接控制Driver停止，由DriverManager控制 */
-    g_trmCtx.state = TRM_STATE_STOPPED;
-    
-    TRM_LOG_INFO("TRM系统停止完成，状态: STOPPED");
     return TRM_OK;
 }
 
