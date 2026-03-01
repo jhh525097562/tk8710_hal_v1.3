@@ -77,12 +77,13 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     printf("==================\n\n");
 }
 
-static void OnTxComplete(uint32_t userId, TRM_TxResult result)
+static void OnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
 {
     const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
     printf("=== 发送完成事件 ===\n");
-    printf("用户ID: 0x%08X, 结果: %s\n", userId, resultStr[result]);
-    
+    printf("用户ID: 0x%08X, 结果: %s, 剩余队列: %u\n", userId, resultStr[result], remainingQueue);
+    printf("==================\n");
+
     /* 更新用户发送统计 */
     for (int i = 0; i < MAX_TEST_USERS; i++) {
         if (g_testUsers[i].userId == userId) {

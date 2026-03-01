@@ -123,8 +123,9 @@ typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
  * @brief 发送完成回调函数类型
  * @param userId 用户ID
  * @param result 发送结果
+ * @param remainingQueue 剩余发送队列数量
  */
-typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result);
+typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue);
 
 /* 初始化配置 */
 typedef struct {

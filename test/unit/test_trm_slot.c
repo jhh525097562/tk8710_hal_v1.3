@@ -28,9 +28,10 @@ static void TestOnRxData(const TRM_RxDataList* rxDataList)
 }
 
 
-static void TestOnTxComplete(uint32_t userId, TRM_TxResult result)
+static void TestOnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
 {
     (void)userId;
+    (void)remainingQueue;
     g_lastTxResult = result;
     g_txCompleteCount++;
 }

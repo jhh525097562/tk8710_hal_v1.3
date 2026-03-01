@@ -492,7 +492,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
         TrmContext* ctx = TRM_GetContext();
         if (ctx && ctx->config.callbacks.onTxComplete) {
             for (uint32_t i = 0; i < resultCount; i++) {
-                ctx->config.callbacks.onTxComplete(txResults[i], txResultTypes[i]);
+                ctx->config.callbacks.onTxComplete(txResults[i], txResultTypes[i], g_txQueue.count);
             }
             TRM_LOG_DEBUG("TRM: Called %u TxComplete callbacks, remaining queue count: %u", 
                          resultCount, g_txQueue.count);

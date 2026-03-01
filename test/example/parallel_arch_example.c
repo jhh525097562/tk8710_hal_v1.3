@@ -30,11 +30,11 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void OnTxComplete(uint32_t userId, TRM_TxResult result)
+static void OnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
 {
     const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
-    printf("TRM Tx complete: userId=0x%08X, result=%s\n",
-           userId, resultStr[result]);
+    printf("TRM Tx complete: userId=0x%08X, result=%s, remainingQueue=%u\n", 
+           userId, resultStr[result], remainingQueue);
 }
 
 /*==============================================================================
