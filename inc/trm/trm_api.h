@@ -190,30 +190,6 @@ void TRM_Deinit(void);
 int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 
 /**
- * @brief 发送用户数据（缓存到发送队列）
- * @param userId 用户ID
- * @param data 发送数据指针
- * @param len 数据长度 (最大512字节)
- * @param txPower 发送功率 (0-31)
- * @param frameNo 目标帧号
- * @param targetRateMode 目标速率模式
- * @param dataType 数据类型 (TK8710_USER_DATA_TYPE_NORMAL 或 TK8710_USER_DATA_TYPE_SLOT3)
- * @return TRM_OK成功，其他失败
- */
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
-
-/**
- * @brief 发送广播数据
- * @param brdIndex 广播索引 (0-15)
- * @param data 发送数据指针
- * @param len 数据长度 (最大260字节)
- * @param txPower 发送功率 (0-31)
- * @param dataType 数据类型 (TK8710_BRD_DATA_TYPE_NORMAL 或 TK8710_BRD_DATA_TYPE_SLOT3)
- * @return TRM_OK成功，其他失败
- */
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
-
-/**
  * @brief 清除发送数据
  * @param userId 用户ID，0xFFFFFFFF表示清除所有
  * @return TRM_OK成功，其他失败
