@@ -1257,25 +1257,18 @@ int main(int argc, char* argv[])
     signal(SIGTERM, signal_handler);
 #endif
     
-    /* 1. 初始化日志系统 */
-    printf("Initializing log system...\n");
-    TK8710LogConfig(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
-    
-    /* 2. 初始化中断系统 */
-    ret = init_interrupt_system();
-    if (ret != TK8710_OK) {
-        printf("Interrupt system initialization failed\n");
-        return -1;
-    }
-    
-    /* 3. 初始化8710芯片 */
+    /* 1. 初始化8710芯片 */
     ret = init_tk8710_chip();
     if (ret != TK8710_OK) {
         printf("TK8710 chip initialization failed\n");
         return -1;
     }
 
-    /* 4. 配置时隙参数 (TK8710_CFG_TYPE_SLOT_CFG) */
+    /* 2. 初始化日志系统 */
+    printf("Initializing log system...\n");
+    TK8710LogConfig(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
+
+    /* 3. 配置时隙参数 (TK8710_CFG_TYPE_SLOT_CFG) */
     if (use_multi_rate) {
         /* 多速率配置示例：使用4种不同的速率模式 */
         uint8_t rateModes[] = {
