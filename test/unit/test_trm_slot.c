@@ -382,7 +382,7 @@ int main(void)
     printf("=================================\n");
     
     /* 初始化日?*/
-    TK8710LogSimpleInit(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
+    TK8710LogSimpleConfig(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
     
     /* TRM初始化测?*/
     TEST_SUITE_BEGIN("TRM Init Tests");

@@ -426,7 +426,7 @@ int main(void)
     printf("===================================\n");
     
     /* 初始化日�?*/
-    TK8710LogSimpleInit(TK8710_LOG_ERROR, TK8710_LOG_MODULE_ALL);
+    TK8710LogSimpleConfig(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
     
     /* 边界条件测试 - 波束管理 */
     TEST_SUITE_BEGIN("Beam Boundary Tests");

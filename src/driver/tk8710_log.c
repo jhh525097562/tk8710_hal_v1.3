@@ -227,7 +227,7 @@ const char* TK8710LogGetLevelName(TK8710LogLevel level)
  * @param module_mask 模块掩码
  * @return 0-成功, 1-失败
  */
-int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask)
+int TK8710LogSimpleConfig(TK8710LogLevel level, uint32_t module_mask)
 {
     TK8710LogConfig config = {
         .level = level,

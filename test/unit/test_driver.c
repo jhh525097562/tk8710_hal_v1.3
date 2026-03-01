@@ -176,7 +176,7 @@ TEST_CASE(debug_force_max_tx)
 
 TEST_CASE(log_init)
 {
-    int ret = TK8710LogSimpleInit(TK8710_LOG_DEBUG, TK8710_LOG_MODULE_ALL);
+    int ret = TK8710LogSimpleConfig(TK8710_LOG_LEVEL_DEBUG, TK8710_LOG_MODULE_ALL);
     TEST_ASSERT_EQ(ret, 0, "Log init should succeed");
     TEST_ASSERT_EQ(TK8710LogGetLevel(), TK8710_LOG_DEBUG, "Log level should be DEBUG");
     TEST_ASSERT_EQ(TK8710LogGetModuleMask(), TK8710_LOG_MODULE_ALL, "Module mask should be ALL");
@@ -210,7 +210,7 @@ int main(void)
     printf("============================\n");
     
     /* 初始化日�?*/
-    TK8710LogSimpleInit(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
+    TK8710LogSimpleConfig(TK8710_LOG_WARN, TK8710_LOG_MODULE_ALL);
     
     /* Driver初始化测�?*/
     TEST_SUITE_BEGIN("Driver Init Tests");

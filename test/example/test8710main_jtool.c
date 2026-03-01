@@ -553,7 +553,7 @@ int start_work(void)
     printf("Starting TK8710 work...\n");
     
     /* 启动主模式连续工作 */
-    ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_MODE_MASTER | TK8710_WORK_TYPE_CONTINUOUS);
     if (ret != TK8710_OK) {
         printf("Start work failed: %d\n", ret);
         return ret;
@@ -710,7 +710,7 @@ int main(int argc, char* argv[])
     
     /* 1. 初始化日志系统 */
     printf("Initializing log system...\n");
-    TK8710LogSimpleInit(TK8710_LOG_ERROR, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE
+    TK8710LogSimpleConfig(TK8710_LOG_ERROR, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE
     
     /* 2. 初始化中断系统 */
     ret = init_interrupt_system();
@@ -851,7 +851,6 @@ int main(int argc, char* argv[])
     printf("Cleaning up resources...\n");
     
     /* 打印最终的中断时间统计报告 */
-    TK8710LogSimpleInit(TK8710_LOG_INFO, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE
     printf("\n=== 最终中断处理时间统计报告 ===\n");
     TK8710PrintIrqTimeStats();
     
