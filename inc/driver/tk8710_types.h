@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "../port/tk8710_hal.h"
 
 #ifdef __cplusplus
 extern "C" {
