@@ -879,7 +879,6 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层   | 回调管理   |
 | **日志系统**              |                             |            |            |
 | `TRM_LogInit`                 | 初始化TRM日志系统           | 应用层     | 日志系统   |
-| `TRM_LogSetLevel`             | 设置TRM日志级别             | 应用层     | 日志系统   |
 |                                 |                             |            |            |
 | **调试接口**              |                             |            |            |
 | `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | Driver层   | 调试接口   |
@@ -1211,18 +1210,6 @@ void TRM_LogInit(TRMLogLevel level);
   ```
 
 **说明**: 初始化TRM独立日志系统，设置默认日志级别
-
-#### `TRM_LogSetLevel`
-
-```c
-void TRM_LogSetLevel(TRMLogLevel level);
-```
-
-**功能**: 设置TRM日志级别
-**参数**:
-
-- `level`: 日志级别 (同TRM_LogInit)
-  **说明**: 动态调整日志输出级别，只有等于或低于此级别的日志才会输出
 
 ### 9. TRM调试接口
 
