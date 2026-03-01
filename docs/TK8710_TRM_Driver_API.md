@@ -869,8 +869,8 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_Stop`                    | 停止TRM系统            | 应用层     | 初始化控制 |
 | `TRM_Deinit`                  | 清理TRM系统资源        | 应用层     | 初始化控制 |
 | **数据发送**              |                        |            |            |
-| `TRM_SendData`                | 发送用户数据           | 应用层     | 数据发送   |
-| `TRM_SendBroadcast`           | 发送广播数据           | 应用层     | 数据发送   |
+| `TRM_SetTxUserData`          | 统一发送数据接口(广播/用户) | TRM层      | 数据发送   |
+| `TRM_ClearTxData`             | 清除发送数据            | TRM层      | 数据发送   |
 | **波束获取**              |                        |            |            |
 | `TRM_GetBeamInfo`             | 获取用户波束信息       | 应用层     | 波束获取   |
 | **回调接口**              |                        |            |            |
@@ -1062,76 +1062,6 @@ int ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, 0, brdData, sizeof(brdData), 20, 
 // 发送用户数据
 ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, userData, sizeof(userData), 25, frameNo, 0, TK8710_DATA_TYPE_DED);
 ```
-
-#### `TRM_SendData`
-
-```c
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
-```
-
-**功能**: 发送用户数据(支持单速率和多速率模式)
-**参数**:
-
-- `userId`: 用户ID，32位唯一标识符
-  - 范围: 0x00000000 - 0xFFFFFFFF
-  - 0xFFFFFFFF: 保留值，用于特殊操作
-- `data`: 数据指针，指向要发送的数据缓冲区
-  - 不能为NULL
-  - 数据长度不超过512字节
-- `len`: 数据长度，字节数
-  - 范围: 1 - 512
-  - 必须小于等于实际数据缓冲区大小
-- `txPower`: 发射功率
-  - 范围: 0 - 31
-  - 0: 最小功率
-  - 31: 最大功率
-- `frameNo`: 目标发送帧号
-  - 范围: 0 - g_trmMaxFrameCount-1
-  - 当targetRateMode=0时使用此参数进行帧号匹配
-- `targetRateMode`: 目标速率模式
-  - 0: 使用帧号匹配模式
-  - 5-11: 使用速率模式匹配(对应不同速率)
-  - 18: 使用速率模式匹配(特殊速率)
-- `dataType`: 数据类型
-  - `TK8710_USER_DATA_TYPE_NORMAL`: 正常用户数据
-  - `TK8710_USER_DATA_TYPE_SLOT3`: 与Slot3共用数据
-    **返回值**:
-- `TRM_OK`: 发送成功(数据已入队)
-- `TRM_ERR_PARAM`: 参数错误
-- `TRM_ERR_QUEUE_FULL`: 发送队列已满
-- `TRM_ERR_NOT_INIT`: TRM未初始化
-- 其他: 发送失败
-
-#### `TRM_SendBroadcast`
-
-```c
-int TRM_SendBroadcast(uint8_t brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint8_t dataType);
-```
-
-**功能**: 发送广播数据
-**参数**:
-
-- `brdIndex`: 广播索引
-  - 范围: 0 - 15
-  - 对应不同的广播用户
-- `data`: 数据指针，指向要发送的广播数据缓冲区
-  - 不能为NULL
-  - 数据长度不超过512字节
-- `len`: 数据长度，字节数
-  - 范围: 1 - 512
-  - 必须小于等于实际数据缓冲区大小
-- `txPower`: 发射功率
-  - 范围: 0 - 31
-  - 0: 最小功率
-  - 31: 最大功率
-- `dataType`: 数据类型
-  - `TK8710_BRD_DATA_TYPE_NORMAL`: 正常广播数据
-  - `TK8710_BRD_DATA_TYPE_SLOT3`: 与Slot3共用波束信息
-    **返回值**:
-- `TRM_OK`: 发送成功
-- `TRM_ERR_PARAM`: 参数错误
-- `TRM_ERR_NOT_INIT`: TRM未初始化
-- 其他: 发送失败
 
 #### `TRM_ClearTxData`
 
@@ -1722,10 +1652,10 @@ void RegisterDriverCallbacks(void) {
 // 单速率模式发送(使用帧号匹配)
 uint8_t testData[] = {0x01, 0x02, 0x03};
 uint32_t currentFrame = TRM_GetCurrentFrame();
-ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, 0);
+ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, testData, sizeof(testData), 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
 
 // 多速率模式发送(使用速率模式匹配)
-ret = TRM_SendData(0x12345678, testData, sizeof(testData), 20, currentFrame + 1, TK8710_RATE_MODE_5);
+ret = TRM_SetTxUserData(TK8710_DOWNLINK_2, 0x12345678, testData, sizeof(testData), 20, currentFrame + 1, TK8710_RATE_MODE_5, TK8710_DATA_TYPE_DED);
 ```
 
 ### Driver配置管理示例
@@ -1875,7 +1805,7 @@ if (ret == 0) {
 
 1. **初始化顺序**: 必须先初始化Driver，再初始化TRM
 2. **中断处理**: TRM的中断回调需要注册到Driver
-3. **多速率支持**: 使用 `TRM_SendData`进行多速率发送
+3. **多速率支持**: 使用 `TRM_SetTxUserData`进行多速率发送
 4. **资源管理**: 及时释放接收数据Buffer，避免内存泄漏
 5. **错误处理**: 所有API调用都需要检查返回值
 6. **线程安全**: 在多线程环境下需要注意临界区保护
