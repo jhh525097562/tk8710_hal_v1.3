@@ -253,7 +253,8 @@ int TK8710Init(const ChipConfig* initConfig)
     TK8710SpiInit(&defaultSpiConfig);
     
     /* 初始化默认GPIO中断 */
-    TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, NULL, NULL);
+    extern void gpio_irq_wrapper(TK8710IrqResult irqResult);
+    TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, gpio_irq_wrapper, NULL);
     
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
