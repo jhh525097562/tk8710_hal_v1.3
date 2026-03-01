@@ -41,11 +41,13 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void OnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
+static void OnTxComplete(const TRM_TxCompleteResult* txResult)
 {
-    g_txCount++;
-    LOG_TRM_INFO("TX: userId=0x%08X, result=%s, remainingQueue=%u", 
-                  userId, result == TRM_TX_OK ? "OK" : "FAILED", remainingQueue);
+    if (!txResult) return;
+    
+    g_txCount += txResult->userCount;
+    LOG_TRM_INFO("TX: totalUsers=%u, remainingQueue=%u", 
+                  txResult->totalUsers, txResult->remainingQueue);
 }
 
 /*==============================================================================

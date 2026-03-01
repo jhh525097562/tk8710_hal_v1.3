@@ -28,11 +28,14 @@ static void TestOnRxData(const TRM_RxDataList* rxDataList)
 }
 
 
-static void TestOnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
+static void TestOnTxComplete(const TRM_TxCompleteResult* txResult)
 {
-    (void)userId;
-    (void)remainingQueue;
-    g_lastTxResult = result;
+    if (!txResult) return;
+    
+    /* 只记录最后一个用户的结果用于测试 */
+    if (txResult->userCount > 0) {
+        g_lastTxResult = txResult->users[txResult->userCount - 1].result;
+    }
     g_txCompleteCount++;
 }
 

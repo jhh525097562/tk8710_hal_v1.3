@@ -96,7 +96,7 @@ void app_irq_handler(TK8710IrqResult irqResult);
 
 /* TRM回调函数声明 */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList);
-static void OnTrmTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue);
+static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult);
 
 /*============================================================================
  * 自动下行发送测试函数
@@ -295,20 +295,24 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
 
 /**
  * @brief TRM发送完成回调
- * @param userId 用户ID
- * @param result 发送结果
- * @param remainingQueue 剩余队列数量
+ * @param txResult 发送完成结果
  */
-static void OnTrmTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
+static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult)
 {
-    if (!g_trmEnabled) return;
+    if (!g_trmEnabled || !txResult) return;
     
-    const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
     printf("=== TRM发送完成事件 ===\n");
-    printf("用户ID: 0x%08X, 结果: %s, 剩余队列: %u\n", userId, resultStr[result], remainingQueue);
+    printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
     
-    if (result == TRM_TX_OK) {
-        g_trmSendCount++;
+    /* 打印每个用户的发送结果 */
+    const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
+    for (uint32_t i = 0; i < txResult->userCount; i++) {
+        const TRM_TxUserResult* userResult = &txResult->users[i];
+        printf("  用户ID: 0x%08X, 结果: %s\n", userResult->userId, resultStr[userResult->result]);
+        
+        if (userResult->result == TRM_TX_OK) {
+            g_trmSendCount++;
+        }
     }
     printf("==================\n");
 }

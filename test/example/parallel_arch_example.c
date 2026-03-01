@@ -30,11 +30,20 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     }
 }
 
-static void OnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
+static void OnTxComplete(const TRM_TxCompleteResult* txResult)
 {
+    if (!txResult) return;
+    
     const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
-    printf("TRM Tx complete: userId=0x%08X, result=%s, remainingQueue=%u\n", 
-           userId, resultStr[result], remainingQueue);
+    printf("TRM Tx complete: totalUsers=%u, remainingQueue=%u\n", 
+           txResult->totalUsers, txResult->remainingQueue);
+    
+    /* 打印每个用户的结果 */
+    for (uint32_t i = 0; i < txResult->userCount; i++) {
+        const TRM_TxUserResult* userResult = &txResult->users[i];
+        printf("  User[%u]: userId=0x%08X, result=%s\n", 
+               i, userResult->userId, resultStr[userResult->result]);
+    }
 }
 
 /*==============================================================================

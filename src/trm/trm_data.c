@@ -303,8 +303,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     uint8_t sentCount = 0;
     uint32_t successCount = 0;    /* 成功发送的用户数 */
     uint32_t failedCount = 0;     /* 发送失败的用户数 */
-    uint32_t txResults[TX_QUEUE_SIZE]; /* 存储发送结果的用户ID */
-    TRM_TxResult txResultTypes[TX_QUEUE_SIZE]; /* 存储发送结果类型 */
+    TRM_TxUserResult txResults[TX_QUEUE_SIZE]; /* 存储发送结果 */
     uint32_t resultCount = 0;     /* 结果统计数量 */
     
     /* 首先处理波束RAM延时释放 */
@@ -435,8 +434,8 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                             
                             /* 记录发送成功结果 */
                             if (resultCount < TX_QUEUE_SIZE) {
-                                txResults[resultCount] = item->userId;
-                                txResultTypes[resultCount] = TRM_TX_OK;
+                                txResults[resultCount].userId = item->userId;
+                                txResults[resultCount].result = TRM_TX_OK;
                                 resultCount++;
                             }
                             
@@ -458,8 +457,8 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                     
                     /* 记录发送失败结果 */
                     if (resultCount < TX_QUEUE_SIZE) {
-                        txResults[resultCount] = item->userId;
-                        txResultTypes[resultCount] = TRM_TX_NO_BEAM;
+                        txResults[resultCount].userId = item->userId;
+                        txResults[resultCount].result = TRM_TX_NO_BEAM;
                         resultCount++;
                     }
                 }
@@ -491,10 +490,16 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     if (resultCount > 0) {
         TrmContext* ctx = TRM_GetContext();
         if (ctx && ctx->config.callbacks.onTxComplete) {
-            for (uint32_t i = 0; i < resultCount; i++) {
-                ctx->config.callbacks.onTxComplete(txResults[i], txResultTypes[i], g_txQueue.count);
-            }
-            TRM_LOG_DEBUG("TRM: Called %u TxComplete callbacks, remaining queue count: %u", 
+            /* 构建发送结果结构体 */
+            TRM_TxCompleteResult txResult;
+            txResult.totalUsers = resultCount;
+            txResult.remainingQueue = g_txQueue.count;
+            txResult.userCount = resultCount;
+            txResult.users = txResults;  /* 直接使用结果数组 */
+            
+            /* 一次性调用回调，传递所有结果 */
+            ctx->config.callbacks.onTxComplete(&txResult);
+            TRM_LOG_DEBUG("TRM: Called TxComplete callback with %u users, remaining queue count: %u", 
                          resultCount, g_txQueue.count);
         }
     }

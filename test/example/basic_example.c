@@ -77,23 +77,30 @@ static void OnRxData(const TRM_RxDataList* rxDataList)
     printf("==================\n\n");
 }
 
-static void OnTxComplete(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue)
+static void OnTxComplete(const TRM_TxCompleteResult* txResult)
 {
+    if (!txResult) return;
+    
     const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
     printf("=== 发送完成事件 ===\n");
-    printf("用户ID: 0x%08X, 结果: %s, 剩余队列: %u\n", userId, resultStr[result], remainingQueue);
-    printf("==================\n");
-
-    /* 更新用户发送统计 */
-    for (int i = 0; i < MAX_TEST_USERS; i++) {
-        if (g_testUsers[i].userId == userId) {
-            if (result == TRM_TX_OK) {
-                g_testUsers[i].sendCount++;
-                printf("  ✓ 发送成功，累计发送: %u\n", g_testUsers[i].sendCount);
-            } else {
-                printf("  ✗ 发送失败，错误: %s\n", resultStr[result]);
+    printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
+    
+    /* 处理每个用户的发送结果 */
+    for (uint32_t i = 0; i < txResult->userCount; i++) {
+        const TRM_TxUserResult* userResult = &txResult->users[i];
+        printf("  用户ID: 0x%08X, 结果: %s\n", userResult->userId, resultStr[userResult->result]);
+        
+        /* 更新用户发送统计 */
+        for (int j = 0; j < MAX_TEST_USERS; j++) {
+            if (g_testUsers[j].userId == userResult->userId) {
+                if (userResult->result == TRM_TX_OK) {
+                    g_testUsers[j].sendCount++;
+                    printf("    ✓ 发送成功，累计发送: %u\n", g_testUsers[j].sendCount);
+                } else {
+                    printf("    ✗ 发送失败，错误: %s\n", resultStr[userResult->result]);
+                }
+                break;
             }
-            break;
         }
     }
     printf("==================\n\n");

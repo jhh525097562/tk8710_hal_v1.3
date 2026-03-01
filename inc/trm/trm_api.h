@@ -119,13 +119,25 @@ typedef struct {
  */
 typedef void (*TRM_OnRxData)(const TRM_RxDataList* rxDataList);
 
+/* 单个用户发送结果 */
+typedef struct {
+    uint32_t userId;         /* 用户ID */
+    TRM_TxResult result;     /* 发送结果 */
+} TRM_TxUserResult;
+
+/* 发送完成回调结果 */
+typedef struct {
+    uint32_t totalUsers;           /* 发送用户总数 */
+    uint32_t remainingQueue;        /* 剩余发送队列数量 */
+    uint32_t userCount;             /* 结果数组中的用户数量 */
+    const TRM_TxUserResult* users;  /* 用户结果数组指针 */
+} TRM_TxCompleteResult;
+
 /**
  * @brief 发送完成回调函数类型
- * @param userId 用户ID
- * @param result 发送结果
- * @param remainingQueue 剩余发送队列数量
+ * @param txResult 发送完成结果
  */
-typedef void (*TRM_OnTxComplete)(uint32_t userId, TRM_TxResult result, uint32_t remainingQueue);
+typedef void (*TRM_OnTxComplete)(const TRM_TxCompleteResult* txResult);
 
 /* 初始化配置 */
 typedef struct {
