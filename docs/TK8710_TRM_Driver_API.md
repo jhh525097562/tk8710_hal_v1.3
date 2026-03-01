@@ -487,10 +487,10 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
 
 ### 8. 日志系统
 
-#### `TK8710LogSimpleInit`（config）
+#### `TK8710LogConfig`（config）
 
 ```c
-int TK8710LogSimpleInit(TK8710LogLevel level, uint32_t module_mask);
+int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask);
 ```
 
 **功能**: 简化初始化日志系统
@@ -682,7 +682,7 @@ if (ret != TK8710_OK) {
 }
 
 // 3. 日志系统初始化
-TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
+TK8710LogConfig(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 ```
 
 #### 10.3 注册Driver回调
@@ -841,7 +841,7 @@ ret = TK8710RfConfig(&rfConfig);
 **7个主要步骤**：
 
 1. **GPIO中断初始化配置** - `TK8710GpioInit()`, `TK8710GpioIrqEnable()`
-2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogSimpleInit()`
+2. **TK8710初始化与日志系统** - `TK8710Init()`, `TK8710RfConfig()`, `TK8710LogConfig()`
 3. **注册Driver回调** - `TK8710RegisterCallbacks()`
 4. **TK8710配置与启动工作** - `TK8710GetSlotCfg()`, `TK8710SetConfig()`, `TK8710GetConfig()`, `TK8710Start()`
 5. **数据接收操作** - `TK8710GetRxUserData()`, `TK8710GetRxUserSignalQuality()`, `TK8710GetRxUserInfo()`, `TK8710ReleaseRxData()`
@@ -1493,7 +1493,7 @@ int main(void) {
     }
   
     // 4. 日志系统初始化
-    ret = TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
+    ret = TK8710LogConfig(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
     if (ret != TK8710_OK) {
         printf("日志系统初始化失败: %d\n", ret);
         return -1;
@@ -1753,7 +1753,7 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
 
 ```c
 // 1. 初始化日志系统
-TK8710LogSimpleInit(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
+TK8710LogConfig(TK8710_LOG_INFO, TK8710_LOG_MODULE_ALL);
 
 // 2. 使用日志宏输出日志
 TK8710_LOG_CORE_ERROR("系统初始化失败: %d", ret);
@@ -1825,7 +1825,7 @@ if (ret == 0) {
 5. **错误处理**: 所有API调用都需要检查返回值
 6. **线程安全**: 在多线程环境下需要注意临界区保护
 7. **日志系统**:
-   - 使用 `TK8710LogSimpleInit`快速初始化日志系统
+   - 使用 `TK8710LogConfig`快速初始化日志系统
    - 生产环境建议设置为INFO或WARN级别以减少性能影响
    - 日志系统支持模块化输出，便于调试和问题定位
    - 日志宏在编译时会根据级别和模块掩码进行优化，无效日志不会产生性能开销
