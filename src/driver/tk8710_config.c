@@ -14,8 +14,62 @@
  * 全局变量 (保存配置状态)
  *============================================================================*/
 
-/* 时隙配置全局变量 */
-static slotCfg_t g_slotCfg = {0};
+/* 时隙配置全局变量 - 默认配置参考test_Driver_TRM_main_3506.c */
+static slotCfg_t g_slotCfg = {
+    /* 基本参数 */
+    .msMode = TK8710_MODE_MASTER,        /* 主模式 */
+    .plCrcEn = 0,                         /* 使能CRC校验 */
+    .rateCount = 1,                       /* 速率个数，设置为1个速率模式 */
+    .rateModes = {TK8710_RATE_MODE_8},    /* 第一个速率模式 */
+    .brdUserNum = 1,                      /* 广播用户数 */
+    .antEn = 0xFF,                        /* 使能所有天线 */
+    .rfSel = 0xFF,                        /* 选择所有RF */
+    .txAutoMode = 1,                      /* 自动发送模式 */
+    .txBcnEn = 0x7f,                      /* 使能BCN发送 */
+    
+    /* BCN轮流发送配置 */
+    .bcnRotation = {0, 1, 2, 3, 4, 5, 6, 7},  /* 轮流使用所有天线 */
+    
+    /* 广播频率 */
+    .brdFreq = {20000.0},                 /* 广播用户0频率: 503.1 MHz */
+    
+    /* 时隙参数 */
+    .rx_delay = 0,                        /* RX delay */
+    .md_agc = 1024,                       /* DATA AGC长度 */
+    
+    /* 时隙DAC参数 */
+    .s0Cfg = {
+        {
+            .da_m = 0,                    /* S0 (BCN) da0_m */
+            .byteLen = 0,                 /* S0 (BCN) 时隙长度 */
+            .centerFreq = 503100000       /* S0中心频点 */
+        }
+    },
+    .s1Cfg = {
+        {
+            .da_m = 5600,                 /* S1 (FDL) da1_m - RATE_MODE_8 */
+            .byteLen = 26,                /* S1 (FDL) 时隙长度 */
+            .centerFreq = 503100000       /* S1中心频点 */
+        }
+    },
+    .s2Cfg = {
+        {
+            .da_m = 5600,                 /* S2 (ADL) da2_m - RATE_MODE_8 */
+            .byteLen = 26,                /* S2 (ADL) 时隙长度 */
+            .centerFreq = 503100000       /* S2中心频点 */
+        }
+    },
+    .s3Cfg = {
+        {
+            .da_m = 5600,                 /* S3 (UL) da3_m - RATE_MODE_8 */
+            .byteLen = 26,                /* S3 (UL) 时隙长度 */
+            .centerFreq = 503100000       /* S3中心频点 */
+        }
+    },
+    
+    /* 帧时间长度 (由硬件自动计算) */
+    .frameTimeLen = 0
+};
 
 /* ACM校准增益 */
 static uint16_t g_acm_dgain0[16] = {16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,0};
