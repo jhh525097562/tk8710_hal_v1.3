@@ -129,18 +129,16 @@ void TRM_ProcessBeamRamReleases(void)
     static uint32_t lastReportFrame = 0;
     uint32_t processedCount = 0;
     
-    /* 遍历整个队列，检查所有用户的释放状态 */
+    /* 遍历所有队列项目，检查是否到达释放时间 */
     uint32_t head = g_beamReleaseQueue.head;
     uint32_t count = 0;
-    uint32_t itemsToRemove = 0;
     
     while (count < g_beamReleaseQueue.count) {
         uint32_t index = (head + count) % BEAM_RELEASE_QUEUE_SIZE;
         BeamReleaseItem* item = &g_beamReleaseQueue.items[index];
         
         if (!item->valid) {
-            /* 无效项，标记为需要移除 */
-            itemsToRemove++;
+            /* 无效项，直接跳过 */
             count++;
             continue;
         }
@@ -153,37 +151,26 @@ void TRM_ProcessBeamRamReleases(void)
             /* 调用波束信息清理函数 */
             TRM_ClearBeamInfo(item->userId);
             
-            /* 标记为已处理 */
+            /* 标记为无效，但不移动head指针，在最后统一清理 */
             item->valid = 0;
-            itemsToRemove++;
             processedCount++;
         }
+        
         count++;
     }
     
-    /* 移除已处理的项 */
-    if (itemsToRemove > 0) {
-        /* 重新整理队列，移除无效项 */
-        uint32_t newHead = head;
-        uint32_t newCount = 0;
+    /* 清理无效项，移动head指针 */
+    while (g_beamReleaseQueue.count > 0) {
+        BeamReleaseItem* headItem = &g_beamReleaseQueue.items[g_beamReleaseQueue.head];
         
-        for (uint32_t i = 0; i < g_beamReleaseQueue.count; i++) {
-            uint32_t index = (head + i) % BEAM_RELEASE_QUEUE_SIZE;
-            BeamReleaseItem* item = &g_beamReleaseQueue.items[index];
-            
-            if (item->valid) {
-                /* 保留有效项 */
-                if (newCount > 0) {
-                    /* 移动到新位置 */
-                    uint32_t newIndex = (newHead + newCount) % BEAM_RELEASE_QUEUE_SIZE;
-                    g_beamReleaseQueue.items[newIndex] = *item;
-                }
-                newCount++;
-            }
+        if (headItem->valid) {
+            /* 头项有效，停止清理 */
+            break;
         }
         
-        g_beamReleaseQueue.head = newHead;
-        g_beamReleaseQueue.count = newCount;
+        /* 头项无效，移除 */
+        g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
+        g_beamReleaseQueue.count--;
     }
     
     /* 每100帧报告一次队列状态 */
