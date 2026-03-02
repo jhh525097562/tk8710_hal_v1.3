@@ -320,8 +320,8 @@ typedef struct {
 
 /* 下行类型枚举 */
 typedef enum {
-    TK8710_DOWNLINK_1 = 0,  /* 下行1 (广播数据) */
-    TK8710_DOWNLINK_2 = 1,  /* 下行2 (专用数据) */
+    TK8710_DOWNLINK_A = 0,  /* 下行A */
+    TK8710_DOWNLINK_B = 1,  /* 下行B */
 } TK8710DownlinkType;
 
 /* 数据类型 */

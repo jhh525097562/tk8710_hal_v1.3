@@ -1090,9 +1090,9 @@ int TK8710ClearTxUserData(uint8_t userIndex)
  * @param beamType 波束类型: 0=广播数据, 1=专用数据
  * @return 0-成功, 1-失败
  */
-int TK8710SetTxUserData(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType)
+int TK8710SetTxData(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType)
 {
-    if (downlinkType == TK8710_DOWNLINK_1) {
+    if (downlinkType == TK8710_DOWNLINK_A) {
         /* 下行1 (广播数据) */
         if (index >= 16 || data == NULL || dataLen == 0) {
             TK8710_LOG_IRQ_ERROR("Invalid parameters for downlink1: index=%d, data=%p, dataLen=%d", 
@@ -1125,7 +1125,7 @@ int TK8710SetTxUserData(TK8710DownlinkType downlinkType, uint8_t index, const ui
         
         TK8710_LOG_IRQ_DEBUG("Downlink1 TX data set: downlink1[%d], len=%d, power=%d, beamType=%d", 
                             index, dataLen, txPower, beamType);
-    } else if (downlinkType == TK8710_DOWNLINK_2) {
+    } else if (downlinkType == TK8710_DOWNLINK_B) {
         /* 下行2 (专用数据) */
         if (index >= 128 || data == NULL || dataLen == 0) {
             TK8710_LOG_IRQ_ERROR("Invalid parameters for downlink2: index=%d, data=%p, dataLen=%d", 

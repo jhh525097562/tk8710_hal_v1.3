@@ -174,7 +174,7 @@ void TRM_ProcessBeamRamReleases(void)
 
 /**
  * @brief 统一发送数据接口（支持用户数据和广播数据）
- * @param downlinkType 下行类型 (TK8710_DOWNLINK_1=广播, TK8710_DOWNLINK_2=用户数据)
+ * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
  * @param userIdOrIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度
@@ -191,12 +191,12 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
         return TRM_ERR_PARAM;
     }
     
-    if (downlinkType == TK8710_DOWNLINK_1) {
+    if (downlinkType == TK8710_DOWNLINK_A) {
         /* 广播数据模式 - 直接调用Driver发送 */
         TRM_LOG_DEBUG("TRM_SetTxUserData发送广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
                       (uint8_t)userIdOrIndex, len, txPower, BeamType);
         
-        int ret = TK8710SetTxUserData(TK8710_DOWNLINK_1, (uint8_t)userIdOrIndex, data, len, txPower, BeamType);
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, (uint8_t)userIdOrIndex, data, len, txPower, BeamType);
         if (ret == TK8710_OK) {
             TRM_LOG_DEBUG("TRM广播发送成功");
         } else {
@@ -205,7 +205,7 @@ int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, c
         
         return (ret == TK8710_OK) ? TRM_OK : TRM_ERR_DRIVER;
         
-    } else if (downlinkType == TK8710_DOWNLINK_2) {
+    } else if (downlinkType == TK8710_DOWNLINK_B) {
         /* 用户数据模式 - 缓存到发送队列 */
         TRM_LOG_DEBUG("TRM_SetTxUserData发送用户数据 - 用户ID=0x%08X, 长度=%d, 功率=%d, 帧号=%u, 速率模式=%d", 
                       userIdOrIndex, len, txPower, frameNo, targetRateMode);
@@ -434,7 +434,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                 int beamRet = TRM_GetBeamInfo(item->userId, &beam);
                 if (beamRet == TRM_OK) {
                     /* 设置发送下行2数据 - 参考test_Driver_TRM_main_3506.c实现 */
-                    int ret = TK8710SetTxUserData(TK8710_DOWNLINK_2, txUserIndex, item->data, item->len, item->power, item->dataType);
+                    int ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, item->data, item->len, item->power, item->dataType);
                     if (ret != TK8710_OK) {
                         TRM_LOG_ERROR("TRM: Failed to set TX user data for user[%u]: %d", item->userId, ret);
                         
