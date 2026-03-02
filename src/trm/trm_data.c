@@ -128,13 +128,17 @@ void TRM_ProcessBeamRamReleases(void)
 {
     static uint32_t lastReportFrame = 0;
     uint32_t processedCount = 0;
+    uint32_t originalHead = g_beamReleaseQueue.head;
+    uint32_t itemsToCheck = g_beamReleaseQueue.count;
     
-    while (g_beamReleaseQueue.count > 0) {
-        BeamReleaseItem* item = &g_beamReleaseQueue.items[g_beamReleaseQueue.head];
+    /* 扫描整个队列，寻找需要释放的项 */
+    for (uint32_t i = 0; i < itemsToCheck; i++) {
+        uint32_t index = (originalHead + i) % BEAM_RELEASE_QUEUE_SIZE;
+        BeamReleaseItem* item = &g_beamReleaseQueue.items[index];
         
         if (!item->valid) {
-            /* 无效项，直接跳过 */
-            g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
+            /* 无效项，标记为已处理 */
+            item->valid = 0;
             g_beamReleaseQueue.count--;
             continue;
         }
@@ -147,14 +151,33 @@ void TRM_ProcessBeamRamReleases(void)
             /* 调用波束信息清理函数 */
             TRM_ClearBeamInfo(item->userId);
             
-            /* 移除已处理的项 */
+            /* 标记为已处理 */
             item->valid = 0;
-            g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
             g_beamReleaseQueue.count--;
             processedCount++;
-        } else {
-            /* 还未到释放时间，停止处理 */
-            break;
+        }
+        /* 如果未到释放时间，保留该项，稍后检查 */
+    }
+    
+    /* 清理队列：移除所有无效项 */
+    if (processedCount > 0) {
+        uint32_t validCount = 0;
+        uint32_t newHead = originalHead;
+        
+        /* 找到第一个有效项作为新的head */
+        for (uint32_t i = 0; i < BEAM_RELEASE_QUEUE_SIZE; i++) {
+            uint32_t index = (originalHead + i) % BEAM_RELEASE_QUEUE_SIZE;
+            if (g_beamReleaseQueue.items[index].valid) {
+                newHead = index;
+                validCount++;
+                break;
+            }
+        }
+        
+        g_beamReleaseQueue.head = newHead;
+        /* 重新计算有效项数量 */
+        if (validCount == 0) {
+            g_beamReleaseQueue.count = 0;
         }
     }
     
