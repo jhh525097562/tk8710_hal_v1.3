@@ -6,9 +6,9 @@
 
 TK8710 HAL API是由多个Driver API和TRM API组合而成的完整硬件抽象层接口：
 
-- **Driver API**: 提供底层芯片控制、数据传输等基础功能
-- **TRM API**: 在Driver API之上构建，提供传输资源管理、波束管理、队列管理等高级功能
-- **HAL API**: HAL API需要使用多个Driver API和TRM API组合来实现完整的通信功能
+- **8710 Driver API**: 提供底层芯片控制、数据传输等基础功能
+- **8710 TRM API**: 在Driver API之上构建，提供传输资源管理、波束管理、队列管理等高级功能
+- **8710 HAL API**: HAL API需要使用多个Driver API和TRM API组合来实现完整的通信功能
 
 本文档提供了完整的使用示例，展示如何组合使用这些API来构建应用。
 
@@ -150,14 +150,14 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-  
+
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-  
+
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -205,7 +205,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-  
+
   ```
 
 #### `TK8710GetConfig`
@@ -271,15 +271,15 @@ int TK8710SetTxUserData(TK8710DownlinkType downlinkType, uint8_t index, const ui
 **内存管理说明**:
 
 - **内存申请**: Driver内部会自动申请所需的内存空间来存储发送数据
-- **数据复制**: 函数会将用户提供的`data`内容复制到Driver内部的缓冲区
+- **数据复制**: 函数会将用户提供的 `data`内容复制到Driver内部的缓冲区
 - **内存释放**: Driver会在数据发送完成后自动释放相关内存
-- **用户责任**: 用户只需确保在函数调用期间`data`指针有效，调用完成后可立即释放用户侧内存
+- **用户责任**: 用户只需确保在函数调用期间 `data`指针有效，调用完成后可立即释放用户侧内存
 - **线程安全**: 内存操作是线程安全的，支持多线程并发调用
 - **内存限制**: 总发送缓冲区大小有限，建议及时发送避免缓冲区满
 
 **最佳实践**:
 
-- 调用后用户可立即释放或重用`data`指向的内存
+- 调用后用户可立即释放或重用 `data`指向的内存
 - 避免长时间持有大量未发送数据的内存
 - 监控发送队列状态，避免缓冲区溢出
 - 在高频发送场景下注意内存使用效率
@@ -314,6 +314,23 @@ int TK8710GetRxUserData(uint8_t userIndex, uint8_t** data, uint16_t* dataLen);
 - `data`: 数据指针输出
 - `dataLen`: 数据长度输出
   **返回值**: 0-成功, 1-失败, 2-超时
+
+**内存管理说明**:
+
+- **内存所有权**: 返回的 `data` 指针指向Driver内部的接收缓冲区，所有权仍属于Driver
+- **内存有效性**: 数据指针在下一次调用 `TK8710GetRxUserData` 或 `TK8710ReleaseRxData` 之前保持有效
+- **禁止修改**: 用户不应修改返回的数据内容，如需修改请先复制到用户缓冲区
+- **内存释放**: 必须调用 `TK8710ReleaseRxData` 显式释放数据资源
+- **缓冲区限制**: Driver内部接收缓冲区大小有限，及时释放可避免缓冲区溢出
+- **线程安全**: 接收操作是线程安全的，但建议在同一线程中获取和释放数据
+
+**最佳实践**:
+
+- 获取数据后尽快处理并释放，避免长时间占用接收缓冲区
+- 如需长期保存数据，请复制到用户侧内存后再释放
+- 在多线程环境中，确保获取和释放操作在同一线程中执行
+- 批量处理多个用户数据时，建议逐个处理并及时释放
+- 检查返回值，确保数据获取成功后再使用指针
 
 #### `TK8710GetRxUserInfo`
 
@@ -465,10 +482,10 @@ typedef struct {
     int32_t   bcn_freq_offset;      /* BCN offset */
     uint8_t   rx_bcnbits;           /* 接收BCN bit数 */
     uint8_t   rxbcn_status;         /* 接收BCN状态 */
-    
+  
     /* MD_UD中断专用信息 */
     uint8_t  mdUserDataValid;       /* MD_UD用户波束信息有效性 */
-    
+  
     /* BRD_UD中断专用信息 （8710做为slave时，接收BRD_DATA）*/
     uint8_t  brdUserDataValid;      /* BRD_UD用户波束信息有效性 */
 
@@ -489,15 +506,15 @@ typedef struct {
     /* S1时隙自动发送信息 */
     uint8_t  autoTxValid;           /* 自动发送数据有效性 */
     uint8_t  autoTxCount;           /* 自动发送用户数量 */
-    
+  
     /* 广播发送信息 */
     uint8_t  brdTxValid;            /* 广播发送数据有效性 */
     uint8_t  brdTxCount;            /* 广播发送用户数量 */
-    
+  
     /* 信号质量信息 */
     uint8_t  signalInfoValid;       /* 信号信息有效性 */
     uint8_t  currentRateIndex;      /* 当前速率序号 (0-based) */
-    
+  
 } TK8710IrqResult;
 ```
 
