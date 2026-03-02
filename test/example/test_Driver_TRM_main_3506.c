@@ -305,15 +305,15 @@ static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult)
     printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
     
     /* 打印每个用户的发送结果 */
-    const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
-    for (uint32_t i = 0; i < txResult->userCount; i++) {
-        const TRM_TxUserResult* userResult = &txResult->users[i];
-        printf("  用户ID: 0x%08X, 结果: %s\n", userResult->userId, resultStr[userResult->result]);
+    // const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
+    // for (uint32_t i = 0; i < txResult->userCount; i++) {
+    //     const TRM_TxUserResult* userResult = &txResult->users[i];
+    //     printf("  用户ID: 0x%08X, 结果: %s\n", userResult->userId, resultStr[userResult->result]);
         
-        if (userResult->result == TRM_TX_OK) {
-            g_trmSendCount++;
-        }
-    }
+    //     if (userResult->result == TRM_TX_OK) {
+    //         g_trmSendCount++;
+    //     }
+    // }
     printf("==================\n");
 }
 
@@ -522,15 +522,6 @@ int init_trm_system(void)
         printf("TRM initialization failed: %d\n", ret);
         return ret;
     }
-    
-    /* 注册TRM到Driver的回调函数 */
-    ret = TRM_RegisterDriverCallbacks();
-    if (ret != TRM_OK) {
-        TRM_LOG_ERROR("TRM Driver回调注册失败: 错误码=%d", ret);
-        printf("TRM Driver callbacks registration failed: %d\n", ret);
-        return ret;
-    }
-    TRM_LOG_INFO("TRM Driver回调注册完成");
     
     /* 初始化发送验证器 */
     TRM_TxValidatorConfig validatorConfig = {

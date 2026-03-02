@@ -56,6 +56,8 @@ static void TRM_OnDriverErrorAdapter(TK8710IrqResult* irqResult);
 
 int TRM_Init(const TRM_InitConfig* config)
 {
+    int ret;
+    
     /* 初始化默认TRM日志系统（如果尚未初始化） */
     TRM_LogInit(TRM_LOG_INFO);
     
@@ -110,6 +112,14 @@ int TRM_Init(const TRM_InitConfig* config)
     g_trmCtx.state = TRM_STATE_INIT;
     TRM_LOG_INFO("TRM系统初始化完成，状态: INIT");
     
+    /* 注册TRM到Driver的回调函数 */
+    ret = TRM_RegisterDriverCallbacks();
+    if (ret != TRM_OK) {
+        TRM_LOG_ERROR("TRM Driver回调注册失败: 错误码=%d", ret);
+        return ret;
+    }
+    TRM_LOG_INFO("TRM Driver回调注册完成");
+
     return TRM_OK;
 }
 

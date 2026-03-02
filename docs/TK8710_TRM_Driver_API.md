@@ -150,14 +150,14 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-
+  
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-
+  
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -205,7 +205,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-
+  
   ```
 
 #### `TK8710GetConfig`
@@ -892,31 +892,28 @@ ret = TK8710RfConfig(&rfConfig);
 
 ### TRM API接口汇总
 
-| API函数                         | 功能描述                    | 目标用户层   | 分类       |
-| ------------------------------- | --------------------------- | ------------ | ---------- |
-| **系统初始化与控制**      |                             |              |            |
-| `TRM_Init`                    | 初始化TRM系统               | 应用层       | 初始化控制 |
-| `TRM_Deinit`                  | 清理TRM系统资源             | 应用层       | 初始化控制 |
-| **数据发送**              |                             |              |            |
-| `TRM_SetTxUserData`           | 统一发送数据接口(广播/用户) | 应用层       | 数据发送   |
-| **波束获取**              |                             |              |            |
-| `TRM_GetBeamInfo`             | 获取用户波束信息            | 应用层       | 波束获取   |
-| **回调接口**              |                             |              |            |
-| `TRM_OnRxData`                | 接收数据回调函数类型        | 应用层       | 回调接口   |
-| `TRM_OnTxComplete`            | 发送完成回调函数类型        | 应用层       | 回调接口   |
-| **状态查询**              |                             |              |            |
-| `TRM_GetStats`                | 获取TRM统计信息             | 应用层       | 状态查询   |
-| **回调函数管理**          |                             |              |            |
-| `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层     | 回调管理   |
-| **日志系统**              |                             |              |            |
-| `TRM_LogConfig`               | 配置TRM日志系统             | 应用层       | 日志系统   |
-| **调试接口**              |                             |              |            |
-| `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | TRM/Driver层 | 调试接口   |
+| API函数                     | 功能描述                    | 目标用户层   | 分类       |
+| --------------------------- | --------------------------- | ------------ | ---------- |
+| **系统初始化与控制**  |                             |              |            |
+| `TRM_Init`                | 初始化TRM系统               | 应用层       | 初始化控制 |
+| `TRM_Deinit`              | 清理TRM系统资源             | 应用层       | 初始化控制 |
+| **数据发送**          |                             |              |            |
+| `TRM_SetTxUserData`       | 统一发送数据接口(广播/用户) | 应用层       | 数据发送   |
+| **波束获取**          |                             |              |            |
+| `TRM_GetBeamInfo`         | 获取用户波束信息            | 应用层       | 波束获取   |
+| **回调接口**          |                             |              |            |
+| `TRM_OnRxData`            | 接收数据回调函数类型        | 应用层       | 回调接口   |
+| `TRM_OnTxComplete`        | 发送完成回调函数类型        | 应用层       | 回调接口   |
+| **状态查询**          |                             |              |            |
+| `TRM_GetStats`            | 获取TRM统计信息             | 应用层       | 状态查询   |
+| **日志系统**          |                             |              |            |
+| `TRM_LogConfig`           | 配置TRM日志系统             | 应用层       | 日志系统   |
+| **调试接口**          |                             |              |            |
+| `TRM_TxValidatorOnRxData` | 发送验证器接收数据处理      | TRM/Driver层 | 调试接口   |
 
 **说明:**
 
 - **应用层**: 直接供应用层开发者使用的API
-- **Driver层**: 主要供Driver层内部使用的API，应用层一般不直接调用
 - **初始化控制**: TRM系统初始化和基本控制功能
 - **数据发送**: 数据发送相关功能
 - **波束获取**: 波束信息获取功能
@@ -932,6 +929,8 @@ ret = TK8710RfConfig(&rfConfig);
 
 TRM系统采用简化的生命周期管理，只需要初始化和清理操作，无需单独的启动/停止控制。TRM专注于数据管理职责，硬件控制由Driver层负责。
 
+**架构优化**: TRM_Init现在会自动注册Driver回调函数，简化了应用层的初始化流程，确保TRM与Driver层的通信通道在初始化阶段就建立完成。
+
 #### `TRM_Init`
 
 ```c
@@ -942,6 +941,17 @@ int TRM_Init(const TRM_InitConfig* config);
 **参数**:
 
 - `config`: TRM初始化配置指针，包含波束配置、回调函数等设置
+
+**说明**:
+
+- 初始化TRM日志系统（INFO级别）
+- 验证配置参数有效性
+- 检查TRM状态，防止重复初始化
+- 保存配置参数，设置默认值
+- 初始化波束管理系统
+- 初始化发送队列系统
+- **自动注册TRM到Driver的回调函数**（内部调用TRM_RegisterDriverCallbacks）
+- 设置TRM状态为INIT
 
 **TRM_InitConfig结构体定义**:
 
@@ -1296,7 +1306,7 @@ typedef enum {
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 获取失败
 
-### 7. 回调函数管理
+### 7. 内部接口
 
 #### `TRM_RegisterDriverCallbacks`
 
@@ -1305,13 +1315,19 @@ int TRM_RegisterDriverCallbacks(void);
 ```
 
 **功能**: 注册TRM到Driver的回调函数
+**目标用户**: TRM内部使用
 **返回值**:
 
 - `TRM_OK`: 注册成功
 - `TRM_ERR_NOT_INIT`: TRM未初始化
 - 其他: 注册失败
 
-**说明**: 此函数将TRM的回调适配函数注册到Driver的回调系统中
+**说明**:
+
+- 此函数由TRM内部调用，建立TRM与Driver层的通信通道
+- **在TRM_Init过程中自动调用**，应用层不应直接调用此函数
+- 将TRM的回调适配函数注册到Driver的回调系统中
+- 确保TRM能够接收Driver层的中断和事件通知
 
 ### 8. TRM日志系统
 

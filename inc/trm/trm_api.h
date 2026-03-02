@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "driver/tk8710_types.h"
+#include "trm_log.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -219,14 +220,16 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo);
 int TRM_GetStats(TRM_Stats* stats);
 
 /* =============================================================================
- * 回调函数管理API
- * ============================================================================= */
+ * TRM日志系统API
+ * =============================================================================
+ */
 
 /**
- * @brief 注册TRM到Driver的回调函数
+ * @brief 配置TRM日志系统
+ * @param level 日志级别
  * @return TRM_OK成功，其他失败
  */
-int TRM_RegisterDriverCallbacks(void);
+int TRM_LogConfig(TRMLogLevel level);
 
 #ifdef __cplusplus
 }

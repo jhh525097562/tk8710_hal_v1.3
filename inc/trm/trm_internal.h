@@ -214,6 +214,18 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
 void trm_print_slot_calc_result(const TRM_SlotCalcOutput* output);
 
 /* =============================================================================
+ * Driver回调管理API
+ * =============================================================================
+ */
+
+/**
+ * @brief 注册TRM到Driver的回调函数
+ * @return TRM_OK成功，其他失败
+ * @note 此函数由TRM内部调用，建立TRM与Driver层的通信通道
+ */
+int TRM_RegisterDriverCallbacks(void);
+
+/* =============================================================================
  * 调试和测试接口
  * ============================================================================= */
 
