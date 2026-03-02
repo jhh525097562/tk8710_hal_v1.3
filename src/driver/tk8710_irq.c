@@ -1935,7 +1935,7 @@ static void tk8710_s1_manual_tx_process(void)
         /* 统计与Slot1共用波束信息的用户个数 */
         uint8_t slot1SharedUserCount = 0;
         for (uint8_t i = 0; i < actualMaxUsers; i++) {
-            if (g_txBuffers[i].valid && g_txBuffers[i].beamType == TK8710_DATA_TYPE_DED) {
+            if (g_txBuffers[i].valid && g_txBuffers[i].beamType == TK8710_DATA_TYPE_BRD) {
                 slot1SharedUserCount++;
             }
         }
