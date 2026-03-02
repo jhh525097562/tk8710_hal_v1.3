@@ -129,17 +129,14 @@ void TRM_ProcessBeamRamReleases(void)
     static uint32_t lastReportFrame = 0;
     uint32_t processedCount = 0;
     
-    /* 遍历所有队列项目，检查是否到达释放时间 */
-    uint32_t head = g_beamReleaseQueue.head;
-    uint32_t count = 0;
-    
-    while (count < g_beamReleaseQueue.count) {
-        uint32_t index = (head + count) % BEAM_RELEASE_QUEUE_SIZE;
-        BeamReleaseItem* item = &g_beamReleaseQueue.items[index];
+    /* 遍历队列，处理所有项目 */
+    while (g_beamReleaseQueue.count > 0) {
+        BeamReleaseItem* item = &g_beamReleaseQueue.items[g_beamReleaseQueue.head];
         
         if (!item->valid) {
-            /* 无效项，直接跳过 */
-            count++;
+            /* 无效项，直接清理并移除 */
+            g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
+            g_beamReleaseQueue.count--;
             continue;
         }
         
@@ -151,26 +148,14 @@ void TRM_ProcessBeamRamReleases(void)
             /* 调用波束信息清理函数 */
             TRM_ClearBeamInfo(item->userId);
             
-            /* 标记为无效，但不移动head指针，在最后统一清理 */
-            item->valid = 0;
+            /* 移除已处理的项 */
+            g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
+            g_beamReleaseQueue.count--;
             processedCount++;
-        }
-        
-        count++;
-    }
-    
-    /* 清理无效项，移动head指针 */
-    while (g_beamReleaseQueue.count > 0) {
-        BeamReleaseItem* headItem = &g_beamReleaseQueue.items[g_beamReleaseQueue.head];
-        
-        if (headItem->valid) {
-            /* 头项有效，停止清理 */
+        } else {
+            /* 头项还未到释放时间，停止处理（后面的项目时间更晚） */
             break;
         }
-        
-        /* 头项无效，移除 */
-        g_beamReleaseQueue.head = (g_beamReleaseQueue.head + 1) % BEAM_RELEASE_QUEUE_SIZE;
-        g_beamReleaseQueue.count--;
     }
     
     /* 每100帧报告一次队列状态 */
