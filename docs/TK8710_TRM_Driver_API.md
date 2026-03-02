@@ -440,6 +440,51 @@ typedef struct {
 } TK8710DriverCallbacks;
 ```
 
+**TK8710IrqResult 结构体定义**:
+
+```c
+/* 中断结果结构体 */
+typedef struct {
+    irqType_e irq_type;             /* 中断类型 */
+    int32_t   bcn_freq_offset;      /* BCN offset */
+    uint8_t   rx_bcnbits;           /* 接收BCN bit数 */
+    uint8_t   rxbcn_status;         /* 接收BCN状态 */
+    
+    /* MD_UD中断专用信息 */
+    uint8_t  mdUserDataValid;       /* MD_UD用户波束信息有效性 */
+    
+    /* BRD_UD中断专用信息 （8710做为slave时，接收BRD_DATA）*/
+    uint8_t  brdUserDataValid;      /* BRD_UD用户波束信息有效性 */
+
+    /* MD_DATA中断专用信息 */
+    uint8_t  mdDataValid;           /* MD_DATA数据有效性 */
+    uint8_t  crcValidCount;         /* CRC正确的用户数量 */
+    uint8_t  crcErrorCount;         /* CRC错误的用户数量 */
+    uint8_t  maxUsers;              /* 当前速率模式最大用户数 */
+    TK8710CrcResult crcResults[128]; /* CRC结果数组 (最多128个用户) */
+ 
+    /* BRD_DATA中断专用信息（8710做为slave时，接收BRD_DATA） */
+    uint8_t  brdDataValid;          /* BRD_DATA数据有效性 */
+    uint8_t  brdCrcValidCount;      /* CRC正确的用户数量 */
+    uint8_t  brdCrcErrorCount;      /* CRC错误的用户数量 */
+    uint8_t  brdMaxUsers;           /* 当前速率模式最大用户数 */
+    TK8710CrcResult brdCrcResults[16]; /* CRC结果数组 (最多16个用户) */
+
+    /* S1时隙自动发送信息 */
+    uint8_t  autoTxValid;           /* 自动发送数据有效性 */
+    uint8_t  autoTxCount;           /* 自动发送用户数量 */
+    
+    /* 广播发送信息 */
+    uint8_t  brdTxValid;            /* 广播发送数据有效性 */
+    uint8_t  brdTxCount;            /* 广播发送用户数量 */
+    
+    /* 信号质量信息 */
+    uint8_t  signalInfoValid;       /* 信号信息有效性 */
+    uint8_t  currentRateIndex;      /* 当前速率序号 (0-based) */
+    
+} TK8710IrqResult;
+```
+
 **回调函数说明**:
 
 - `onRxData`: 当接收到MD_DATA中断时调用，对应数据接收事件
@@ -832,7 +877,6 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_RegisterDriverCallbacks` | 注册Driver回调函数          | Driver层     | 回调管理   |
 | **日志系统**              |                             |              |            |
 | `TRM_LogConfig`               | 配置TRM日志系统             | 应用层       | 日志系统   |
-|                                 |                             |              |            |
 | **调试接口**              |                             |              |            |
 | `TRM_TxValidatorOnRxData`     | 发送验证器接收数据处理      | TRM/Driver层 | 调试接口   |
 
