@@ -270,6 +270,15 @@ int TK8710Init(const ChipConfig* initConfig)
     }
     TK8710SpiInit(&spiConfigToUse);
     
+    /* SPI配置完成后复位芯片，确保复位操作能正常执行 */
+    TK8710_LOG_CORE_INFO("Resetting TK8710 chip after SPI configuration...");
+    int resetRet = TK8710Reset(2);  /* 复位状态机+寄存器 */
+    if (resetRet != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("TK8710 chip reset failed: %d", resetRet);
+        return resetRet;
+    }
+    TK8710_LOG_CORE_INFO("TK8710 chip reset completed");
+    
     /* 初始化默认GPIO中断 */
     TK8710GpioInit(0, TK8710_GPIO_EDGE_RISING, default_gpio_irq_handler, NULL);
     

@@ -833,15 +833,7 @@ int init_tk8710_chip(void)
     
     printf("Initializing TK8710 chip...\n");
     
-    /* 首先复位芯片 */
-    printf("Resetting TK8710 chip...\n");
-    ret = TK8710Reset(2);  /* 复位状态机+寄存器 */
-    if (ret != TK8710_OK) {
-        printf("TK8710 chip reset failed: %d\n", ret);
-        return ret;
-    }
-    printf("TK8710 chip reset completed\n");
-    
+    /* 调用TK8710Init，包含SPI配置、GPIO初始化、中断使能和芯片复位 */
     /* 使用默认配置初始化芯片 */
     /* 注意：TRM回调通过TRM_RegisterDriverCallbacks()设置 */
     ret = TK8710Init(&chipConfig);  /* 中断回调参数已移除 */
