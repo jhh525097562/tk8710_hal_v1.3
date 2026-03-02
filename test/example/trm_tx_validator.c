@@ -77,11 +77,11 @@ static int ExecuteSend(uint32_t userId, const uint8_t* data, uint16_t len, uint3
     /* 根据速率模式选择发送接口 */
     if (rateMode == 0) {
         /* 使用帧号匹配（原有方式） */
-        ret = TRM_SendData(userId, data, len, g_validatorConfig.txPower, frameNo, 0, TK8710_DATA_TYPE_DED);
+        ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, userId, data, len, g_validatorConfig.txPower, frameNo, 0, TK8710_DATA_TYPE_DED);
         TRM_LOG_DEBUG("验证发送(帧号模式): 用户ID=0x%08X, 帧号=%u, 长度=%d", userId, frameNo, len);
     } else {
         /* 使用速率模式匹配（新方式） */
-        ret = TRM_SendData(userId, data, len, g_validatorConfig.txPower, frameNo, rateMode, TK8710_DATA_TYPE_DED);
+        ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, userId, data, len, g_validatorConfig.txPower, frameNo, rateMode, TK8710_DATA_TYPE_DED);
         TRM_LOG_DEBUG("验证发送(速率模式): 用户ID=0x%08X, 帧号=%u, 长度=%d, 速率=%d", userId, frameNo, len, rateMode);
     }
     
