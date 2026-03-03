@@ -106,14 +106,34 @@ typedef struct {
     uint32_t bcn_agc;       /* BCN AGC长度, 默认32 */
     uint32_t interval;      /* Intval长度, 默认32 */
     uint8_t  tx_dly;        /* 下行发送时使用前几个上行ram中的信息, 默认1 */
-    uint8_t  rx_dly;        /* 上行接收时使用前几个下行ram中的信息, 默认1 */
-    uint8_t  ant_num;       /* 天线数量, 默认8 */
-    uint8_t  user_num;      /* 用户数量, 默认128 */
-    uint8_t  brd_num;       /* 广播用户数量, 默认16 */
-    uint8_t  ant_sel;       /* 天线选择, 默认0xFF(全选) */
-    uint8_t  work_mode;     /* 工作模式, 默认1(TDD) */
-    uint8_t  ms_mode;       /* 主从模式, 默认0(主模式) */
+    uint8_t  tx_fix_info;   /* TX是否固定频点, 默认0 */
+    int32_t  offset_adj;    /* BCN sync窗口微调, 默认0, 单位us */
+    int32_t  tx_pre;        /* 发送数据窗口调整, 默认0, 单位us */
+    uint8_t  conti_mode;    /* 连续工作模式使能, 默认1 */
+    uint8_t  bcn_scan;      /* BCN SCAN模式使能, 默认0 */
+    uint8_t  ant_en;        /* 天线使能, 默认0xFF */
+    uint8_t  rf_sel;        /* 射频使能, 默认0xFF */
+    uint8_t  tx_bcn_en;     /* 发送BCN使能, 默认1 */
+    uint8_t  ts_sync;       /* 本地同步, 默认0 */
+    uint8_t  rf_model;      /* 射频芯片型号: 1=SX1255, 2=SX1257 */
+    uint8_t  bcnbits;       /* 信标标识位, 共5bit */
+    uint32_t anoiseThe1;    /* 用户检测anoiseTh1门限, 默认0 */
+    uint32_t power2rssi;    /* RSSI换算 */
+    uint32_t irq_ctrl0;     /* 中断使能 */
+    uint32_t irq_ctrl1;     /* 中断清理 */
+    
+    /* SPI配置 (可选, 为NULL时使用默认配置) */
+    SpiConfig* spiConfig;   /* SPI接口配置, 为NULL时使用默认16MHz/Mode0 */
 } ChipConfig;
+
+/* SPI配置结构体 */
+typedef struct {
+    uint32_t speed;         /* SPI时钟频率 */
+    uint8_t  mode;          /* SPI模式 (0-3) */
+    uint8_t  bits;          /* 数据位宽 */
+    uint8_t  lsb_first;     /* 0=MSB优先, 1=LSB优先 */
+    uint8_t  cs_pin;        /* CS引脚号 */
+} SpiConfig;
 
 /* RF配置结构体 */
 typedef struct {
@@ -121,10 +141,14 @@ typedef struct {
     uint32_t Freq;          /* 射频中心频率 */
     uint8_t  rxgain;        /* 射频接收增益 */
     uint8_t  txgain;        /* 射频发送增益 */
-    uint8_t  lnaGain;       /* LNA增益 */
-    uint8_t  antSel;        /* 天线选择 */
-    uint8_t  tx_dac[16];    /* 发送直流校准数据, 8天线×2路(I/Q) */
+    TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
 } ChiprfConfig;
+
+/* 射频发送直流配置 (每天线i/q两路) */
+typedef struct {
+    int16_t i;              /* I路直流, 16bit */
+    int16_t q;              /* Q路直流, 16bit */
+} TxAdcConfig;
 
 /* Driver日志级别枚举 */
 typedef enum {
