@@ -264,6 +264,13 @@ void TK8710LogSetCallback(TK8710LogCallback callback);
  */
 
 /**
+ * @brief 获取时隙配置
+ * @return 时隙配置指针
+ * @note 内部函数，不建议应用层直接调用
+ */
+const slotCfg_t* TK8710GetSlotConfig(void);
+
+/**
  * @brief 获取当前速率模式
  * @return 当前速率模式
  */
