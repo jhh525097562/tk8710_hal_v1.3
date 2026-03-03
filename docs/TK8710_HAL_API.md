@@ -77,6 +77,7 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config);
 **配置结构体**:
 
 ```c
+/* HAL初始化主配置结构体 */
 typedef struct {
     /* TK8710初始化配置 */
     ChipConfig* tk8710Init;           /**< TK8710芯片初始化配置，为NULL时使用默认配置 */
@@ -99,6 +100,70 @@ typedef struct {
         bool enableStats;             /**< 是否启用统计 */
     } trmLogConfig;
 } TK8710_HalInitConfig;
+
+/* TK8710芯片初始化配置结构体 */
+typedef struct {
+    uint32_t bcn_agc;       /* BCN AGC长度, 默认32 */
+    uint32_t interval;      /* Intval长度, 默认32 */
+    uint8_t  tx_dly;        /* 下行发送时使用前几个上行ram中的信息, 默认1 */
+    uint8_t  rx_dly;        /* 上行接收时使用前几个下行ram中的信息, 默认1 */
+    uint8_t  ant_num;       /* 天线数量, 默认8 */
+    uint8_t  user_num;      /* 用户数量, 默认128 */
+    uint8_t  brd_num;       /* 广播用户数量, 默认16 */
+    uint8_t  ant_sel;       /* 天线选择, 默认0xFF(全选) */
+    uint8_t  work_mode;     /* 工作模式, 默认1(TDD) */
+    uint8_t  ms_mode;       /* 主从模式, 默认0(主模式) */
+} ChipConfig;
+
+/* RF配置结构体 */
+typedef struct {
+    rfType_e rftype;        /* 射频类型 */
+    uint32_t Freq;          /* 射频中心频率 */
+    uint8_t  rxgain;        /* 射频接收增益 */
+    uint8_t  txgain;        /* 射频发送增益 */
+    uint8_t  lnaGain;       /* LNA增益 */
+    uint8_t  antSel;        /* 天线选择 */
+    uint8_t  tx_dac[16];    /* 发送直流校准数据, 8天线×2路(I/Q) */
+} ChiprfConfig;
+
+/* Driver日志级别枚举 */
+typedef enum {
+    TK8710_LOG_ERROR = 0,   /* 错误级别 */
+    TK8710_LOG_WARN  = 1,   /* 警告级别 */
+    TK8710_LOG_INFO  = 2,   /* 信息级别 */
+    TK8710_LOG_DEBUG = 3,   /* 调试级别 */
+    TK8710_LOG_TRACE = 4    /* 跟踪级别 */
+} TK8710LogLevel;
+
+/* TRM初始化配置结构体 */
+typedef struct {
+    /* 波束配置 */
+    TRM_BeamMode beamMode;          /* 波束存储模式 */
+    uint32_t     beamMaxUsers;      /* 最大用户数(使用默认?) */
+    uint32_t     beamTimeoutMs;     /* 波束超时时间戳使用默认?) */
+    
+    /* 帧管理配置 */
+    uint32_t     maxFrameCount;     /* 最大帧数 */
+    
+    /* 回调函数 */
+    struct {
+        TRM_OnRxData      onRxData;
+        TRM_OnTxComplete  onTxComplete;
+    } callbacks;
+    
+    /* 平台配置(预留) */
+    void* platformConfig;
+} TRM_InitConfig;
+
+/* TRM波束存储模式枚举 */
+typedef enum {
+    TRM_BEAM_MODE_FULL_STORE = 0,   /* 完整波束存储模式(CPU RAM) */
+    TRM_BEAM_MODE_MAPPING    = 1,   /* 波束映射模式(8710 RAM) */
+} TRM_BeamMode;
+
+/* TRM回调函数类型定义 */
+typedef void (*TRM_OnRxData)(uint32_t userId, const uint8_t* data, uint16_t len, void* context);
+typedef void (*TRM_OnTxComplete)(uint32_t userId, int result, void* context);
 ```
 
 **使用示例**:
@@ -155,6 +220,61 @@ TK8710_HalError hal_config(const slotCfg_t* slotConfig);
 - 调用TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, slotConfig)设置时隙配置
 - 如果slotConfig为NULL，自动获取当前配置并重新设置
 - 确保时隙配置在硬件中生效
+
+**时隙配置结构体**:
+
+```c
+/* 时隙配置子结构体 */
+typedef struct {
+    uint16_t byteLen;       /* 时隙字节数 */
+    uint32_t timeLen;       /* 时隙时间长度, 单位us (仅查询有效) */
+    uint32_t centerFreq;    /* 时隙中心频点 */
+    uint32_t FreqOffset;    /* 相较于中心频点的偏移 */
+    uint32_t da_m;          /* 内部DAC参数，用于配置时隙末尾的空闲长度 */
+} SlotConfig;
+
+/* 完整时隙配置结构体 */
+typedef struct {
+    msMode_e   msMode;          /* 主从模式 */
+    uint8_t    plCrcEn;         /* Payload CRC使能 */
+    uint8_t    rateCount;       /* 速率个数，范围1~4，支持最多4个速率模式 */
+    rateMode_e rateModes[4];    /* 各时隙速率模式数组，对应s0Cfg-s3Cfg */
+    uint8_t    brdUserNum;      /* 广播时隙用户数, 范围1~16 */
+    float      brdFreq[TK8710_MAX_BRD_USERS]; /* 广播时隙发送用户的频率 */
+    uint8_t    antEn;           /* 天线使能, 默认0xFF(8天线) */
+    uint8_t    rfSel;           /* RF天线选择, 默认0xFF(8天线) */
+    uint8_t    txAutoMode;      /* 下行发送模式: 0=自动发送, 1=指定信息发送 */
+    uint8_t    txBcnEn;         /* BCN发送使能 */
+    uint8_t    bcnRotation[TK8710_MAX_ANTENNAS];  /* BCN发送使能为0xff时，从bcnRotation中轮流获取当前发送bcn天线 */
+    uint32_t   rx_delay;        /* RX delay, 默认0 */
+    uint32_t   md_agc;          /* DATA AGC长度, 默认1024 */
+    uint8_t    local_sync;      /* 本地同步: 1=产生本地同步信号, 0=接收外部同步脉冲 */
+    
+    SlotConfig s0Cfg[4];           /* 时隙0(BCN)配置 */
+    SlotConfig s1Cfg[4];           /* 时隙1配置 */
+    SlotConfig s2Cfg[4];           /* 时隙2配置 */
+    SlotConfig s3Cfg[4];           /* 时隙3配置 */
+    uint32_t   frameTimeLen;    /* TDD周期总时间长度, 单位us */
+} slotCfg_t;
+
+/* 主从模式枚举 */
+typedef enum {
+    TK8710_MS_MASTER = 0,     /* 主模式 */
+    TK8710_MS_SLAVE  = 1      /* 从模式 */
+} msMode_e;
+
+/* 速率模式枚举 */
+typedef enum {
+    TK8710_RATE_MODE_5  = 5,
+    TK8710_RATE_MODE_6  = 6,
+    TK8710_RATE_MODE_7  = 7,
+    TK8710_RATE_MODE_8  = 8,
+    TK8710_RATE_MODE_9  = 9,
+    TK8710_RATE_MODE_10 = 10,
+    TK8710_RATE_MODE_11 = 11,
+    TK8710_RATE_MODE_18 = 18,
+} rateMode_e;
+```
 
 **使用示例**:
 
@@ -253,7 +373,7 @@ TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrI
 
 **参数**:
 
-- `downlinkType`: 下行类型 (TK8710_DOWNLINK_1=广播, TK8710_DOWNLINK_2=用户数据)
+- `downlinkType`: 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
 - `userIdOrIndex`: 用户ID或广播索引
 - `data`: 数据指针
 - `len`: 数据长度
@@ -261,6 +381,30 @@ TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrI
 - `frameNo`: 帧号 (仅用户数据使用，广播时忽略)
 - `targetRateMode`: 目标速率模式 (仅用户数据使用，广播时忽略)
 - `dataType`: 数据类型/波束类型
+
+**下行类型枚举**:
+
+```c
+/* 下行类型枚举 */
+typedef enum {
+    TK8710_DOWNLINK_A = 0,  /* 下行A (广播数据) */
+    TK8710_DOWNLINK_B = 1,  /* 下行B (专用数据) */
+} TK8710DownlinkType;
+
+/* 数据类型定义 */
+#define TK8710_DATA_TYPE_BRD     0   /* 广播数据: 使用Driver自动生成的波束信息或与Slot3共用波束信息 */
+#define TK8710_DATA_TYPE_DED     1   /* 专用数据: 使用指定信息模式的波束信息或与Slot1共用波束信息 */
+
+/* 速率模式定义 (可选值) */
+#define TK8710_RATE_MODE_5       5
+#define TK8710_RATE_MODE_6       6
+#define TK8710_RATE_MODE_7       7
+#define TK8710_RATE_MODE_8       8
+#define TK8710_RATE_MODE_9       9
+#define TK8710_RATE_MODE_10      10
+#define TK8710_RATE_MODE_11      11
+#define TK8710_RATE_MODE_18      18
+```
 
 **返回值**:
 
@@ -280,7 +424,7 @@ TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrI
 // 发送广播数据
 uint8_t broadcastData[] = {0x01, 0x02, 0x03, 0x04};
 TK8710_HalError ret = hal_sendData(
-    TK8710_DOWNLINK_1,    // 广播类型
+    TK8710_DOWNLINK_A,    // 广播类型
     0,                    // 广播索引
     broadcastData,        // 数据
     sizeof(broadcastData),// 数据长度
@@ -293,7 +437,7 @@ TK8710_HalError ret = hal_sendData(
 // 发送用户数据
 uint8_t userData[] = {0x11, 0x12, 0x13, 0x14, 0x15};
 ret = hal_sendData(
-    TK8710_DOWNLINK_2,    // 用户数据类型
+    TK8710_DOWNLINK_B,    // 用户数据类型
     0x30000001,           // 用户ID
     userData,             // 数据
     sizeof(userData),     // 数据长度
@@ -339,21 +483,39 @@ TK8710_HalError hal_getStatus(TRM_Stats* stats);
 **统计信息结构体**:
 
 ```c
+/* TRM运行状态枚举 */
+typedef enum {
+    TRM_STATE_UNINIT = 0,    /* 未初始化 */
+    TRM_STATE_INITED,        /* 已初始化 */
+    TRM_STATE_RUNNING,       /* 运行中 */
+    TRM_STATE_STOPPED,       /* 已停止 */
+    TRM_STATE_ERROR          /* 错误状态 */
+} TrmState;
+
+/* TRM统计信息结构体 */
 typedef struct {
+    /* 运行状态 */
+    TrmState    state;             /* TRM运行状态 */
+    
     /* 发送统计 */
-    uint32_t    txSuccessCount;     /* 发送成功次数 */
-    uint32_t    txFailureCount;     /* 发送失败次数 */
-    uint32_t    txRetryCount;       /* 发送重试次数 */
+    uint32_t    txCount;           /* 总发送次数 */
+    uint32_t    txSuccessCount;    /* 发送成功次数 */
+    uint32_t    txFailureCount;    /* 发送失败次数 */
+    uint32_t    txRetryCount;      /* 发送重试次数 */
   
     /* 接收统计 */
-    uint32_t    rxDataCount;        /* 接收数据次数 */
+    uint32_t    rxCount;           /* 总接收次数 */
+    uint32_t    rxDataCount;       /* 接收数据次数 */
+  
+    /* 波束统计 */
+    uint32_t    beamCount;         /* 当前波束数量 */
   
     /* 内存统计 */
-    uint32_t    memAllocCount;      /* 内存分配次数 */
-    uint32_t    memFreeCount;       /* 内存释放次数 */
+    uint32_t    memAllocCount;     /* 内存分配次数 */
+    uint32_t    memFreeCount;      /* 内存释放次数 */
   
     /* 队列状态 */
-    uint32_t    txQueueRemaining;   /* 剩余发送队列数量 */
+    uint32_t    txQueueRemaining;  /* 剩余发送队列数量 */
 } TRM_Stats;
 ```
 
@@ -420,7 +582,7 @@ int main(void)
     printf("发送数据...\n");
     uint8_t testData[] = {0x01, 0x02, 0x03, 0x04};
     ret = hal_sendData(
-        TK8710_DOWNLINK_1,    // 广播
+        TK8710_DOWNLINK_A,    // 广播
         0,                    // 索引
         testData,             // 数据
         sizeof(testData),     // 长度
@@ -506,7 +668,7 @@ int custom_hal_example(void)
     // 发送用户数据
     uint8_t userData[] = "Hello TK8710";
     ret = hal_sendData(
-        TK8710_DOWNLINK_2,    // 用户数据
+        TK8710_DOWNLINK_B,    // 用户数据
         0x30000001,           // 用户ID
         userData,             // 数据
         sizeof(userData)-1,   // 长度（不包括\0）
