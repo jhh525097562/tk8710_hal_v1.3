@@ -107,6 +107,16 @@ else
     echo "❌ tk8710_rk3506.c 编译失败，跳过..."
 fi
 
+# 编译HAL API模块
+echo "编译HAL API模块..."
+arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c src/8710_hal_api.c -o ${BUILD_DIR}/8710_hal_api.o
+if [ $? -eq 0 ]; then
+    echo "✅ 8710_hal_api.c 编译成功"
+else
+    echo "❌ 8710_hal_api.c 编译失败"
+    exit 1
+fi
+
 # 创建静态库
 echo ""
 echo "创建静态库..."
@@ -120,7 +130,8 @@ ar rcs ${BUILD_DIR}/libtk8710_hal_complete.a \
     ${BUILD_DIR}/trm_beam.o \
     ${BUILD_DIR}/trm_data.o \
     ${BUILD_DIR}/trm_log.o \
-    ${BUILD_DIR}/mempool.o
+    ${BUILD_DIR}/mempool.o \
+    ${BUILD_DIR}/8710_hal_api.o
 
 if [ $? -eq 0 ]; then
     echo "✅ 静态库创建成功"

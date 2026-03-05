@@ -361,6 +361,19 @@ int TK8710Init(const ChipConfig* initConfig)
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), 0);
     if (ret != TK8710_OK) return ret;
     
+    /* 如果配置了射频参数，则进行射频初始化 */
+    if (cfg->rfConfig != NULL) {
+        const ChiprfConfig* rfCfg = (const ChiprfConfig*)cfg->rfConfig;
+        TK8710_LOG_CORE_INFO("RF config provided, initializing RF (type=%d, freq=%u Hz)...", 
+                             rfCfg->rftype, rfCfg->Freq);
+        ret = TK8710RfConfig(rfCfg);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CORE_ERROR("RF initialization failed: %d", ret);
+            return ret;
+        }
+        TK8710_LOG_CORE_INFO("RF initialization completed");
+    }
+    
     TK8710_LOG_CORE_INFO("TK8710 initialized successfully");
     return TK8710_OK;
 }

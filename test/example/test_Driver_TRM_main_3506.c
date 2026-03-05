@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include "tk8710_hal.h"
 #include "tk8710.h"
+#include "8710_hal_api.h"   /* HAL API接口 */
 #include "trm/trm.h"        /* 添加TRM头文件 */
 #include "trm/trm_log.h"     /* 添加TRM日志头文件 */
 #include "trm_tx_validator.h"  /* 添加发送验证模块 */
@@ -1240,67 +1241,198 @@ int main(int argc, char* argv[])
     signal(SIGTERM, signal_handler);
 #endif
     
-    /* 1. 初始化8710芯片 */
-    ret = init_tk8710_chip();
-    if (ret != TK8710_OK) {
-        printf("TK8710 chip initialization failed\n");
+    /* ========== 使用 HAL API 进行初始化 ========== */
+    
+    /* 1. 准备RF配置 */
+    static ChiprfConfig rfConfig = {
+        .rftype = TK8710_RF_TYPE_1255_32M,
+        .Freq = 503100000,
+        .rxgain = 0x7e,
+        .txgain = 0x2a,
+        .txadc = {
+            {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
+            {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
+        }
+    };
+    
+    /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
+    ChipConfig chipConfig = {
+        .bcn_agc     = 32,
+        .interval    = 32,
+        .tx_dly      = 0,
+        .tx_fix_info = 0,
+        .offset_adj  = 0,
+        .tx_pre      = 0,
+        .conti_mode  = 1,
+        .bcn_scan    = 0,
+        .ant_en      = 0xFF,
+        .rf_sel      = 0xFF,
+        .tx_bcn_en   = 1,
+        .ts_sync     = 0,
+        .rf_model    = 1,
+        .bcnbits     = 0,
+        .anoiseThe1  = 0,
+        .power2rssi  = 0,
+        .irq_ctrl0   = 0x7FF,
+        .irq_ctrl1   = 0,
+        .spiConfig   = NULL,
+        .rfConfig    = (struct ChiprfConfig_s*)&rfConfig  /* RF配置在TK8710Init中自动调用 */
+    };
+    
+    /* 3. 准备TRM配置 (与原 init_trm_system 配置一致) */
+    TRM_InitConfig trmConfig;
+    memset(&trmConfig, 0, sizeof(trmConfig));
+    trmConfig.beamMode = TRM_BEAM_MODE_FULL_STORE;
+    trmConfig.beamMaxUsers = 3000;
+    trmConfig.beamTimeoutMs = 10000;
+    trmConfig.callbacks.onRxData = OnTrmRxData;
+    trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
+    
+    /* 4. 准备HAL初始化配置 */
+    TK8710_HalInitConfig halConfig = {
+        .tk8710Init = &chipConfig,
+        .driverLogConfig = {
+            .logLevel = TK8710_LOG_WARN,  /* TK8710_LOG_INFO TK8710_LOG_ALL TK8710_LOG_NONE TK8710_LOG_WARN */
+            .moduleMask = 0xFFFFFFFF
+        },
+        .trmInitConfig = &trmConfig,
+        .trmLogConfig = {
+            .logLevel = TRM_LOG_INFO,     /* TRM_LOG_INFO TRM_LOG_DEBUG */
+            .enableStats = true
+        }
+    };
+    
+    /* 5. 调用 hal_init 完成芯片、RF、日志、TRM初始化 */
+    printf("Initializing HAL (chip + RF + log + TRM)...\n");
+    TK8710_HalError halRet = hal_init(&halConfig);
+    if (halRet != TK8710_HAL_OK) {
+        printf("HAL initialization failed: %d\n", halRet);
         return -1;
     }
-
-    /* 2. 初始化日志系统 */
-    printf("Initializing log system...\n");
-    TK8710LogConfig(TK8710_LOG_WARN, 0xFFFFFFFF);//TK8710_LOG_INFO   TK8710_LOG_ALL  TK8710_LOG_NONE TK8710_LOG_WARN
-
-    /* 3. 配置时隙参数 (TK8710_CFG_TYPE_SLOT_CFG) */
-    if (use_multi_rate) {
-        /* 多速率配置示例：使用4种不同的速率模式 */
-        uint8_t rateModes[] = {
-            TK8710_RATE_MODE_5,    /* 速率模式5 */
-            TK8710_RATE_MODE_6,    /* 速率模式6 */
-            TK8710_RATE_MODE_7,    /* 速率模式7 */
-            TK8710_RATE_MODE_8     /* 速率模式8 */
-        };
-        // uint8_t rateModes[] = {
-        //     TK8710_RATE_MODE_7,    /* 速率模式7 */
-        //     TK8710_RATE_MODE_8     /* 速率模式8 */
-        // };
-        uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
-        
-        printf("Using multi-rate configuration with %d rates\n", rateCount);
-        ret = config_multi_rate_slot_parameters(rateCount, rateModes);
-    } else {
-        printf("Using single-rate configuration\n");
-        ret = config_slot_parameters();
+    g_trmEnabled = true;  /* TRM已在hal_init中初始化 */
+    printf("HAL initialization completed (including RF)\n");
+    
+    /* 6. 配置时隙参数 - 使用 hal_config */
+    slotCfg_t slotCfg;
+    memset(&slotCfg, 0, sizeof(slotCfg_t));
+    
+    /* 配置基本参数 (与原配置一致) */
+    slotCfg.msMode = TK8710_MODE_MASTER;
+    slotCfg.plCrcEn = 0;
+    slotCfg.brdUserNum = 1;
+    slotCfg.antEn = 0xFF;
+    slotCfg.rfSel = 0xFF;
+    slotCfg.txAutoMode = 1;
+    g_txAutoMode = (slotCfg.txAutoMode == 0);
+    slotCfg.txBcnEn = 0x7f;
+    slotCfg.rx_delay = 0;
+    slotCfg.md_agc = 1024;
+    slotCfg.brdFreq[0] = 20000.0;
+    slotCfg.frameTimeLen = 0;
+    
+    /* 配置BCN轮流发送 */
+    for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
+        slotCfg.bcnRotation[i] = i;
     }
     
-    if (ret != TK8710_OK) {
-        printf("Slot parameter configuration failed\n");
-        return -1;
-    }
-
-    /* 5. 初始化射频系统 */
-    ret = init_rf_system();
-    if (ret != TK8710_OK) {
-        printf("RF system initialization failed\n");
-        return -1;
-    }
-
-    /* 6. 初始化TRM系统 */
-    printf("Initialize TRM system? (y/n): ");
-    char trmChoice;
-    scanf(" %c", &trmChoice);
-    if (trmChoice == 'y' || trmChoice == 'Y') {
-        ret = init_trm_system();
-        if (ret != TK8710_OK) {
-            printf("TRM system initialization failed\n");
-            return -1;
+    if (use_multi_rate) {
+        /* 多速率配置 */
+        uint8_t rateModes[] = {
+            TK8710_RATE_MODE_5,
+            TK8710_RATE_MODE_6,
+            TK8710_RATE_MODE_7,
+            TK8710_RATE_MODE_8
+        };
+        uint8_t rateCount = sizeof(rateModes) / sizeof(rateModes[0]);
+        slotCfg.rateCount = rateCount;
+        
+        printf("Using multi-rate configuration with %d rates\n", rateCount);
+        
+        for (int i = 0; i < rateCount; i++) {
+            slotCfg.rateModes[i] = rateModes[i];
+            
+            /* 根据速率模式设置da_m参数 */
+            switch (rateModes[i]) {
+                case TK8710_RATE_MODE_5:
+                    slotCfg.s1Cfg[i].da_m = 21492;
+                    slotCfg.s2Cfg[i].da_m = 21492;
+                    slotCfg.s3Cfg[i].da_m = 21492;
+                    break;
+                case TK8710_RATE_MODE_6:
+                    slotCfg.s1Cfg[i].da_m = 19728;
+                    slotCfg.s2Cfg[i].da_m = 19728;
+                    slotCfg.s3Cfg[i].da_m = 19728;
+                    break;
+                case TK8710_RATE_MODE_7:
+                    slotCfg.s1Cfg[i].da_m = 12000;
+                    slotCfg.s2Cfg[i].da_m = 12000;
+                    slotCfg.s3Cfg[i].da_m = 12000;
+                    break;
+                case TK8710_RATE_MODE_8:
+                    slotCfg.s1Cfg[i].da_m = 5600;
+                    slotCfg.s2Cfg[i].da_m = 5600;
+                    slotCfg.s3Cfg[i].da_m = 5600;
+                    break;
+                default:
+                    slotCfg.s1Cfg[i].da_m = 12000;
+                    slotCfg.s2Cfg[i].da_m = 12000;
+                    slotCfg.s3Cfg[i].da_m = 12000;
+                    break;
+            }
+            
+            /* 配置时隙长度和频点 */
+            slotCfg.s0Cfg[i].byteLen = 0;
+            slotCfg.s0Cfg[i].centerFreq = 503100000;
+            slotCfg.s1Cfg[i].byteLen = 26;
+            slotCfg.s1Cfg[i].centerFreq = 503100000;
+            slotCfg.s2Cfg[i].byteLen = 26;
+            slotCfg.s2Cfg[i].centerFreq = 503100000;
+            slotCfg.s3Cfg[i].byteLen = 26;
+            slotCfg.s3Cfg[i].centerFreq = 503100000;
         }
     } else {
-        printf("TRM system initialization skipped\n");
-        g_trmEnabled = false;
+        /* 单速率配置 */
+        printf("Using single-rate configuration\n");
+        slotCfg.rateCount = 1;
+        slotCfg.rateModes[0] = TK8710_RATE_MODE_8;
+        slotCfg.s0Cfg[0].da_m = 0;
+        slotCfg.s1Cfg[0].da_m = 5600;
+        slotCfg.s2Cfg[0].da_m = 5600;
+        slotCfg.s3Cfg[0].da_m = 5600;
+        slotCfg.s0Cfg[0].byteLen = 0;
+        slotCfg.s0Cfg[0].centerFreq = 503100000;
+        slotCfg.s1Cfg[0].byteLen = 26;
+        slotCfg.s1Cfg[0].centerFreq = 503100000;
+        slotCfg.s2Cfg[0].byteLen = 26;
+        slotCfg.s2Cfg[0].centerFreq = 503100000;
+        slotCfg.s3Cfg[0].byteLen = 26;
+        slotCfg.s3Cfg[0].centerFreq = 503100000;
     }
-
-    /* 7. 配置测试选项 */
+    
+    /* 调用 hal_config 配置时隙 */
+    halRet = hal_config(&slotCfg);
+    if (halRet != TK8710_HAL_OK) {
+        printf("HAL config (slot) failed: %d\n", halRet);
+        return -1;
+    }
+    printf("Slot parameter configuration completed\n");
+    
+    /* 7. 初始化发送验证器 */
+    TRM_TxValidatorConfig validatorConfig = {
+        .txPower = 35,
+        .frameOffset = 2,
+        .userIdBase = 0x30000000,
+        .enableAutoResponse = true,
+        .enablePeriodicTest = false,
+        .periodicIntervalFrames = 10,
+        .responseDataLength = 26
+    };
+    ret = TRM_TxValidatorInit(&validatorConfig);
+    if (ret != TRM_OK) {
+        printf("TX validator initialization failed: %d (non-fatal)\n", ret);
+    }
+    
+    /* 8. 配置测试选项 */
     printf("Configure test options:\n");
     printf("Enable force process all users for testing? (y/n): ");
     char testChoice;
@@ -1323,21 +1455,13 @@ int main(int argc, char* argv[])
         printf("Force max users TX: DISABLED\n");
     }
 
-    /* 8. 启动工作 */
-    ret = start_work();
-    if (ret != TK8710_OK) {
-        printf("Start work failed\n");
+    /* 9. 调用 hal_start 启动工作 */
+    halRet = hal_start();
+    if (halRet != TK8710_HAL_OK) {
+        printf("HAL start failed: %d\n", halRet);
         return -1;
     }
-
-    /* 9. 启动TRM系统（如果已初始化） */
-    if (g_trmEnabled) {
-        ret = start_trm_system();
-        if (ret != TK8710_OK) {
-            printf("TRM system start failed\n");
-            return -1;
-        }
-    }
+    printf("HAL started successfully (Master mode, Continuous work)\n");
     
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");

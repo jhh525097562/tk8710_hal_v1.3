@@ -33,7 +33,7 @@ typedef struct {
     uint8_t  power;
     uint8_t  valid;
     uint8_t  targetRateMode;  /**< 目标发送速率模式 (0=使用帧号, 5-11,18=使用速率模式) */
-    uint8_t  dataType;        /**< 数据类型 (TK8710_USER_DATA_TYPE_NORMAL 或 TK8710_USER_DATA_TYPE_SLOT3) */
+    uint8_t  beamType;        /**< 波束类型 (TK8710_DATA_TYPE_BRD=广播波束, TK8710_DATA_TYPE_DED=指定波束) */
     uint32_t timestamp;
     uint32_t frameNo;      /**< 目标发送帧号 */
 } TxItem;
@@ -211,7 +211,7 @@ int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, con
     }
 }
 
-int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType)
+int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType)
 {
     if (data == NULL || len == 0 || len > TX_DATA_MAX_LEN) {
         TRM_LOG_ERROR("TRM发送数据失败: 参数错误 - data=%p, len=%d", data, len);
@@ -247,7 +247,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     item->len = len;
     item->power = txPower;
     item->targetRateMode = targetRateMode;  /* 设置目标速率模式 */
-    item->dataType = dataType;              /* 设置数据类型 */
+    item->beamType = BeamType;              /* 设置波束类型 */
     item->valid = 1;
     memcpy(item->data, data, len);
     item->timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
@@ -427,7 +427,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                 int beamRet = TRM_GetBeamInfo(item->userId, &beam);
                 if (beamRet == TRM_OK) {
                     /* 设置发送下行2数据 - 参考test_Driver_TRM_main_3506.c实现 */
-                    int ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, item->data, item->len, item->power, item->dataType);
+                    int ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, item->data, item->len, item->power, item->beamType);
                     if (ret != TK8710_OK) {
                         TRM_LOG_ERROR("TRM: Failed to set TX user data for user[%u]: %d", item->userId, ret);
                         

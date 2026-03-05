@@ -41,9 +41,6 @@ typedef struct {
     /* TK8710初始化配置 */
     ChipConfig* tk8710Init;           /**< TK8710芯片初始化配置，为NULL时使用默认配置 */
     
-    /* RF配置 */
-    ChiprfConfig* rfConfig;           /**< RF配置参数，为NULL时使用默认配置 */
-    
     /* Driver日志配置 */
     struct {
         TK8710LogLevel logLevel;      /**< 日志级别 */

@@ -23,17 +23,15 @@
  */
 TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
 {
-    TK8710_Ret ret;
+    int ret;
     
     // 如果配置为NULL，使用默认配置
     TK8710_HalInitConfig defaultConfig = {
         .tk8710Init = NULL,              // 使用Driver层默认配置
-        .rfConfig = NULL,                // 使用Driver层默认配置
         .driverLogConfig = {
             .logLevel = TK8710_LOG_INFO, // 信息级别
             .moduleMask = 0xFFFFFFFF     // 所有模块
         },
-        .callbacks = NULL,               // 使用Driver层默认回调
         .trmInitConfig = NULL,           // 使用TRM层默认配置
         .trmLogConfig = {
             .logLevel = 2,
@@ -46,12 +44,6 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
     
     // 1. 初始化TK8710芯片
     ret = TK8710Init(cfg->tk8710Init);
-    if (ret != TK8710_OK) {
-        return TK8710_HAL_ERROR_INIT;
-    }
-    
-    // 2. 配置RF参数
-    ret = TK8710RfConfig(cfg->rfConfig);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_INIT;
     }
@@ -87,7 +79,7 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
  */
 TK8710_HalError hal_config(const slotCfg_t* slotConfig)
 {
-    TK8710_Ret ret;
+    int ret;
     const slotCfg_t* configToUse;
     
     // 如果传入的配置为NULL，使用当前配置
@@ -118,7 +110,7 @@ TK8710_HalError hal_config(const slotCfg_t* slotConfig)
  */
 TK8710_HalError hal_start(void)
 {
-    TK8710_Ret ret;
+    int ret;
     
     // 启动TK8710芯片，使用Master模式和连续工作模式
     ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
@@ -138,7 +130,7 @@ TK8710_HalError hal_start(void)
  */
 TK8710_HalError hal_reset(void)
 {
-    TK8710_Ret ret;
+    int ret;
     int trmRet;
     
     // 1. 复位TK8710芯片（复位状态机+寄存器）

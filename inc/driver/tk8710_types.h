@@ -204,6 +204,9 @@ typedef struct {
     
     /* SPI配置 (可选, 为NULL时使用默认配置) */
     SpiConfig* spiConfig;   /* SPI接口配置, 为NULL时使用默认16MHz/Mode0 */
+    
+    /* 射频配置 (可选, 为NULL时不配置射频) */
+    struct ChiprfConfig_s* rfConfig;  /* 射频初始化配置, 为NULL时跳过射频配置 */
 } ChipConfig;
 
 /* 射频发送直流配置 (每天线i/q两路) */
@@ -213,7 +216,7 @@ typedef struct {
 } TxAdcConfig;
 
 /* 射频初始化配置结构体 */
-typedef struct {
+typedef struct ChiprfConfig_s {
     rfType_e rftype;        /* 射频类型 */
     uint32_t Freq;          /* 射频中心频率 */
     uint8_t  rxgain;        /* 射频接收增益 */
