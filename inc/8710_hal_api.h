@@ -101,7 +101,7 @@ TK8710_HalError hal_reset(void);
 /**
  * @brief HAL发送数据
  * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
- * @param userIdOrIndex 用户ID或广播索引
+ * @param userId_brdIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度
  * @param txPower 发送功率
@@ -112,7 +112,9 @@ TK8710_HalError hal_reset(void);
  * 
  * 发送数据到目标设备
  */
-TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
+TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, 
+                           const uint8_t* data, uint16_t len, uint8_t txPower, 
+                           uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType);
 
 /**
  * @brief HAL获取状态

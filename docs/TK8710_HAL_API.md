@@ -398,7 +398,7 @@ TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrI
 **参数**:
 
 - `downlinkType`: 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
-- `userIdOrIndex`: 用户ID或广播索引
+- `userId_brdIndex`: 用户ID或广播索引
 - `data`: 数据指针
 - `len`: 数据长度
 - `txPower`: 发送功率

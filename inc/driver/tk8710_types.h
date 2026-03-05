@@ -325,8 +325,8 @@ typedef enum {
 } TK8710DownlinkType;
 
 /* 数据类型 */
-#define TK8710_DATA_TYPE_BRD     0   /* 广播数据: 使用Driver自动生成的波束信息或与Slot3共用波束信息 */
-#define TK8710_DATA_TYPE_DED     1   /* 专用数据: 使用指定信息模式的波束信息或与Slot1共用波束信息 */
+#define TK8710_DATA_TYPE_BRD     0   /* 广播波束 - 使用广播式波束发送数据 */
+#define TK8710_DATA_TYPE_DED     1   /* 指定波束 - 使用针对性的波束 */
 
 /* 发送数据Buffer结构体 */
 typedef struct {

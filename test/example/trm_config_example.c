@@ -19,8 +19,8 @@
 /* 简单的接收数据回调函数 */
 void on_rx_data(const TRM_RxDataList* rxList)
 {
-    printf("TRM Example: Received data - slot=%d, users=%d\n", 
-           rxList->slotIndex, rxList->userCount);
+    printf("TRM Example: Received data - users=%d, frame=%u\n", 
+           rxList->userCount, rxList->frameNo);
     
     for (uint8_t i = 0; i < rxList->userCount; i++) {
         const TRM_RxUserData* user = &rxList->users[i];

@@ -175,7 +175,7 @@ void TRM_ProcessBeamRamReleases(void)
 /**
  * @brief 统一发送数据接口（支持用户数据和广播数据）
  * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
- * @param userIdOrIndex 用户ID或广播索引
+ * @param userId_brdIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度
  * @param txPower 发送功率
@@ -184,36 +184,29 @@ void TRM_ProcessBeamRamReleases(void)
  * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType)
+int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType)
 {
     if (data == NULL || len == 0) {
-        TRM_LOG_ERROR("TRM_SetTxUserData失败: 参数错误 - data=%p, len=%d", data, len);
+        TRM_LOG_ERROR("TRM_SetTxData失败: 参数错误 - data=%p, len=%d", data, len);
         return TRM_ERR_PARAM;
     }
     
     if (downlinkType == TK8710_DOWNLINK_A) {
         /* 广播数据模式 - 直接调用Driver发送 */
-        TRM_LOG_DEBUG("TRM_SetTxUserData发送广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
-                      (uint8_t)userIdOrIndex, len, txPower, BeamType);
+        TRM_LOG_DEBUG("TRM_SetTxData发送广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
+                      (uint8_t)userId_brdIndex, len, txPower, BeamType);
         
-        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, (uint8_t)userIdOrIndex, data, len, txPower, BeamType);
-        if (ret == TK8710_OK) {
-            TRM_LOG_DEBUG("TRM广播发送成功");
-        } else {
-            TRM_LOG_ERROR("TRM广播发送失败 - 错误码=%d", ret);
-        }
-        
-        return (ret == TK8710_OK) ? TRM_OK : TRM_ERR_DRIVER;
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, (uint8_t)userId_brdIndex, data, len, txPower, BeamType);
         
     } else if (downlinkType == TK8710_DOWNLINK_B) {
         /* 用户数据模式 - 缓存到发送队列 */
-        TRM_LOG_DEBUG("TRM_SetTxUserData发送用户数据 - 用户ID=0x%08X, 长度=%d, 功率=%d, 帧号=%u, 速率模式=%d", 
-                      userIdOrIndex, len, txPower, frameNo, targetRateMode);
+        TRM_LOG_DEBUG("TRM_SetTxData发送用户数据 - 用户ID=0x%08X, 长度=%d, 功率=%d, 帧号=%u, 速率模式=%d", 
+                      userId_brdIndex, len, txPower, frameNo, targetRateMode);
         
-        return TRM_SendData(userIdOrIndex, data, len, txPower, frameNo, targetRateMode, BeamType);
+        return TRM_SendData(userId_brdIndex, data, len, txPower, frameNo, targetRateMode, BeamType);
         
     } else {
-        TRM_LOG_ERROR("TRM_SetTxUserData失败: 无效的下行类型 - downlinkType=%d", downlinkType);
+        TRM_LOG_ERROR("TRM_SetTxData失败: 无效的下行类型 - downlinkType=%d", downlinkType);
         return TRM_ERR_PARAM;
     }
 }
@@ -588,7 +581,6 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
     /* 创建用户数据存储数组 */
     static TRM_RxUserData userStorage[128];  /* 静态存储用户数据数组 */
     TRM_RxDataList rxDataList;
-    rxDataList.slotIndex = 0;  /* TODO: 获取实际时隙索引 */
     rxDataList.frameNo = TRM_GetCurrentFrame();  /* 获取当前系统帧号 */
     rxDataList.userCount = userCount;
     rxDataList.users = userStorage;  /* 指向用户数据数组 */
@@ -634,7 +626,6 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
         /* 初始化用户数据结构 */
         memset(currentUser, 0, sizeof(TRM_RxUserData));
         currentUser->userId = userIndex;  /* 默认用户ID */
-        currentUser->slotIndex = rxDataList.slotIndex;
         currentUser->rateMode = currentRateMode;  /* 设置接收速率模式 */  // TODO: 后面id需要从获取的数据中提取
         
         /* 从接收数据中提取用户信息 - 参考test_Driver_TRM_main_3506.c:TK8710GetRxUserInfo实现 */

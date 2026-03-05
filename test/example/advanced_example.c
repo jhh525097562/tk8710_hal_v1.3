@@ -31,8 +31,8 @@ static uint32_t g_txCount = 0;
 static void OnRxData(const TRM_RxDataList* rxDataList)
 {
     g_rxCount++;
-    LOG_TRM_INFO("RX: slot=%d, users=%d, frame=%u", 
-                 rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    LOG_TRM_INFO("RX: users=%d, frame=%u", 
+                 rxDataList->userCount, rxDataList->frameNo);
     
     for (uint8_t i = 0; i < rxDataList->userCount; i++) {
         const TRM_RxUserData* user = &rxDataList->users[i];

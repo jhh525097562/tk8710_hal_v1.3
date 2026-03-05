@@ -185,8 +185,8 @@ void OnTrmRxData(const TRM_RxDataList* rxDataList) {
     // 3. 更新业务状态和统计信息
     // 4. 触发相应的业务逻辑处理
   
-    printf("TRM回调: 接收到数据 - 时隙=%d, 用户数=%d, 帧号=%u\n", 
-           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    printf("TRM回调: 接收到数据 - 用户数=%d, 帧号=%u\n", 
+           rxDataList->userCount, rxDataList->frameNo);
   
     // 业务数据处理逻辑（具体实现根据应用需求）
     for (int i = 0; i < rxDataList->userCount; i++) {
@@ -396,7 +396,7 @@ int main(void) {
   
     // 发送广播数据
     uint8_t brdData[] = {0xAA, 0xBB, 0xCC};
-    ret = TRM_SetTxUserData(TK8710_DOWNLINK_1, 0, brdData, sizeof(brdData), 35, 0, 0, TK8710_DATA_TYPE_BRD);
+    ret = TRM_SetTxData(TK8710_DOWNLINK_1, 0, brdData, sizeof(brdData), 35, 0, 0, TK8710_DATA_TYPE_BRD);
     if (ret == TRM_OK) {
         printf("广播数据发送成功\n");
     }

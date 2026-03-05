@@ -19,8 +19,8 @@
 
 static void OnRxData(const TRM_RxDataList* rxDataList)
 {
-    printf("TRM Received data: slot=%d, userCount=%d, frameNo=%u\n",
-           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    printf("TRM Received data: userCount=%d, frameNo=%u\n",
+           rxDataList->userCount, rxDataList->frameNo);
     
     for (uint8_t i = 0; i < rxDataList->userCount; i++) {
         printf("  User[%d]: userId=0x%08X, len=%d, rssi=%d\n",

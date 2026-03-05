@@ -159,7 +159,7 @@ TK8710_HalError hal_reset(void)
 /**
  * @brief HAL发送数据
  * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
- * @param userIdOrIndex 用户ID或广播索引
+ * @param userId_brdIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度
  * @param txPower 发送功率
@@ -169,14 +169,14 @@ TK8710_HalError hal_reset(void)
  * @return TK8710_HAL_OK成功，其他值失败
  * 
  * 发送数据到目标设备
- * 调用TRM_SetTxUserData()发送数据
+ * 调用TRM_SetTxData()发送数据
  */
-TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType)
+TK8710_HalError hal_sendData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t dataType)
 {
     int ret;
     
     // 调用TRM层发送数据接口
-    ret = TRM_SetTxUserData(downlinkType, userIdOrIndex, data, len, txPower, frameNo, targetRateMode, dataType);
+    ret = TRM_SetTxData(downlinkType, userId_brdIndex, data, len, txPower, frameNo, targetRateMode, dataType);
     if (ret != TRM_OK) {
         return TK8710_HAL_ERROR_SEND;
     }

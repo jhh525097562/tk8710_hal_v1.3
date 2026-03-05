@@ -159,7 +159,7 @@ int test_broadcast_tx(uint8_t counter)
     }
     
     /* 使用TRM广播发送接口 */
-    int ret = TRM_SetTxUserData(TK8710_DOWNLINK_A, 0, brdData, 26, 35, 0, 0, TK8710_DATA_TYPE_BRD);  /* 下行A用户0，功率35，正常数据类型 */
+    int ret = TRM_SetTxData(TK8710_DOWNLINK_A, 0, brdData, 26, 35, 0, 0, TK8710_DATA_TYPE_BRD);  /* 下行A用户0，功率35，正常数据类型 */
     if (ret == TRM_OK) {
         printf("Broadcast data set successfully: counter=%d\n", counter);
         return 0;
@@ -241,8 +241,8 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     if (!g_trmEnabled) return;
     
     printf("=== TRM接收数据事件 ===\n");
-    printf("时隙: %d, 用户数: %d, 帧号: %u\n", 
-           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    printf("时隙: 用户数=%d, 帧号=%u\n", 
+           rxDataList->userCount, rxDataList->frameNo);
     
     /* 打印第一个用户的速率模式信息（如果有用户数据） */
     if (rxDataList->userCount > 0 && rxDataList->users) {

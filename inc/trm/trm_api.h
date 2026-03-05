@@ -79,7 +79,6 @@ typedef struct {
 /* 接收用户数据 */
 typedef struct {
     uint32_t userId;            /* 用户ID */
-    uint8_t  slotIndex;         /* 时隙索引 */
     uint8_t  dataLen;           /* 数据长度 */
     uint8_t  rateMode;          /* 接收速率模式 */
     int16_t  rssi;              /* 信号强度 */
@@ -87,12 +86,13 @@ typedef struct {
     uint8_t  reserved;
     uint8_t* data;              /* 数据指针 */
     int32_t  freq;              /* 频率 */
+    uint32_t timestamp;         /* 更新时间戳*/
+    uint8_t  valid;             /* 有效标志 */
     TRM_BeamInfo beam;          /* 波束信息 */
 } TRM_RxUserData;
 
 /* 接收数据列表 */
 typedef struct {
-    uint8_t  slotIndex;         /* 时隙索引 */
     uint8_t  userCount;         /* 用户数量 */
     uint16_t reserved;
     uint32_t frameNo;           /* 帧号 */
@@ -184,8 +184,8 @@ int TRM_Deinit(void);
 
 /**
  * @brief 统一发送数据接口（支持用户数据和广播数据）
- * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
- * @param userIdOrIndex 用户ID或广播索引
+ * @param downlinkType 下行位置 (TK8710_DOWNLINK_A=slot1发送, TK8710_DOWNLINK_B=slot3)
+ * @param userId_brdIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度
  * @param txPower 发送功率
@@ -194,7 +194,7 @@ int TRM_Deinit(void);
  * @param BeamType 波束类型 (0=广播波束, 1=指定波束)
  * @return TRM_OK成功，其他失败
  */
-int TRM_SetTxUserData(TK8710DownlinkType downlinkType, uint32_t userIdOrIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType);
+int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType);
 
 /* =============================================================================
  * 波束获取API

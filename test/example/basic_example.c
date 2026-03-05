@@ -39,8 +39,8 @@ static uint32_t g_seqCounter = 0;
 static void OnRxData(const TRM_RxDataList* rxDataList)
 {
     printf("=== 接收数据事件 ===\n");
-    printf("时隙: %d, 用户数: %d, 帧号: %u\n", 
-           rxDataList->slotIndex, rxDataList->userCount, rxDataList->frameNo);
+    printf("时隙: 用户数=%d, 帧号=%u\n", 
+           rxDataList->userCount, rxDataList->frameNo);
     
     for (uint8_t i = 0; i < rxDataList->userCount; i++) {
         TRM_RxUserData* user = &rxDataList->users[i];
