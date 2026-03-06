@@ -47,7 +47,7 @@ tk8710_hal_v1.3/
 │   │   └── mempool.h       # 内存池管理
 │   ├── driver/             # Driver层头文件
 │   │   ├── tk8710.h          # Driver主头文件（向后兼容）
-│   │   ├── tk8710_api.h      # Driver公共API接口
+│   │   ├── tk8710_driver_api.h # Driver公共API接口
 │   │   ├── tk8710_internal.h # Driver内部函数和调试接口
 │   │   ├── tk8710_log.h      # 日志系统
 │   │   ├── tk8710_regs.h     # 寄存器定义
@@ -173,7 +173,7 @@ compile_test_suite.bat
 **适用场景**：需要完整业务逻辑的应用，包括波束管理、数据收发、队列处理等
 
 ```c
-#include "tk8710_api.h"
+#include "tk8710_driver_api.h"
 #include "trm.h"
 #include "trm/trm_log.h"
 
@@ -444,7 +444,7 @@ int main(void) {
 **适用场景**：需要直接控制硬件的应用，或实现自定义业务逻辑
 
 ```c
-#include "tk8710_api.h"
+#include "tk8710_driver_api.h"
 #include "tk8710_log.h"
 
 // Driver回调函数实现 - Driver调用TRM

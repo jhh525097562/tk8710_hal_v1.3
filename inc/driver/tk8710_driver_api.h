@@ -4,8 +4,8 @@
  * @note 此文件包含应用层可调用的Driver API接口函数
  */
 
-#ifndef TK8710_API_H
-#define TK8710_API_H
+#ifndef TK8710_DRIVER_API_H
+#define TK8710_DRIVER_API_H
 
 #include "tk8710_types.h"
 #include "tk8710_log.h"
@@ -185,4 +185,4 @@ int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask);
 }
 #endif
 
-#endif /* TK8710_API_H */
+#endif /* TK8710_DRIVER_API_H */

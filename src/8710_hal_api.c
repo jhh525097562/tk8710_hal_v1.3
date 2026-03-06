@@ -7,7 +7,14 @@
  * TK8710硬件抽象层API实现，提供芯片控制的核心接口
  */
 
-#include "8710_hal_api.h"
+#include "../inc/8710_hal_api.h"
+#include "../inc/driver/tk8710_internal.h"
+#include "../port/tk8710_hal.h"
+
+/* RK3506平台特定函数声明 */
+#ifdef PLATFORM_RK3506
+void TK8710Rk3506Cleanup(void);
+#endif
 
 /*============================================================================
                                 HAL API接口实现

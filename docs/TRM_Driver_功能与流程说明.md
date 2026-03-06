@@ -611,7 +611,7 @@ tk8710_hal_v1.3/
 ├── inc/
 │   ├── 8710_hal_api.h          # HAL API头文件
 │   ├── driver/
-│   │   ├── tk8710_api.h        # Driver API头文件
+│   │   ├── tk8710_driver_api.h        # Driver API头文件
 │   │   ├── tk8710_types.h      # 类型定义
 │   │   ├── tk8710_regs.h       # 寄存器定义
 │   │   └── tk8710_log.h        # 日志定义

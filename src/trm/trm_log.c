@@ -129,7 +129,7 @@ void TRM_LogOutput(TRMLogLevel level, const char* tag,
     va_end(args);
     
     /* 添加换行符 */
-    if (offset < sizeof(buffer) - 1) {
+    if (offset < (int)sizeof(buffer) - 1) {
         buffer[offset] = '\n';
         buffer[offset + 1] = '\0';
     }

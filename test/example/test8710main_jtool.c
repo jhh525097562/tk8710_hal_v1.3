@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../port/tk8710_hal.h"
-#include "../inc/driver/tk8710_api.h"
+#include "../inc/driver/tk8710_driver_api.h"
 #include "../inc/driver/tk8710_internal.h"
 #include "../inc/driver/tk8710_log.h"
 

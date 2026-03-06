@@ -143,23 +143,6 @@ fi
 echo ""
 echo "创建示例程序..."
 
-# 创建 basic_example
-if [ -f "test/example/basic_example.c" ]; then
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} \
-        test/example/basic_example.c \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/basic_example
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ basic_example 创建成功"
-    else
-        echo "❌ basic_example 创建失败"
-    fi
-else
-    echo "⚠️  basic_example 源文件不存在"
-fi
-
 # 创建 test8710main_3506
 if [ -f "test/example/test8710main_3506.c" ]; then
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \

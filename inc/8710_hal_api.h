@@ -12,7 +12,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "driver/tk8710_api.h"
+#include "driver/tk8710_driver_api.h"
 #include "trm/trm_api.h"
 
 #ifdef __cplusplus

@@ -6,6 +6,7 @@
 #include "trm_tx_validator.h"
 #include "trm/trm_log.h"
 #include "driver/tk8710.h"
+#include "../../port/tk8710_hal.h"
 #include <string.h>
 
 /* ============================================================================

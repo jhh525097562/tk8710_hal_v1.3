@@ -1443,7 +1443,7 @@ typedef enum {
 ### 完整系统初始化示例
 
 ```c
-#include "tk8710_api.h"
+#include "tk8710_driver_api.h"
 #include "trm_api.h"
 
 int main(void) {

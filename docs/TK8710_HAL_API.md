@@ -846,7 +846,7 @@ void monitor_hal_status(void)
 ## 9. 参考资料
 
 - [TK8710 TRM和Driver API接口文档](TK8710_TRM_Driver_API.md)
-- [TK8710 Driver API文档](driver/tk8710_api.h)
+- [TK8710 Driver API文档](driver/tk8710_driver_api.h)
 - [TK8710 TRM API文档](trm/trm_api.h)
 
 ---

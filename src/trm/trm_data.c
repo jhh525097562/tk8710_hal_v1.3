@@ -6,7 +6,8 @@
 #include "../inc/trm/trm.h"
 #include "../inc/trm/trm_log.h"
 #include "../inc/trm/trm_beam.h"
-#include "../inc/driver/tk8710_api.h"
+#include "../inc/driver/tk8710_driver_api.h"
+#include "../inc/driver/tk8710_internal.h"
 #include "../port/tk8710_hal.h"
 #include <string.h>
 #include <stdio.h>
@@ -297,8 +298,8 @@ int TRM_ManageBroadcast(void)
         uint8_t testData[32];
         
         /* 生成测试广播数据 */
-        for (int i = 0; i < sizeof(testData); i++) {
-            testData[i] = brdCounter + i;
+        for (size_t i = 0; i < sizeof(testData); i++) {
+            testData[i] = (uint8_t)(brdCounter + i);
         }
         
         /* 使用默认广播参数 */
@@ -372,7 +373,9 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     if (priority >= TX_QUEUE_PRIORITY_COUNT) {
         priority = TX_QUEUE_PRIORITY_COUNT - 1;
     }
+    //测试使用，后面要删除的 priority = g_trmCurrentFrame%4;
     priority = g_trmCurrentFrame%4;
+
     /* 检查帧号有效性 - 帧号应该是循环的 */
     uint32_t normalizedFrameNo = frameNo % g_trmMaxFrameCount;
     
@@ -832,7 +835,7 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
                 
                 /* 频率转换：26-bit格式转换为实际频率Hz */
                 uint32_t freq26 = freqSignal & 0x03FFFFFF;  /* 取26位 */
-                int32_t freqValue = freq26 > (1<<25) ? (int)(freq26 - (1<<26)) : freq26;
+                int32_t freqValue = freq26 > (1<<25) ? (int32_t)(freq26 - (1<<26)) : (int32_t)freq26;
                 
                 /* 设置信号质量信息到currentUser */
                 currentUser->rssi = rssiValue;               /* 设置实际RSSI值 (int16) */
