@@ -14,7 +14,7 @@ CFLAGS += -march=armv7-a -mfpu=neon -mfloat-abi=hard
 CFLAGS += -DPLATFORM_RK3506
 
 # 头文件路径
-INC = -I./inc -I./inc/driver -I./inc/trm -I./inc/common -I../../hal
+INC = -I./inc -I./inc/driver -I./inc/trm -I../../hal
 
 # 链接选项
 LDFLAGS = -lpthread -lgpiod
@@ -23,8 +23,7 @@ LDFLAGS = -lpthread -lgpiod
 BUILD_DIR = build_rk3506
 
 # 源文件
-COMMON_SRC = src/common/mempool.c \
-             src/driver/tk8710_log.c
+COMMON_SRC = src/driver/tk8710_log.c
 DRIVER_SRC = src/driver/tk8710_core.c \
              src/driver/tk8710_spi.c \
              src/driver/tk8710_irq.c \

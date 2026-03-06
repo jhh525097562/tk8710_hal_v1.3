@@ -20,14 +20,14 @@ mkdir -p ${BUILD_DIR}
 
 # 编译选项
 CFLAGS="-Wall -Wextra -Wno-unused-parameter -O2 -DPLATFORM_RK3506"
-INCLUDES="-I./inc -I./inc/common -I./inc/driver -I./inc/trm -I./port -I./port/rk3506"
+INCLUDES="-I./inc -I./inc/driver -I./inc/trm -I./port -I./port/rk3506"
 
 echo ""
 echo "编译所有模块..."
 
 # 编译公共模块
 echo "编译公共模块..."
-files=("src/common/mempool.c" "src/driver/tk8710_log.c")
+files=("src/driver/tk8710_log.c")
 for file in "${files[@]}"; do
     echo "编译 $file..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c $file -o ${BUILD_DIR}/$(basename $file .c).o
@@ -130,7 +130,6 @@ ar rcs ${BUILD_DIR}/libtk8710_hal_complete.a \
     ${BUILD_DIR}/trm_beam.o \
     ${BUILD_DIR}/trm_data.o \
     ${BUILD_DIR}/trm_log.o \
-    ${BUILD_DIR}/mempool.o \
     ${BUILD_DIR}/8710_hal_api.o
 
 if [ $? -eq 0 ]; then

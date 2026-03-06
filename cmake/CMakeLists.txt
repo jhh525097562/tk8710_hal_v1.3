@@ -26,13 +26,11 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/driver
     ${CMAKE_CURRENT_SOURCE_DIR}/../inc/trm
-    ${CMAKE_CURRENT_SOURCE_DIR}/../inc/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../../hal
 )
 
 # 公共源文件
 set(COMMON_SOURCES
-    ../src/common/mempool.c
     ../src/driver/tk8710_log.c
 )
 

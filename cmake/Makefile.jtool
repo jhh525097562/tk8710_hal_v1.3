@@ -12,7 +12,7 @@ CFLAGS += -DPLATFORM_JTOOL
 CFLAGS += -DWIN32_LEAN_AND_MEAN
 
 # 头文件路径
-INC = -I./inc -I./inc/driver -I./inc/trm -I./inc/common -I./port/jtool -I./port
+INC = -I./inc -I./inc/driver -I./inc/trm -I./port/jtool -I./port
 
 # 链接选项 - 直接链接 jtool.dll (64位)
 JTOOL_DLL = port/jtool/x64/jtool.dll
@@ -22,7 +22,7 @@ LDFLAGS = $(JTOOL_DLL)
 BUILD_DIR = build_jtool
 
 # 源文件
-COMMON_SRC = src/common/mempool.c src/driver/tk8710_log.c
+COMMON_SRC = src/driver/tk8710_log.c
 DRIVER_SRC = src/driver/tk8710_irq.c src/driver/tk8710_config.c src/driver/tk8710_core.c
 TRM_SRC = src/trm/trm_core.c src/trm/trm_beam.c src/trm/trm_data.c src/trm/trm_slot.c src/trm/trm_freq.c src/trm/trm_power.c
 PORT_SRC = port/jtool/port_jtool.c
