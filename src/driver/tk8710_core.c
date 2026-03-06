@@ -371,6 +371,7 @@ int TK8710Init(const ChipConfig* initConfig)
             TK8710_LOG_CORE_ERROR("RF initialization failed: %d", ret);
             return ret;
         }
+        ret = TK8710RfConfig(rfCfg);
         TK8710_LOG_CORE_INFO("RF initialization completed");
     }
     

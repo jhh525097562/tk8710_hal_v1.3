@@ -416,7 +416,14 @@ void TK8710PrintIrqTimeStats(void)
         "RX_BCN", "BRD_UD", "BRD_DATA", "MD_UD", "MD_DATA",
         "S0", "S1", "S2", "S3", "ACM"
     };
-    
+    TK8710LogConfig_t defaultLogConfig = {
+        .level = TK8710_LOG_ALL,
+        .module_mask = TK8710_LOG_MODULE_ALL,
+        .callback = NULL,
+        .enable_timestamp = 1,
+        .enable_module_name = 1
+    };
+    TK8710LogInit(&defaultLogConfig);
     TK8710_LOG_IRQ_INFO("=== 中断处理时间统计报告 ===");
     TK8710_LOG_IRQ_INFO("%-8s %-8s %-8s %-8s %-8s %-12s", 
                         "类型", "次数", "总时间", "平均时间", "最大时间", "最小时间");

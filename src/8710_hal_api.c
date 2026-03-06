@@ -133,18 +133,23 @@ TK8710_HalError hal_reset(void)
     int ret;
     int trmRet;
     
-    // 1. 复位TK8710芯片（复位状态机+寄存器）
-    ret = TK8710Reset(TK8710_RST_ALL);
-    if (ret != TK8710_OK) {
-        return TK8710_HAL_ERROR_RESET;
-    }
-    
-    // 2. 清理TRM系统资源
+    // 1. 清理TRM系统资源
     trmRet = TRM_Deinit();
     if (trmRet != TRM_OK) {
         return TK8710_HAL_ERROR_RESET;
     }
+
+    // 2. 复位TK8710芯片（复位状态机+寄存器）
+    ret = TK8710Reset(TK8710_RST_STATE_MACHINE);//TK8710_RST_STATE_MACHINE  TK8710_RST_ALL
+    ret = TK8710Reset(TK8710_RST_ALL);//TK8710_RST_STATE_MACHINE  TK8710_RST_ALL
+    if (ret != TK8710_OK) {
+        return TK8710_HAL_ERROR_RESET;
+    }
+
+    TK8710GpioIrqEnable(0, 0);
     
+    TK8710Rk3506Cleanup();
+
     return TK8710_HAL_OK;
 }
 

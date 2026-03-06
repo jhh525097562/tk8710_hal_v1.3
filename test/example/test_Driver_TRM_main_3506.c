@@ -41,16 +41,6 @@
 #endif
 
 /*============================================================================
- * 外部函数声明 (RK3506 HAL相关)
- *============================================================================*/
-
-/* RK3506 清理函数 */
-extern void TK8710Rk3506Cleanup(void);
-
-/* SPI 协议层函数 */
-extern int TK8710SpiInit(const SpiConfig* cfg);
-
-/*============================================================================
  * 全局变量和配置
  *============================================================================*/
 
@@ -88,62 +78,12 @@ static volatile bool g_hasValidUsers = false;     /* 是否有有效用户 */
 static volatile bool g_txAutoMode = false;         /* 自动发送模式 */
 
 /* TRM相关变量 */
-static volatile bool g_trmEnabled = false;        /* TRM是否启用 */
 static uint32_t g_trmSendCount = 0;               /* TRM发送计数 */
 static uint32_t g_trmRxCount = 0;                 /* TRM接收计数 */
-
-/* 中断回调函数声明 */
-void app_irq_handler(TK8710IrqResult irqResult);
 
 /* TRM回调函数声明 */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList);
 static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult);
-
-/*============================================================================
- * 自动下行发送测试函数
- *============================================================================*/
-
-/**
- * @brief 测试自动下行发送 - 一次性设置所有用户
- * @param userIndices 用户索引数组
- * @param txPowers 对应的发送功率数组
- * @param userCount 用户数量
- * @return 0-成功, 其他-失败
- */
-static int test_auto_downlink_tx_all(const uint8_t* userIndices, const uint8_t* txPowers, uint8_t userCount)
-{
-    static uint8_t txCounter = 0;
-    int ret;
-    
-    printf("Setting up auto downlink TX for %d users\n", userCount);
-    
-    /* 为每个用户生成并发送数据 */
-    for (int i = 0; i < userCount; i++) {
-        uint8_t userIndex = userIndices[i];
-        uint8_t txPower = txPowers[i];
-        uint8_t txData[26];
-        
-        /* 生成发送数据 */
-        for (int j = 0; j < 26; j++) {
-            txData[j] = txCounter + j + i;  /* 基于用户索引、计数器和用户序号生成数据 */
-        }
-        
-        /* 设置自动发送下行2数据和功率 */
-        ret = TK8710SetTxData(TK8710_DOWNLINK_B, userIndex, txData, 26, txPower, TK8710_DATA_TYPE_DED);
-        if (ret != TK8710_OK) {
-            printf("Failed to set TX user data for user[%d]: %d\n", userIndex, ret);
-            return ret;
-        }
-        
-        printf("Auto downlink TX data set successfully: user[%d], counter=%d, power=%d\n", 
-               userIndex, txCounter, txPower);
-    }
-    
-    txCounter++;
-    printf("All %d users TX data set successfully\n", userCount);
-    
-    return TK8710_OK;
-}
 
 /**
  * @brief 测试广播发送功能
@@ -170,65 +110,6 @@ int test_broadcast_tx(uint8_t counter)
     }
 }
 
-/**
- * @brief 测试指定信息发送功能
- * @param userIndices 用户索引数组
- * @param userCount 用户数量
- * @return 0-成功, 其他-失败
- */
-static int test_manual_tx_setup(const uint8_t* userIndices, uint8_t userCount)
-{
-    int ret;
-    
-    printf("Setting up manual TX for %d users\n", userCount);
-    
-    /* 为每个用户设置发送信息 */
-    for (int i = 0; i < userCount; i++) {
-        uint8_t userIndex = userIndices[i];
-        
-        /* 从接收的用户信息Buffer获取数据 */
-        uint32_t freq;
-        uint32_t ahData[16];
-        uint64_t pilotPower;
-        
-        /* 为每个用户生成发送数据 */
-        uint8_t txData[26];
-        for (int j = 0; j < 26; j++) {
-            txData[j] = i + j;  /* 基于用户序号生成数据 */
-        }
-        
-        /* 设置发送下行2数据 */
-        uint8_t txUserIndex = i;  /* 从第一个用户开始，依次增加 */
-        ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, txData, 26, 35, TK8710_DATA_TYPE_DED);  /* 使用连续索引，功率35 */
-        if (ret != TK8710_OK) {
-            printf("Failed to set TX user data for user[%d]: %d\n", txUserIndex, ret);
-            return ret;
-        }
-        
-        ret = TK8710GetRxUserInfo(userIndex, &freq, ahData, &pilotPower);
-        if (ret != TK8710_OK) {
-            printf("Failed to get RX user info for user[%d]: %d\n", userIndex, ret);
-            /* 如果获取失败，使用默认值 */
-            freq = 20000;  /* 默认频率 */
-            for (int j = 0; j < 16; j++) {
-                ahData[j] = 8192 + j;  /* 默认AH值 */
-            }
-            pilotPower = 1000000;  /* 默认Pilot功率 */
-            printf("Using default values for user[%d]\n", userIndex);
-        }
-        
-        /* 设置发送用用户信息 - 使用从0开始的连续索引 */
-        ret = TK8710SetTxUserInfo(txUserIndex, freq, ahData, pilotPower);
-        if (ret != TK8710_OK) {
-            printf("Failed to set TX user info for user[%d]: %d\n", txUserIndex, ret);
-            return ret;
-        }
-    }
-    
-    printf("All %d users manual TX info set successfully\n", userCount);
-    return TK8710_OK;
-}
-
 /*============================================================================
  * TRM回调函数实现
  *============================================================================*/
@@ -239,11 +120,9 @@ static int test_manual_tx_setup(const uint8_t* userIndices, uint8_t userCount)
  */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList)
 {
-    if (!g_trmEnabled) return;
-    
-    printf("=== TRM接收数据事件 ===\n");
-    printf("时隙: 用户数=%d, 帧号=%u\n", 
-           rxDataList->userCount, rxDataList->frameNo);
+    printf("=== TRM接收数据事件 (帧号=%u) ===\n", rxDataList->frameNo);
+    printf("时隙: 用户数=%d\n", 
+           rxDataList->userCount);
     
     /* 打印第一个用户的速率模式信息（如果有用户数据） */
     if (rxDataList->userCount > 0 && rxDataList->users) {
@@ -286,8 +165,8 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     /* 显示验证统计信息 */
     TRM_TxValidatorStats stats;
     if (TRM_TxValidatorGetStats(&stats) == TRM_OK) {
-        printf("  发送统计: 总触发=%u, 成功=%u, 失败=%u\n", 
-               stats.totalTriggerCount, stats.successSendCount, stats.failedSendCount);
+        printf("  发送统计: 总触发=%u, 成功=%u, 失败=%u, 接收总次数=%u\n", 
+               stats.totalTriggerCount, stats.successSendCount, stats.failedSendCount, g_trmRxCount);
     }
     
     printf("==================\n");
@@ -300,421 +179,18 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
  */
 static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult)
 {
-    if (!g_trmEnabled || !txResult) return;
+    if (!txResult) return;
     
     printf("=== TRM发送完成事件 ===\n");
     printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
-    
+    g_trmSendCount += txResult->userCount;
     /* 打印每个用户的发送结果 */
     // const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
     // for (uint32_t i = 0; i < txResult->userCount; i++) {
     //     const TRM_TxUserResult* userResult = &txResult->users[i];
     //     printf("  用户ID: 0x%08X, 结果: %s\n", userResult->userId, resultStr[userResult->result]);
-        
-    //     if (userResult->result == TRM_TX_OK) {
-    //         g_trmSendCount++;
-    //     }
     // }
     printf("==================\n");
-}
-
-
-/*============================================================================
- * 中断处理函数
- *============================================================================*/
-
-/**
- * @brief 应用层中断处理函数
- * @param irqResult 中断结果数据
- */
-void app_irq_handler(TK8710IrqResult irqResult)
-{
-    switch (irqResult.irq_type) {
-        case TK8710_IRQ_RX_BCN:
-            printf("BCN receive interrupt\n");
-            break;
-            
-        case TK8710_IRQ_BRD_UD:
-            printf("Broadcast UD interrupt\n");
-            break;
-            
-        case TK8710_IRQ_BRD_DATA:
-            printf("Broadcast DATA interrupt\n");
-            break;
-            
-        case TK8710_IRQ_MD_UD:
-            printf("MD UD interrupt\n");
-            break;
-            
-        case TK8710_IRQ_MD_DATA:
-            if (irqResult.mdDataValid) {
-                printf("CRC valid users: %d, CRC error users: %d\n", 
-                       irqResult.crcValidCount, irqResult.crcErrorCount);
-                
-                /* 更新有效用户状态 */
-                g_hasValidUsers = (irqResult.crcValidCount > 0);
-                
-                /* 读取有效用户的数据 */
-                uint8_t validUsers[128];
-                uint8_t validPowers[128];
-                uint8_t validUserCount = 0;
-                
-                for (uint8_t i = 0; i < 128; i++) {
-                    if (irqResult.crcResults[i].crcValid) {
-                        uint8_t* userData;
-                        uint16_t dataLen;
-                        
-                        /* 使用新的Buffer API获取数据 */
-                        if (TK8710GetRxUserData(i, &userData, &dataLen) == TK8710_OK) {
-                            // printf("User[%d] data (len=%d): ", i, dataLen);
-                            
-                            // /* 打印前16字节数据 */
-                            // uint16_t printLen = dataLen > 16 ? 16 : dataLen;
-                            // for (uint16_t j = 0; j < printLen; j++) {
-                            //     printf("%02X ", userData[j]);
-                            // }
-                            // if (dataLen > 16) {
-                            //     printf("...");
-                            // }
-                            // printf("\n");
-                            
-                            /* 获取信号质量信息 */
-                            uint32_t rssi, freq;
-                            uint8_t snr;
-                            if (TK8710GetRxUserSignalQuality(i, &rssi, &snr, &freq) == TK8710_OK) {
-                                /* SNR转换：大于256时默认为0，其他时候除以4 */
-                                uint8_t snrValue = snr > 256 ? 0 : snr / 4;
-                                
-                                /* RSSI转换：11位有符号数，需要转换为有符号值 */
-                                uint32_t rssiRaw = rssi;
-                                int16_t rssiValue = (int16_t)(rssiRaw - 2048) / 4;
-                                
-                                /* 频率转换：26-bit格式转换为实际频率Hz */
-                                uint32_t freq26 = freq & 0x03FFFFFF;  /* 取26位 */
-                                int32_t freqValue = freq26 > (1<<25) ? (int)(freq26 - (1<<26)) : freq26;
-                                printf("User[%d] Signal: SNR=%d, RSSI=%d, Freq=%d Hz (raw=0x%08X)\n", 
-                                       i, snrValue, rssiValue, freqValue/128, freq26);
-                                
-                                /* 释放接收数据Buffer */
-                                TK8710ReleaseRxData(i);
-                                
-                                /* 收集有效用户信息用于批量发送 */
-                                validUsers[validUserCount] = i;
-                                validPowers[validUserCount] = 35;  /* 功率范围30-39，基于用户索引 */
-                                validUserCount++;
-                            }
-                        }
-                    }
-                }
-                
-                /* 一次性设置所有有效用户的发送数据 */
-                if (validUserCount > 0) {
-                    // test_auto_downlink_tx_all(validUsers, validPowers, validUserCount);
-                    test_manual_tx_setup(validUsers, validUserCount);
-                }
-            }
-            
-            break;
-            
-        case TK8710_IRQ_S0:
-            printf("S0 slot interrupt (BCN)\n");
-            break;
-            
-        case TK8710_IRQ_S1:
-            printf("S1 slot interrupt\n");
-            
-            /* 设置广播发送数据 */
-            {
-                static uint8_t brdCounter = 0;
-                test_broadcast_tx(brdCounter);
-                brdCounter++;
-            }
-            break;
-            
-        case TK8710_IRQ_S2:
-            printf("S2 slot interrupt\n");
-            break;
-            
-        case TK8710_IRQ_S3:
-            printf("S3 slot interrupt\n");
-            break;
-            
-        case TK8710_IRQ_ACM:
-            printf("ACM calibration interrupt\n");
-            break;
-            
-        default:
-            printf("Unknown interrupt type: %d\n", irqResult.irq_type);
-            break;
-    }
-}
-
-/*============================================================================
- * GPIO中断包装函数
- *============================================================================*/
-
-/**
- * @brief GPIO中断包装函数
- * @note 将GPIO中断转换为Driver中断调用
- */
-static void gpio_irq_wrapper(TK8710IrqResult irqResult)
-{
-    (void)irqResult;  /* GPIO中断不需要IRQ结果参数 */
-    
-    /* 调用Driver层中断处理函数 */
-    extern void TK8710_IRQHandler(void);
-    TK8710_IRQHandler();
-}
-
-/*============================================================================
- * 初始化函数
- *============================================================================*/
-
-/**
- * @brief 初始化中断系统
- * @return 0-成功, 非0-失败
- */
-int init_interrupt_system(void)
-{
-    printf("Initializing interrupt system...\n");
-    
-    /* GPIO中断已在TK8710Init中完整初始化和使能 */
-    printf("GPIO interrupt already initialized and enabled in TK8710Init\n");
-    
-    printf("Interrupt system initialization completed\n");
-    return TK8710_OK;
-}
-
-/**
- * @brief 初始化TRM系统
- * @return 0-成功, 非0-失败
- */
-int init_trm_system(void)
-{
-    int ret;
-    
-    printf("Initializing TRM system...\n");
-    
-    /* 初始化TRM日志系统 */
-    printf("Initializing TRM logging system...\n");
-    TRM_LogInit(TRM_LOG_INFO);//TRM_LOG_INFO TRM_LOG_DEBUG
-    TRM_LOG_INFO("测试程序开始初始化TRM系统");
-    
-    /* 配置TRM参数 */
-    TRM_InitConfig trmConfig;
-    memset(&trmConfig, 0, sizeof(trmConfig));
-    
-    /* TRM波束配置 */
-    trmConfig.beamMode = TRM_BEAM_MODE_FULL_STORE;
-    trmConfig.beamMaxUsers = 3000;
-    trmConfig.beamTimeoutMs = 10000;  /* 增加到10秒，避免波束信息过期 */
-    TRM_LOG_INFO("配置TRM参数: beamMode=%d, maxUsers=%u, timeout=%u ms", 
-                 trmConfig.beamMode, trmConfig.beamMaxUsers, trmConfig.beamTimeoutMs);
-    
-    /* TRM回调函数 */
-    trmConfig.callbacks.onRxData = OnTrmRxData;
-    trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
-    TRM_LOG_INFO("设置TRM回调函数");
-    
-    /* 初始化TRM */
-    ret = TRM_Init(&trmConfig);
-    if (ret != TRM_OK) {
-        TRM_LOG_ERROR("TRM初始化失败: 错误码=%d", ret);
-        printf("TRM initialization failed: %d\n", ret);
-        return ret;
-    }
-    
-    /* 初始化发送验证器 */
-    TRM_TxValidatorConfig validatorConfig = {
-        .txPower = 35,
-        .frameOffset = 2,
-        .userIdBase = 0x30000000,
-        .enableAutoResponse = true,
-        .enablePeriodicTest = false,
-        .periodicIntervalFrames = 10,
-        .responseDataLength = 26  /* 配置应答数据长度为16字节 */
-    };
-    
-    ret = TRM_TxValidatorInit(&validatorConfig);
-    if (ret != TRM_OK) {
-        TRM_LOG_ERROR("发送验证器初始化失败: 错误码=%d", ret);
-        printf("TX validator initialization failed: %d\n", ret);
-        /* 验证器失败不影响主流程 */
-    }
-    
-    /* 启用TRM */
-    g_trmEnabled = true;
-    g_trmSendCount = 0;
-    g_trmRxCount = 0;
-    
-    TRM_LOG_INFO("TRM系统初始化完成");
-    printf("TRM system initialization completed\n");
-    return TK8710_OK;
-}
-
-/**
- * @brief 启动TRM系统
- * @return 0-成功, 非0-失败
- */
-int start_trm_system(void)
-{
-    int ret;
-    
-    if (!g_trmEnabled) {
-        TRM_LOG_WARN("TRM未初始化，无法启动");
-        printf("TRM not initialized, cannot start\n");
-        return -1;
-    }
-    
-    printf("Starting TRM system...\n");
-    
-    /* TRM已初始化，无需启动 */
-    printf("TRM is ready (initialized state)\n");
-    
-    return TRM_OK;
-}
-
-/**
- * @brief 停止TRM系统
- * @return 0-成功, 非0-失败
- */
-int stop_trm_system(void)
-{
-    int ret;
-    
-    if (!g_trmEnabled) {
-        TRM_LOG_WARN("TRM未初始化，无需停止");
-        printf("TRM not initialized, cannot stop\n");
-        return -1;
-    }
-    
-    TRM_LOG_INFO("停止TRM系统");
-    printf("Stopping TRM system...\n");
-    
-    /* TRM无需停止，已初始化即可使用 */
-    printf("TRM is ready (no stop needed)\n");
-    
-    TRM_LOG_INFO("TRM系统停止成功");
-    printf("TRM system stopped successfully\n");
-    return TK8710_OK;
-}
-    
-    /**
- * @brief 清理TRM系统
- * @return 0-成功, 非0-失败
- */
-int cleanup_trm_system(void)
-{
-    TRM_LOG_INFO("开始清理TRM系统");
-    
-    if (g_trmEnabled) {
-        /* TRM无需停止，直接清理 */
-    }
-    
-    printf("Cleaning up TRM system...\n");
-    
-    /* 清理发送验证器 */
-    TRM_TxValidatorDeinit();
-    
-    /* 清理TRM */
-    TRM_Deinit();
-    
-    TRM_LOG_INFO("TRM系统清理完成");
-    printf("TRM system cleaned up\n");
-    return TK8710_OK;
-}
-
-/**
- * @brief TRM发送测试数据
- * @param userId 用户ID
- * @param testData 测试数据
- * @param dataLen 数据长度
- * @return 0-成功, 非0-失败
- */
-int test_trm_send_data(uint32_t userId, const uint8_t* testData, uint16_t dataLen)
-{
-    int ret;
-    
-    if (!g_trmEnabled) {
-        TRM_LOG_WARN("TRM未启用，无法发送数据");
-        printf("TRM not enabled, cannot send data\n");
-        return -1;
-    }
-    
-    TRM_LOG_INFO("开始TRM发送测试 - 用户ID=0x%08X, 数据长度=%d", userId, dataLen);
-    printf("=== TRM发送测试 ===\n");
-    printf("用户ID: 0x%08X, 数据长度: %d\n", userId, dataLen);
-    
-    /* 获取当前帧号 */
-    uint32_t currentFrame = TRM_GetCurrentFrame();
-    printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
-    
-    /* 发送数据 */
-    ret = TRM_SendData(userId, testData, dataLen, 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
-    if (ret == TRM_OK) {
-        TRM_LOG_INFO("TRM发送成功 - 用户ID=0x%08X", userId);
-        printf("TRM发送成功\n");
-        g_trmSendCount++;
-    } else {
-        TRM_LOG_ERROR("TRM发送失败 - 用户ID=0x%08X, 错误码=%d", userId, ret);
-        printf("TRM发送失败: %d\n", ret);
-    }
-    
-    printf("==================\n");
-    return ret;
-}
-    /**
- * @brief TRM批量发送测试
- * @param userCount 用户数量
- * @return 0-成功, 非0-失败
- */
-int test_trm_batch_send(uint8_t userCount)
-{
-    int ret;
-    uint8_t testData[32];
-    
-    if (!g_trmEnabled) {
-        TRM_LOG_WARN("TRM未启用，无法批量发送");
-        printf("TRM not enabled, cannot batch send\n");
-        return -1;
-    }
-    
-    TRM_LOG_INFO("开始TRM批量发送测试 - 用户数量=%d", userCount);
-    printf("=== TRM批量发送测试 ===\n");
-    printf("用户数量: %d\n", userCount);
-    
-    /* 生成测试数据 */
-    for (int i = 0; i < sizeof(testData); i++) {
-        testData[i] = (uint8_t)(i & 0xFF);
-    }
-    
-    /* 获取当前帧号 */
-    uint32_t currentFrame = TRM_GetCurrentFrame();
-    
-    /* 批量发送 */
-    for (int i = 0; i < userCount; i++) {
-        uint32_t userId = 0x10000000 + i;
-        
-        printf("=== TRM发送测试 ===\n");
-        printf("用户ID: 0x%08X, 数据长度: %d\n", userId, sizeof(testData));
-        printf("当前帧号: %u, 目标帧号: %u\n", currentFrame, currentFrame + 1);
-        
-        ret = TRM_SendData(userId, testData, sizeof(testData), 20, currentFrame + 1, 0, TK8710_DATA_TYPE_DED);
-        if (ret == TRM_OK) {
-            TRM_LOG_DEBUG("批量发送[%d/%d]成功 - 用户ID=0x%08X", i+1, userCount, userId);
-            printf("TRM发送成功\n");
-            g_trmSendCount++;
-        } else {
-            TRM_LOG_ERROR("批量发送[%d/%d]失败 - 用户ID=0x%08X, 错误码=%d", i+1, userCount, userId, ret);
-            printf("TRM发送失败: %d\n", ret);
-        }
-        printf("==================\n");
-    }
-    
-    printf("TRM批量发送完成\n");
-    TRM_LOG_INFO("TRM批量发送测试完成 - 总用户数=%d", userCount);
-    printf("==================\n");
-    return TK8710_OK;
 }
 
 /**
@@ -723,393 +199,21 @@ int test_trm_batch_send(uint8_t userCount)
 void show_trm_statistics(void)
 {
     printf("\n=== TRM统计信息 ===\n");
-    printf("TRM状态: %s\n", g_trmEnabled ? "启用" : "禁用");
     printf("发送计数: %u\n", g_trmSendCount);
     printf("接收计数: %u\n", g_trmRxCount);
     
-    if (g_trmEnabled) {
-        /* 获取TRM内部统计 */
-        TRM_Stats stats;
-        if (TRM_GetStats(&stats) == TRM_OK) {
-            printf("TRM内部统计:\n");
-            printf("  发送次数: %u\n", stats.txCount);
-            printf("  发送成功: %u\n", stats.txSuccessCount);
-            printf("  接收次数: %u\n", stats.rxCount);
-            printf("  波束数量: %u\n", stats.beamCount);
-            printf("当前帧号: %u\n", TRM_GetCurrentFrame());
-        }
+    /* 获取TRM内部统计 */
+    TRM_Stats stats;
+    if (TRM_GetStats(&stats) == TRM_OK) {
+        printf("TRM内部统计:\n");
+        printf("  发送次数: %u\n", stats.txCount);
+        printf("  发送成功: %u\n", stats.txSuccessCount);
+        printf("  接收次数: %u\n", stats.rxCount);
+        printf("  波束数量: %u\n", stats.beamCount);
+        printf("当前帧号: %u\n", TRM_GetCurrentFrame());
     }
     
     printf("==================\n\n");
-}
-
-/**
- * @brief 初始化射频
- * @return 0-成功, 非0-失败
- */
-int init_rf_system(void)
-{
-    int ret;
-    ChiprfConfig rfConfig;
-    
-    printf("Initializing RF system...\n");
-    
-    /* 配置射频参数 */
-    memset(&rfConfig, 0, sizeof(ChiprfConfig));
-    rfConfig.rftype = TK8710_RF_TYPE_1255_32M;  /* SX1255 32MHz */
-    rfConfig.Freq = 503100000;  /* 503.1MHz */
-    rfConfig.rxgain = 0x7e;       /* 接收增益 */
-    rfConfig.txgain = 0x2a;       /* 发送增益 */
-    
-    /* 配置所有天线的直流偏置 */
-    uint16_t txadc_i[TK8710_MAX_ANTENNAS] = {0x0bc0,0x0a50,0x0750,0x0bc3,0x0e83,0xfbff,0x0880,0x02a0};
-    uint16_t txadc_q[TK8710_MAX_ANTENNAS] = {0x04a0,0x0780,0x0820,0x0940,0x05e0,0x0850,0x0500,0x06ff};
-    for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        rfConfig.txadc[i].i = txadc_i[i];  /* I路直流 */
-        rfConfig.txadc[i].q = txadc_q[i];  /* Q路直流 */
-    }
-    
-    /* 初始化射频 */
-    printf("First RF initialization attempt...\n");
-    ret = TK8710RfConfig(&rfConfig);
-    if (ret != TK8710_OK) {
-        printf("First RF initialization failed: %d\n", ret);
-        return ret;
-    }
-    
-    /* 等待RF稳定 - 首次上电需要更长时间 */
-    printf("Waiting for RF to stabilize (first power-on requires longer time)...\n");
-    usleep(50000);  /* 等待50ms，给RF芯片充分的稳定时间 */
-    
-    /* 第二次RF初始化确保硬件完全就绪 */
-    printf("Second RF initialization to ensure hardware is fully operational...\n");
-    ret = TK8710RfConfig(&rfConfig);
-    if (ret != TK8710_OK) {
-        printf("Second RF initialization failed: %d\n", ret);
-        return ret;
-    }
-    printf("RF dual initialization completed - hardware should be fully operational\n");
-    
-    printf("RF system initialization completed\n");
-    printf("RF type: %d, Frequency: %u Hz\n", rfConfig.rftype, rfConfig.Freq);
-    return TK8710_OK;
-}
-
-/**
- * @brief 初始化8710芯片
- * @return 0-成功, 非0-失败
- */
-int init_tk8710_chip(void)
-{
-    int ret;
-    ChipConfig chipConfig = {
-        .bcn_agc     = 32,
-        .interval    = 32,
-        .tx_dly      = 0,
-        .tx_fix_info = 0,
-        .offset_adj  = 0,
-        .tx_pre      = 0,
-        .conti_mode  = 1,
-        .bcn_scan    = 0,
-        .ant_en      = 0xFF,
-        .rf_sel      = 0xFF,
-        .tx_bcn_en   = 1,
-        .ts_sync     = 0,
-        .rf_model    = 1,
-        .bcnbits     = 0,
-        .anoiseThe1  = 0,
-        .power2rssi  = 0,
-        .irq_ctrl0   = 0x7FF,
-        .irq_ctrl1   = 0,
-    };
-    
-    printf("Initializing TK8710 chip...\n");
-    
-    /* 调用TK8710Init，包含SPI配置、GPIO初始化、中断使能和芯片复位 */
-    /* 使用默认配置初始化芯片 */
-    /* 注意：TRM回调通过TRM_RegisterDriverCallbacks()设置 */
-    ret = TK8710Init(&chipConfig);  /* 中断回调参数已移除 */
-    if (ret != TK8710_OK) {
-        printf("TK8710 chip initialization failed: %d\n", ret);
-        return ret;
-    }
-    
-    printf("TK8710 chip initialization completed\n");
-    return TK8710_OK;
-}
-
-/**
- * @brief 配置时隙参数
- * @return 0-成功, 非0-失败
- */
-int config_slot_parameters(void)
-{
-    int ret;
-    slotCfg_t slotCfg;
-    
-    printf("Configuring slot parameters...\n");
-    
-    /* 清零配置结构 */
-    memset(&slotCfg, 0, sizeof(slotCfg_t));
-    
-    /* 配置基本参数 */
-    slotCfg.msMode = TK8710_MODE_MASTER;        /* 主模式 */
-    slotCfg.plCrcEn = 0;                         /* 使能CRC校验 */
-    slotCfg.rateCount = 1;                       /* 速率个数，先设置为1个速率模式 */
-    slotCfg.rateModes[0] = TK8710_RATE_MODE_8;   /* 第一个速率模式 */
-    slotCfg.brdUserNum = 1;                      /* 广播用户数 */
-    slotCfg.antEn = 0xFF;                        /* 使能所有天线 */
-    slotCfg.rfSel = 0xFF;                        /* 选择所有RF */
-    slotCfg.txAutoMode = 1;                      /* 自动发送模式 */
-    g_txAutoMode = (slotCfg.txAutoMode == 0);  /* 0=自动发送, 1=指定信息发送 */
-    slotCfg.txBcnEn = 0x7f;                         /* 使能BCN发送 */
-    
-    /* 配置BCN轮流发送 */
-    for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        slotCfg.bcnRotation[i] = i;  /* 轮流使用所有天线 0,1,2,3,4,5,6,7 */
-    }
-    
-    /* 配置广播频率 */
-    slotCfg.brdFreq[0] = 20000.0;  /* 广播用户0频率: 503.1 MHz */
-    
-    /* 配置时隙参数 */
-    slotCfg.rx_delay = 0;                        /* RX delay */
-    slotCfg.md_agc = 1024;                       /* DATA AGC长度 */
-    
-    /* 配置时隙DAC参数 */
-    /* S0时隙 (BCN) */
-    slotCfg.s0Cfg[0].da_m = 0;        /* da0_m */
-    
-    /* 根据速率模式设置S1、S2、S3时隙的da_m参数 */
-    switch (slotCfg.rateModes[0]) {
-        case TK8710_RATE_MODE_5:
-            slotCfg.s1Cfg[0].da_m = 21492;    /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 21492;    /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 21492;    /* da3_m */
-            break;
-        case TK8710_RATE_MODE_6:
-            slotCfg.s1Cfg[0].da_m = 19728;    /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 19728;    /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 19728;    /* da3_m */
-            break;
-        case TK8710_RATE_MODE_7:
-            slotCfg.s1Cfg[0].da_m = 12000;    /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 12000;    /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 12000;    /* da3_m */
-            break;
-        case TK8710_RATE_MODE_8:
-            slotCfg.s1Cfg[0].da_m = 5600;     /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 5600;     /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 5600;     /* da3_m */
-            break;
-        case TK8710_RATE_MODE_9:
-            slotCfg.s1Cfg[0].da_m = 2800;     /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 2800;     /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 2800;     /* da3_m */
-            break;
-        case TK8710_RATE_MODE_10:
-            slotCfg.s1Cfg[0].da_m = 1400;     /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 1400;     /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 1400;     /* da3_m */
-            break;
-        case TK8710_RATE_MODE_11:
-        case TK8710_RATE_MODE_18:
-            slotCfg.s1Cfg[0].da_m = 800;      /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 800;      /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 800;      /* da3_m */
-            break;
-        default:
-            /* 默认值，保持原有设置 */
-            slotCfg.s1Cfg[0].da_m = 12000;    /* da1_m */
-            slotCfg.s2Cfg[0].da_m = 12000;    /* da2_m */
-            slotCfg.s3Cfg[0].da_m = 12000;    /* da3_m */
-            break;
-    }
-    
-    /* 配置时隙 */
-    slotCfg.s0Cfg[0].byteLen = 0;                  /* S0 (BCN) 时隙长度 */
-    slotCfg.s0Cfg[0].centerFreq = 503100000;          /* S0中心频点 */
-    
-    slotCfg.s1Cfg[0].byteLen = 26;                 /* S1 (FDL) 时隙长度 */
-    slotCfg.s1Cfg[0].centerFreq = 503100000;          /* S1中心频点 */
-    
-    slotCfg.s2Cfg[0].byteLen = 26;                 /* S2 (ADL) 时隙长度 */
-    slotCfg.s2Cfg[0].centerFreq = 503100000;          /* S2中心频点 */
-    
-    slotCfg.s3Cfg[0].byteLen = 26;                 /* S3 (UL) 时隙长度 */
-    slotCfg.s3Cfg[0].centerFreq = 503100000;          /* S3中心频点 */
-    
-    /* 计算帧时间长度 (由硬件自动计算，这里先设为0) */
-    slotCfg.frameTimeLen = 0;
-    
-    /* 设置时隙配置 */
-    ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);
-    if (ret != TK8710_OK) {
-        printf("Slot configuration failed: %d\n", ret);
-        return ret;
-    }
-    
-    printf("Slot parameter configuration completed\n");
-    printf("Rate count: %d, Rate mode[0]: %d, Broadcast users: %d\n", 
-           slotCfg.rateCount, slotCfg.rateModes[0], slotCfg.brdUserNum);
-    printf("Slot length: S1=%d, S2=%d, S3=%d\n", 
-           slotCfg.s1Cfg[0].byteLen, slotCfg.s2Cfg[0].byteLen, slotCfg.s3Cfg[0].byteLen);
-    
-    return TK8710_OK;
-}
-
-/**
- * @brief 配置多速率时隙参数
- * @param rateCount 速率个数 (1-8)
- * @param rateModes 速率模式数组
- * @return 0-成功, 非0-失败
- */
-int config_multi_rate_slot_parameters(uint8_t rateCount, const uint8_t* rateModes)
-{
-    int ret;
-    slotCfg_t slotCfg;
-    
-    printf("Configuring multi-rate slot parameters...\n");
-    
-    /* 参数检查 */
-    if (rateCount == 0 || rateCount > 8 || rateModes == NULL) {
-        printf("Invalid parameters: rateCount=%d, rateModes=%p\n", rateCount, rateModes);
-        return -1;
-    }
-    
-    /* 清零配置结构 */
-    memset(&slotCfg, 0, sizeof(slotCfg_t));
-    
-    /* 配置基本参数 */
-    slotCfg.msMode = TK8710_MODE_MASTER;        /* 主模式 */
-    slotCfg.plCrcEn = 0;                         /* 使能CRC校验 */
-    slotCfg.rateCount = rateCount;               /* 多速率个数 */
-    slotCfg.brdUserNum = 1;                      /* 广播用户数 */
-    slotCfg.antEn = 0xFF;                        /* 使能所有天线 */
-    slotCfg.rfSel = 0xFF;                        /* 选择所有RF */
-    slotCfg.txAutoMode = 1;                      /* 自动发送模式 */
-    g_txAutoMode = (slotCfg.txAutoMode == 0);  /* 0=自动发送, 1=指定信息发送 */
-    slotCfg.txBcnEn = 0x7f;                         /* 使能BCN发送 */
-    
-    /* 配置BCN轮流发送 */
-    for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        slotCfg.bcnRotation[i] = i;  /* 轮流使用所有天线 0,1,2,3,4,5,6,7 */
-    }
-    
-    /* 配置广播频率 */
-    slotCfg.brdFreq[0] = 20000.0;  /* 广播用户0频率: 503.1 MHz */
-    
-    /* 配置时隙参数 */
-    slotCfg.rx_delay = 0;                        /* RX delay */
-    slotCfg.md_agc = 1024;                       /* DATA AGC长度 */
-    
-    /* 配置多速率模式 */
-    for (int i = 0; i < rateCount; i++) {
-        slotCfg.rateModes[i] = rateModes[i];
-        printf("Setting rate[%d] = mode %d\n", i, rateModes[i]);
-        
-        /* 根据每个速率模式设置对应的da_m参数 */
-        switch (rateModes[i]) {
-            case TK8710_RATE_MODE_5:
-                slotCfg.s1Cfg[i].da_m = 21492;    /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 21492;    /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 21492;    /* da3_m */
-                break;
-            case TK8710_RATE_MODE_6:
-                slotCfg.s1Cfg[i].da_m = 19728;    /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 19728;    /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 19728;    /* da3_m */
-                break;
-            case TK8710_RATE_MODE_7:
-                slotCfg.s1Cfg[i].da_m = 12000;    /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 12000;    /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 12000;    /* da3_m */
-                break;
-            case TK8710_RATE_MODE_8:
-                slotCfg.s1Cfg[i].da_m = 5600;     /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 5600;     /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 5600;     /* da3_m */
-                break;
-            case TK8710_RATE_MODE_9:
-                slotCfg.s1Cfg[i].da_m = 2800;     /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 2800;     /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 2800;     /* da3_m */
-                break;
-            case TK8710_RATE_MODE_10:
-                slotCfg.s1Cfg[i].da_m = 1400;     /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 1400;     /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 1400;     /* da3_m */
-                break;
-            case TK8710_RATE_MODE_11:
-            case TK8710_RATE_MODE_18:
-                slotCfg.s1Cfg[i].da_m = 800;      /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 800;      /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 800;      /* da3_m */
-                break;
-            default:
-                printf("Unsupported rate mode %d, using default\n", rateModes[i]);
-                slotCfg.s1Cfg[i].da_m = 12000;    /* da1_m */
-                slotCfg.s2Cfg[i].da_m = 12000;    /* da2_m */
-                slotCfg.s3Cfg[i].da_m = 12000;    /* da3_m */
-                break;
-        }
-        
-        /* 为每个速率配置相同的时隙长度和频点 */
-        slotCfg.s0Cfg[i].byteLen = 0;                  /* S0 (BCN) 时隙长度 */
-        slotCfg.s0Cfg[i].centerFreq = 503100000;          /* S0中心频点 */
-        
-        slotCfg.s1Cfg[i].byteLen = 26;                 /* S1 (FDL) 时隙长度 */
-        slotCfg.s1Cfg[i].centerFreq = 503100000;          /* S1中心频点 */
-        
-        slotCfg.s2Cfg[i].byteLen = 26;                 /* S2 (ADL) 时隙长度 */
-        slotCfg.s2Cfg[i].centerFreq = 503100000;          /* S2中心频点 */
-        
-        slotCfg.s3Cfg[i].byteLen = 26;                 /* S3 (UL) 时隙长度 */
-        slotCfg.s3Cfg[i].centerFreq = 503100000;          /* S3中心频点 */
-    }
-    
-    /* 计算帧时间长度 (由硬件自动计算，这里先设为0) */
-    slotCfg.frameTimeLen = 0;
-    
-    /* 设置时隙配置 */
-    ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);
-    if (ret != TK8710_OK) {
-        printf("Multi-rate slot configuration failed: %d\n", ret);
-        return ret;
-    }
-    
-    printf("Multi-rate slot parameter configuration completed\n");
-    printf("Rate count: %d\n", rateCount);
-    for (int i = 0; i < rateCount; i++) {
-        printf("Rate[%d] = mode %d, da_m: S1=%d, S2=%d, S3=%d\n", 
-               i, slotCfg.rateModes[i], 
-               slotCfg.s1Cfg[i].da_m, slotCfg.s2Cfg[i].da_m, slotCfg.s3Cfg[i].da_m);
-    }
-    printf("Slot length: S1=%d, S2=%d, S3=%d\n", 
-           slotCfg.s1Cfg[0].byteLen, slotCfg.s2Cfg[0].byteLen, slotCfg.s3Cfg[0].byteLen);
-    
-    return TK8710_OK;
-}
-
-/**
- * @brief 启动工作
- * @return 0-成功, 非0-失败
- */
-int start_work(void)
-{
-    int ret;
-    
-    printf("Starting TK8710 work...\n");
-    
-    /* 启动主模式连续工作 */
-    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
-    if (ret != TK8710_OK) {
-        printf("Start work failed: %d\n", ret);
-        return ret;
-    }
-    
-    printf("TK8710 work started (Master mode, Continuous work)\n");
-    return TK8710_OK;
 }
 
 /*============================================================================
@@ -1130,11 +234,6 @@ void show_help(void)
     printf("  q/Q - Quit program\n");
     printf("\nTRM Commands (when TRM enabled):\n");
     printf("  t/T - Show TRM statistics\n");
-    printf("  1   - TRM send test data (single user)\n");
-    printf("  2   - TRM batch send test (multiple users)\n");
-    printf("  3   - TRM start system\n");
-    printf("  4   - TRM stop system\n");
-    printf("  5   - TRM enable/disable toggle\n");
     printf("\nDriver Test Commands:\n");
     printf("  a/A - Auto downlink test (all users)\n");
     printf("  m/M - Manual downlink test (single user)\n");
@@ -1309,7 +408,7 @@ int main(int argc, char* argv[])
         printf("HAL initialization failed: %d\n", halRet);
         return -1;
     }
-    g_trmEnabled = true;  /* TRM已在hal_init中初始化 */
+
     printf("HAL initialization completed (including RF)\n");
     
     /* 6. 配置时隙参数 - 使用 hal_config */
@@ -1512,52 +611,6 @@ int main(int argc, char* argv[])
                 show_trm_statistics();
                 break;
                 
-            case '1':
-                if (g_trmEnabled) {
-                    uint8_t testData[32];
-                    for (int i = 0; i < 32; i++) {
-                        testData[i] = (uint8_t)(i & 0xFF);
-                    }
-                    test_trm_send_data(0x12345678, testData, 32);
-                } else {
-                    printf("TRM not enabled\n");
-                }
-                break;
-                
-            case '2':
-                if (g_trmEnabled) {
-                    test_trm_batch_send(8);
-                } else {
-                    printf("TRM not enabled\n");
-                }
-                break;
-                
-            case '3':
-                if (g_trmEnabled) {
-                    start_trm_system();
-                } else {
-                    printf("TRM not enabled\n");
-                }
-                break;
-                
-            case '4':
-                if (g_trmEnabled) {
-                    stop_trm_system();
-                } else {
-                    printf("TRM not enabled\n");
-                }
-                break;
-                
-            case '5':
-                if (g_trmEnabled) {
-                    stop_trm_system();
-                    g_trmEnabled = false;
-                    printf("TRM disabled\n");
-                } else {
-                    printf("TRM already disabled\n");
-                }
-                break;
-                
             case 'q':
             case 'Q':
                 printf("Exiting program...\n");
@@ -1568,50 +621,16 @@ int main(int argc, char* argv[])
                 printf("Unknown command: %c (enter 'h' for help)\n", input);
                 break;
         }
-        
-        /* 检查是否有中断发生 */
-        uint32_t irqStatus = TK8710GetIrqStatus();
-        if (irqStatus != 0) {
-            printf("Interrupt detected: 0x%08X\n", irqStatus);
-        }
-        
-//         /* 短暂延时，避免CPU占用过高 */
-// #ifdef _WIN32
-//         Sleep(1);
-// #else
-//         usleep(10);
-// #endif
-        
-        // /* 每隔一段时间打印中断时间统计 */
-        // static uint32_t printCounter = 0;
-        // printCounter++;
-        // if (printCounter >= 1000) {
-        //     printCounter = 0;
-        //     TK8710PrintIrqTimeStats();
-        // }
-    }
-    
-    /* 8. 清理资源 */
-    printf("Cleaning up resources...\n");
-    
-    /* 清理TRM系统 */
-    if (g_trmEnabled) {
-        cleanup_trm_system();
     }
     
     /* 打印最终的中断时间统计报告 */
     printf("\n=== 最终中断处理时间统计报告 ===\n");
     TK8710PrintIrqTimeStats();
-    
-    /* 禁用中断 */
-    TK8710GpioIrqEnable(0, 0);
-    
-    /* 重置芯片 */
-    TK8710Reset(TK8710_RST_STATE_MACHINE);
-    
-    /* 清理RK3506资源 */
-    TK8710Rk3506Cleanup();
-    printf("RK3506 resources cleaned up\n");
+
+    /* 清理发送验证器 */
+    TRM_TxValidatorDeinit();
+
+    hal_reset();
     
     printf("Program ended\n");
     return 0;
