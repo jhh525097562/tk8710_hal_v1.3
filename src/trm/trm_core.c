@@ -194,9 +194,16 @@ uint32_t TRM_GetCurrentFrame(void)
     return g_trmCurrentFrame;
 }
 
+
+
 void TRM_SetMaxFrameCount(uint32_t maxCount)
 {
     g_trmMaxFrameCount = maxCount;
+}
+
+uint32_t TRM_GetSuperFramePosition(void)
+{
+    return g_trmCurrentFrame % g_trmMaxFrameCount;
 }
 
 int TRM_RegisterDriverCallbacks(void)
@@ -382,6 +389,9 @@ static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710Ir
 {
     TRM_LOG_DEBUG("TRM: TxSlot: slot=%d, maxUsers=%d\n", slotIndex, maxUserCount);
     
+    /* 处理广播发送管理 */
+    TRM_ManageBroadcast();
+    
     /* 从发送队列取数据，查询波束，调用Driver发送 */
     int sentCount = TRM_ProcessTxSlot(slotIndex, maxUserCount, irqResult);
     
@@ -391,4 +401,4 @@ static void TRM_OnDriverTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710Ir
     }
 }
 
-/* 这些函数在trm_beam.c和trm_data.c中实现，这里不需要重复定义 */
+

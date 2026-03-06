@@ -85,31 +85,6 @@ static uint32_t g_trmRxCount = 0;                 /* TRM接收计数 */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList);
 static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult);
 
-/**
- * @brief 测试广播发送功能
- * @param counter 广播计数器
- * @return 0-成功, 1-失败
- */
-int test_broadcast_tx(uint8_t counter)
-{
-    uint8_t brdData[26];  /* 广播数据，长度与S1时隙长度一致 */
-    
-    /* 准备广播数据 */
-    for (int i = 0; i < 26; i++) {
-        brdData[i] = counter + i;  /* 简单的递增数据 */
-    }
-    
-    /* 使用TRM广播发送接口 */
-    int ret = TRM_SetTxData(TK8710_DOWNLINK_A, 0, brdData, 26, 35, 0, 0, TK8710_DATA_TYPE_BRD);  /* 下行A用户0，功率35，正常数据类型 */
-    if (ret == TRM_OK) {
-        printf("Broadcast data set successfully: counter=%d\n", counter);
-        return 0;
-    } else {
-        printf("Failed to set broadcast data: ret=%d\n", ret);
-        return 1;
-    }
-}
-
 /*============================================================================
  * TRM回调函数实现
  *============================================================================*/
@@ -154,14 +129,6 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     if (ret != TRM_OK) {
         printf("  验证器处理失败: 错误码=%d\n", ret);
     }
-    
-    /* 设置广播发送数据 */
-    {
-        static uint8_t brdCounter = 0;
-        test_broadcast_tx(brdCounter);
-        brdCounter++;
-    }
-
     /* 显示验证统计信息 */
     TRM_TxValidatorStats stats;
     if (TRM_TxValidatorGetStats(&stats) == TRM_OK) {
@@ -341,7 +308,6 @@ int main(int argc, char* argv[])
 #endif
     
     /* ========== 使用 HAL API 进行初始化 ========== */
-    
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
         .rftype = TK8710_RF_TYPE_1255_32M,
@@ -386,7 +352,7 @@ int main(int argc, char* argv[])
     trmConfig.beamTimeoutMs = 10000;
     trmConfig.callbacks.onRxData = OnTrmRxData;
     trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
-    
+    trmConfig.maxFrameCount = 1;
     /* 4. 准备HAL初始化配置 */
     TK8710_HalInitConfig halConfig = {
         .tk8710Init = &chipConfig,

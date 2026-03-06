@@ -36,6 +36,7 @@ typedef struct {
     uint8_t  beamType;        /**< 波束类型 (TK8710_DATA_TYPE_BRD=广播波束, TK8710_DATA_TYPE_DED=指定波束) */
     uint32_t timestamp;
     uint32_t frameNo;      /**< 目标发送帧号 */
+    uint32_t systemFrameNo;/**< 入队时的系统帧号 */
 } TxItem;
 
 /* 发送队列 */
@@ -67,6 +68,20 @@ typedef struct {
 
 static TxQueue g_txQueue;
 static BeamReleaseQueue g_beamReleaseQueue;  /* 波束RAM释放队列 */
+
+/* 广播数据管理 */
+typedef struct {
+    uint8_t data[TX_DATA_MAX_LEN];  /* 广播数据 */
+    uint16_t len;                    /* 数据长度 */
+    uint8_t power;                   /* 发送功率 */
+    uint8_t valid;                   /* 有效标志 */
+    uint8_t hasPayload;              /* 是否包含payload */
+    uint32_t userId_brdIndex;        /* 广播索引 */
+    uint8_t beamType;                /* 波束类型 */
+    uint32_t timestamp;              /* 设置时间戳 */
+} TrmBroadcastData;
+
+static TrmBroadcastData g_broadcastData;  /* 广播数据存储 */
 // static MemPool* g_txMemPool __attribute__((unused)) = NULL;  /* 保留供将来内存池优化使用 */
 
 /*==============================================================================
@@ -192,11 +207,24 @@ int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, con
     }
     
     if (downlinkType == TK8710_DOWNLINK_A) {
-        /* 广播数据模式 - 直接调用Driver发送 */
-        TRM_LOG_DEBUG("TRM_SetTxData发送广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
+        /* 广播数据模式 - 存储广播数据，由广播管理函数统一管理 */
+        TRM_LOG_DEBUG("TRM_SetTxData存储广播 - 索引=%d, 长度=%d, 功率=%d, 波束类型=%d", 
                       (uint8_t)userId_brdIndex, len, txPower, BeamType);
         
-        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, (uint8_t)userId_brdIndex, data, len, txPower, BeamType);
+        /* 存储广播数据 */
+        memcpy(g_broadcastData.data, data, len);
+        g_broadcastData.len = len;
+        g_broadcastData.power = txPower;
+        g_broadcastData.userId_brdIndex = userId_brdIndex;
+        g_broadcastData.beamType = BeamType;
+        g_broadcastData.valid = 1;
+        g_broadcastData.hasPayload = 1;  /* 标记包含payload */
+        g_broadcastData.timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
+        
+        TRM_LOG_INFO("TRM广播数据已存储 - 索引=%d, 长度=%d, 包含payload=true", 
+                     (uint8_t)userId_brdIndex, len);
+        
+        return TRM_OK;
         
     } else if (downlinkType == TK8710_DOWNLINK_B) {
         /* 用户数据模式 - 缓存到发送队列 */
@@ -209,6 +237,97 @@ int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, con
         TRM_LOG_ERROR("TRM_SetTxData失败: 无效的下行类型 - downlinkType=%d", downlinkType);
         return TRM_ERR_PARAM;
     }
+}
+
+/**
+ * @brief 广播发送管理函数
+ * @note 在每个时隙开始时调用，负责广播数据的发送管理
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_ManageBroadcast(void)
+{
+    static uint8_t brdCounter = 0;  /* 自主管理广播计数器 */
+    static uint32_t lastPayloadFrame = 0;  /* 上次发送payload的帧号 */
+    
+    uint32_t currentFrame = TRM_GetCurrentFrame();
+    uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
+    
+    /* 检查是否有上层设置的广播数据（包含payload） */
+    if (g_broadcastData.valid && g_broadcastData.hasPayload) {
+        /* 发送包含payload的广播数据 */
+        TRM_LOG_DEBUG("TRM发送payload广播 - 索引=%d, 长度=%d, 功率=%d", 
+                      (uint8_t)g_broadcastData.userId_brdIndex, g_broadcastData.len, g_broadcastData.power);
+        
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, (uint8_t)g_broadcastData.userId_brdIndex, 
+                                 g_broadcastData.data, g_broadcastData.len, g_broadcastData.power, g_broadcastData.beamType);
+        
+        if (ret == TK8710_OK) {
+            lastPayloadFrame = currentFrame;
+            TRM_LOG_INFO("TRM payload广播发送成功 - 索引=%d, 帧号=%u", 
+                         (uint8_t)g_broadcastData.userId_brdIndex, currentSuperFramePos);
+            
+            /* Payload只发送一次，后续恢复自主管理 */
+            g_broadcastData.hasPayload = 0;
+            g_broadcastData.timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
+        } else {
+            TRM_LOG_ERROR("TRM payload广播发送失败 - 索引=%d, 错误码=%d", 
+                          (uint8_t)g_broadcastData.userId_brdIndex, ret);
+        }
+        
+        return (ret == TK8710_OK) ? TRM_OK : TRM_ERR_DRIVER;
+        
+    } else {
+        /* 自主管理广播 - 使用测试数据 */
+        uint8_t testData[32];
+        
+        /* 生成测试广播数据 */
+        for (int i = 0; i < sizeof(testData); i++) {
+            testData[i] = brdCounter + i;
+        }
+        
+        /* 使用默认广播参数 */
+        uint8_t brdIndex = 0;  /* 默认广播索引 */
+        uint8_t txPower = 35;  /* 默认发送功率 */
+        uint8_t beamType = TK8710_DATA_TYPE_BRD;  /* 广播波束类型 */
+        
+        TRM_LOG_DEBUG("TRM发送自主广播 - 索引=%d, 计数器=%d, 超帧位置=%u", 
+                      brdIndex, brdCounter, currentSuperFramePos);
+        
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, brdIndex, testData, sizeof(testData), txPower, beamType);
+        
+        if (ret == TK8710_OK) {
+            brdCounter++;
+            TRM_LOG_DEBUG("TRM自主广播发送成功 - 索引=%d, 计数器=%d", brdIndex, brdCounter);
+        } else {
+            TRM_LOG_ERROR("TRM自主广播发送失败 - 索引=%d, 错误码=%d", brdIndex, ret);
+        }
+        
+        return (ret == TK8710_OK) ? TRM_OK : TRM_ERR_DRIVER;
+    }
+}
+
+/**
+ * @brief 清除广播数据
+ * @return TRM_OK成功
+ */
+int TRM_ClearBroadcast(void)
+{
+    memset(&g_broadcastData, 0, sizeof(g_broadcastData));
+    TRM_LOG_DEBUG("TRM广播数据已清除");
+    return TRM_OK;
+}
+
+/**
+ * @brief 获取广播状态
+ * @param hasPayload 输出是否包含payload
+ * @param valid 输出是否有效
+ * @return TRM_OK成功
+ */
+int TRM_GetBroadcastStatus(uint8_t* hasPayload, uint8_t* valid)
+{
+    if (hasPayload) *hasPayload = g_broadcastData.hasPayload;
+    if (valid) *valid = g_broadcastData.valid;
+    return TRM_OK;
 }
 
 int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txPower, uint32_t frameNo, uint8_t targetRateMode, uint8_t BeamType)
@@ -226,6 +345,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     
     /* 检查帧号有效性 - 帧号应该是循环的 */
     uint32_t normalizedFrameNo = frameNo % g_trmMaxFrameCount;
+    uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
     
     TK8710EnterCritical();
     
@@ -242,15 +362,15 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     
     /* 填充发送数据项 */
     item->userId = userId;
-    // item->frameNo = normalizedFrameNo;  /* 使用归一化的帧号 */
-    item->frameNo = frameNo;  /* 使用原始帧号 */
+    memcpy(item->data, data, len);
     item->len = len;
     item->power = txPower;
-    item->targetRateMode = targetRateMode;  /* 设置目标速率模式 */
-    item->beamType = BeamType;              /* 设置波束类型 */
     item->valid = 1;
-    memcpy(item->data, data, len);
+    item->targetRateMode = targetRateMode;
+    item->beamType = BeamType;
     item->timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
+    item->frameNo = normalizedFrameNo;
+    item->systemFrameNo = g_trmCurrentFrame; /* 记录入队时的系统帧号 */
     
     g_txQueue.tail = (g_txQueue.tail + 1) % TX_QUEUE_SIZE;
     g_txQueue.count++;
@@ -361,15 +481,44 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                                  item->targetRateMode, nextRateMode, item->userId);
                 }
             } else {
-                /* 单速率模式：只检查帧号匹配 */
+                /* 单速率模式：使用相对帧差判断 */
                 if (item->targetRateMode == 0) {
-                    /* 使用帧号匹配（原有逻辑） */
-                    if (item->frameNo == g_trmCurrentFrame) {
+                    uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
+                    uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
+                    uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
+                    
+                    if (item->frameNo == currentSuperFramePos || item->frameNo == 0xFF) {
+                        /* 当前帧，立即发送 */
                         shouldSend = 1;
-                    } else if (item->frameNo < g_trmCurrentFrame) {
-                        /* 过期的帧号，记录超时失败并丢弃 */
-                        TRM_LOG_WARN("TRM: Discarding expired data - user=%u, target_frame=%u, current_frame=%u", 
-                                   item->userId, item->frameNo, g_trmCurrentFrame);
+                    } else if (frameDiff > g_trmMaxFrameCount / 2) {
+                        /* 帧差超过半个超帧周期，认为是未来帧 */
+                        if (systemFrameDiff > g_trmMaxFrameCount) {
+                            /* 在队列中停留超过一个超帧周期，强制丢弃 */
+                            TRM_LOG_WARN("TRM: Discarding stale data - user=%u, target_frame=%u, super_frame_pos=%u, queue_age=%u frames", 
+                                       item->userId, item->frameNo, currentSuperFramePos, systemFrameDiff);
+                            
+                            /* 记录发送超时结果 */
+                            if (resultCount < TX_QUEUE_SIZE) {
+                                txResults[resultCount].userId = item->userId;
+                                txResults[resultCount].result = TRM_TX_TIMEOUT;
+                                resultCount++;
+                            }
+                            
+                            item->valid = 0;
+                            g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
+                            g_txQueue.count--;
+                            continue;
+                        } else {
+                            /* 未来帧，跳过 */
+                            TRM_LOG_DEBUG("TRM: Future frame - user=%u, target_frame=%u, super_frame_pos=%u, queue_age=%u, skipping", 
+                                         item->userId, item->frameNo, currentSuperFramePos, systemFrameDiff);
+                            futureFrameCount++;
+                            continue;
+                        }
+                    } else {
+                        /* 帧差小于半个超帧周期，认为是过期帧 */
+                        TRM_LOG_WARN("TRM: Discarding expired data - user=%u, target_frame=%u, super_frame_pos=%u, frame_diff=%u", 
+                                   item->userId, item->frameNo, currentSuperFramePos, frameDiff);
                         
                         /* 记录发送超时结果 */
                         if (resultCount < TX_QUEUE_SIZE) {
@@ -381,12 +530,6 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
                         item->valid = 0;
                         g_txQueue.head = (g_txQueue.head + 1) % TX_QUEUE_SIZE;
                         g_txQueue.count--;
-                        continue;
-                    } else {
-                        /* 未来帧号，跳过当前用户，继续处理下一个 */
-                        TRM_LOG_DEBUG("TRM: Future frame - user=%u, target_frame=%u, current_frame=%u, skipping", 
-                                     item->userId, item->frameNo, g_trmCurrentFrame);
-                        futureFrameCount++;
                         continue;
                     }
                 } else {
@@ -502,8 +645,9 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     
     /* 记录未来帧号的情况 */
     if (futureFrameCount > 0) {
-        TRM_LOG_DEBUG("TRM: ProcessTxSlot found %u users with future frames, current_frame=%u", 
-                     futureFrameCount, g_trmCurrentFrame);
+        uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
+        TRM_LOG_DEBUG("TRM: ProcessTxSlot found %u users with future frames, super_frame_pos=%u", 
+                     futureFrameCount, currentSuperFramePos);
     }
     
     TRM_LOG_DEBUG("TRM: ProcessTxSlot completed - sentCount=%d, queueCount=%u, multiRate=%s, processed=%u", 

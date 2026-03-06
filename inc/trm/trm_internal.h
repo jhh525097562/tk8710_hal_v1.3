@@ -200,6 +200,37 @@ void TRM_SetCurrentFrame(uint32_t frameNo);
 void TRM_SetMaxFrameCount(uint32_t maxCount);
 
 /**
+ * @brief 获取超帧中的帧号位置
+ * @return 超帧中的帧号位置 (0 到 maxFrameCount-1)
+ */
+uint32_t TRM_GetSuperFramePosition(void);
+
+/* =============================================================================
+ * 广播管理内部API
+ * ============================================================================= */
+
+/**
+ * @brief 广播发送管理函数
+ * @note 在每个时隙开始时调用，负责广播数据的发送管理
+ * @return TRM_OK成功，其他失败
+ */
+int TRM_ManageBroadcast(void);
+
+/**
+ * @brief 清除广播数据
+ * @return TRM_OK成功
+ */
+int TRM_ClearBroadcast(void);
+
+/**
+ * @brief 获取广播状态
+ * @param hasPayload 输出是否包含payload
+ * @param valid 输出是否有效
+ * @return TRM_OK成功
+ */
+int TRM_GetBroadcastStatus(uint8_t* hasPayload, uint8_t* valid);
+
+/**
  * @brief 计算时隙配置 (内部函数)
  * @param input 输入参数
  * @param output 输出参数

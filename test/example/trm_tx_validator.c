@@ -177,7 +177,13 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             
             /* 计算应答用户ID和目标帧 */
             uint32_t respUserId = GenerateResponseUserId(user->userId);
-            uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
+
+            uint32_t targetFrame;
+            if(g_trmMaxFrameCount==1){
+                targetFrame = 0xFF;
+            }else{
+                targetFrame = (rxDataList->frameNo + g_validatorConfig.frameOffset)%g_trmMaxFrameCount;
+            }
             
             /* 执行发送 - 使用接收到的速率模式作为下行速率模式 */
             ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
