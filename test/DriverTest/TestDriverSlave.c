@@ -188,6 +188,383 @@ void show_trm_statistics(void)
  *============================================================================*/
 
 /**
+ * @brief 从文件读取数据并通过SPI传输
+ * @return 0-成功, 非0-失败
+ */
+int load_and_send_simulation_data(void)
+{
+    char filePath[256];
+    FILE *fp;
+    char lineBuffer[4096];
+    uint8_t spiDataBuffer[2048];
+    int dataCount;
+    
+    printf("\n=== 开始加载仿真数据并传输 ===\n");
+    
+    /* 1. 读取 ANoise 数据 */
+    snprintf(filePath, sizeof(filePath), 
+        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\ANoise.txt");
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("无法打开文件: %s\n", filePath);
+        return -1;
+    }
+    
+    if (fgets(lineBuffer, sizeof(lineBuffer), fp) != NULL) {
+        /* 解析 ANoise 数据 (8个值) */
+        uint16_t anoiseData[8];
+        dataCount = sscanf(lineBuffer, "%hu %hu %hu %hu %hu %hu %hu %hu",
+                          &anoiseData[0], &anoiseData[1], &anoiseData[2], &anoiseData[3],
+                          &anoiseData[4], &anoiseData[5], &anoiseData[6], &anoiseData[7]);
+        
+        if (dataCount == 8) {
+            /* 转换为字节数组并发送 */
+            for (int i = 0; i < 8; i++) {
+                spiDataBuffer[i*2] = (uint8_t)(anoiseData[i] >> 8);
+                spiDataBuffer[i*2+1] = (uint8_t)(anoiseData[i] & 0xFF);
+            }
+            
+            /* 打印前16个输入数据 (十六进制格式) */
+            printf("ANoise SPI输入数据 (前16字节): ");
+            for (int i = 0; i < 16; i++) {
+                printf("0x%02X ", spiDataBuffer[i]);
+            }
+            printf("\n");
+            
+            int ret = TK8710SpiSetInfo(0, spiDataBuffer, 16);
+            if (ret == 0) {
+                printf("ANoise 数据传输成功: 8个值\n");
+            } else {
+                printf("ANoise 数据传输失败: %d\n", ret);
+                fclose(fp);
+                return -1;
+            }
+        }
+    }
+    fclose(fp);
+    
+    /* 2. 读取 GWRXAH 数据 (按用户格式处理: 128个用户，每个用户16个20bit AH) */
+    snprintf(filePath, sizeof(filePath), 
+        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\GWRXAH.txt");
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("无法打开文件: %s\n", filePath);
+        return -1;
+    }
+    
+    uint32_t gwrxahData[2048];  // 128用户 * 16AH = 2048个20bit值
+    dataCount = 0;
+    
+    while (fgets(lineBuffer, sizeof(lineBuffer), fp) != NULL && dataCount < 2048) {
+        char *ptr = lineBuffer;
+        while (*ptr != '\0' && dataCount < 2048) {
+            uint32_t value;
+            if (sscanf(ptr, "%u", &value) == 1) {
+                gwrxahData[dataCount++] = value;
+                /* 跳过当前数字 */
+                while (*ptr != '\0' && *ptr != ' ' && *ptr != '\t' && *ptr != '\n') ptr++;
+                /* 跳过空白字符 */
+                while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')) ptr++;
+            } else {
+                break;
+            }
+        }
+    }
+    fclose(fp);
+    
+    printf("GWRXAH 读取了 %d 个20bit数据值\n", dataCount);
+    
+    if (dataCount > 0) {
+        /* 将20bit数据按用户格式打包到字节缓冲区
+         * 每个用户16个20bit AH = 320bit = 40字节
+         * 128个用户总共需要 128 * 40 = 5120字节
+         */
+        int userCount = dataCount / 16;  // 计算实际用户数
+        if (userCount > 128) userCount = 128;
+        
+        printf("处理 %d 个用户的GWRXAH数据\n", userCount);
+        
+        /* 按用户顺序打包20bit数据到字节数组
+         * 使用位操作实现紧凑的20bit数据打包
+         */
+        int byteIndex = 0;
+        uint32_t bitBuffer = 0;
+        int bitsInBuffer = 0;
+        
+        for (int user = 0; user < userCount; user++) {
+            for (int ah = 0; ah < 16; ah++) {
+                uint32_t ahValue = gwrxahData[user * 16 + ah] & 0xFFFFF;  // 确保只取20bit
+                
+                /* 将20bit数据添加到位缓冲区 */
+                bitBuffer = (bitBuffer << 20) | ahValue;
+                bitsInBuffer += 20;
+                
+                /* 当缓冲区有8位或更多时，提取字节 */
+                while (bitsInBuffer >= 8 && byteIndex < sizeof(spiDataBuffer) - 1) {
+                    spiDataBuffer[byteIndex++] = (uint8_t)((bitBuffer >> (bitsInBuffer - 8)) & 0xFF);
+                    bitsInBuffer -= 8;
+                }
+            }
+        }
+        
+        /* 处理剩余的位 */
+        if (bitsInBuffer > 0 && byteIndex < sizeof(spiDataBuffer)) {
+            spiDataBuffer[byteIndex++] = (uint8_t)((bitBuffer << (8 - bitsInBuffer)) & 0xFF);
+        }
+        
+        /* 打印前16个输入数据 (十六进制格式) */
+        int printLen = (byteIndex < 16) ? byteIndex : 16;
+        printf("GWRXAH SPI输入数据 (前%d字节): ", printLen);
+        for (int i = 0; i < printLen; i++) {
+            printf("0x%02X ", spiDataBuffer[i]);
+        }
+        printf("\n");
+        
+        printf("GWRXAH 数据打包完成: %d用户, 每用户16个AH, 总字节数: %d\n", userCount, byteIndex);
+        
+        int ret = TK8710SpiSetInfo(1, spiDataBuffer, byteIndex);
+        if (ret == 0) {
+            printf("GWRXAH 数据传输成功: %d个用户, 每用户16个AH\n", userCount);
+        } else {
+            printf("GWRXAH 数据传输失败: %d\n", ret);
+            return -1;
+        }
+    }
+    
+    /* 3. 读取 GWRxPilotPower 数据 (按用户格式处理: 128个用户，每个用户40bit PilotPower) */
+    snprintf(filePath, sizeof(filePath), 
+        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\GWRxPilotPower.txt");
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("无法打开文件: %s\n", filePath);
+        return -1;
+    }
+    
+    uint64_t pilotPowerData[128];  // 128个用户，每个用户40bit PilotPower
+    dataCount = 0;
+    
+    while (fgets(lineBuffer, sizeof(lineBuffer), fp) != NULL && dataCount < 128) {
+        char *ptr = lineBuffer;
+        while (*ptr != '\0' && dataCount < 128) {
+            uint64_t value;
+            if (sscanf(ptr, "%llu", &value) == 1) {
+                pilotPowerData[dataCount++] = value;
+                /* 跳过当前数字 */
+                while (*ptr != '\0' && *ptr != ' ' && *ptr != '\t' && *ptr != '\n') ptr++;
+                /* 跳过空白字符 */
+                while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')) ptr++;
+            } else {
+                break;
+            }
+        }
+    }
+    fclose(fp);
+    
+    printf("GWRxPilotPower 读取了 %d 个40bit数据值\n", dataCount);
+    
+    if (dataCount > 0) {
+        /* 将40bit数据按用户格式打包到字节缓冲区
+         * 每个用户40bit PilotPower = 5字节
+         * 128个用户总共需要 128 * 5 = 640字节
+         */
+        int userCount = dataCount;  // 每个用户一个40bit值
+        if (userCount > 128) userCount = 128;
+        
+        printf("处理 %d 个用户的GWRxPilotPower数据\n", userCount);
+        
+        /* 按用户顺序打包40bit数据到字节数组
+         * 40bit数据可以直接拆分为5个字节
+         */
+        int byteIndex = 0;
+        
+        for (int user = 0; user < userCount; user++) {
+            uint64_t pilotValue = pilotPowerData[user] & 0xFFFFFFFFFFULL;  // 确保只取40bit
+            
+            /* 将40bit数据拆分为5个字节 (大端序) */
+            if (byteIndex + 4 < sizeof(spiDataBuffer)) {
+                spiDataBuffer[byteIndex] = (uint8_t)((pilotValue >> 32) & 0xFF);    // 字节0 (最高8位)
+                spiDataBuffer[byteIndex + 1] = (uint8_t)((pilotValue >> 24) & 0xFF); // 字节1
+                spiDataBuffer[byteIndex + 2] = (uint8_t)((pilotValue >> 16) & 0xFF); // 字节2
+                spiDataBuffer[byteIndex + 3] = (uint8_t)((pilotValue >> 8) & 0xFF);  // 字节3
+                spiDataBuffer[byteIndex + 4] = (uint8_t)(pilotValue & 0xFF);         // 字节4 (最低8位)
+                
+                byteIndex += 5;
+            }
+        }
+        
+        /* 打印前16个输入数据 (十六进制格式) */
+        int printLen = (byteIndex < 16) ? byteIndex : 16;
+        printf("GWRxPilotPower SPI输入数据 (前%d字节): ", printLen);
+        for (int i = 0; i < printLen; i++) {
+            printf("0x%02X ", spiDataBuffer[i]);
+        }
+        printf("\n");
+        
+        printf("GWRxPilotPower 数据打包完成: %d用户, 每用户40bit, 总字节数: %d\n", userCount, byteIndex);
+        
+        int ret = TK8710SpiSetInfo(2, spiDataBuffer, byteIndex);
+        if (ret == 0) {
+            printf("GWRxPilotPower 数据传输成功: %d个用户, 每用户40bit PilotPower\n", userCount);
+        } else {
+            printf("GWRxPilotPower 数据传输失败: %d\n", ret);
+            return -1;
+        }
+    }
+    
+    /* 4. 读取 TxFreq 数据 (按用户格式处理: 128个用户，每个用户32bit TxFreq) */
+    snprintf(filePath, sizeof(filePath), 
+        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\TxFreq.txt");
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("无法打开文件: %s\n", filePath);
+        return -1;
+    }
+    
+    uint32_t txFreqData[128];  // 128个用户，每个用户32bit TxFreq
+    dataCount = 0;
+    
+    while (fgets(lineBuffer, sizeof(lineBuffer), fp) != NULL && dataCount < 128) {
+        char *ptr = lineBuffer;
+        while (*ptr != '\0' && dataCount < 128) {
+            uint32_t value;
+            if (sscanf(ptr, "%u", &value) == 1) {
+                txFreqData[dataCount++] = value;
+                /* 跳过当前数字 */
+                while (*ptr != '\0' && *ptr != ' ' && *ptr != '\t' && *ptr != '\n') ptr++;
+                /* 跳过空白字符 */
+                while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')) ptr++;
+            } else {
+                break;
+            }
+        }
+    }
+    fclose(fp);
+    
+    printf("TxFreq 读取了 %d 个32bit数据值\n", dataCount);
+    
+    if (dataCount > 0) {
+        /* 将32bit数据按用户格式打包到字节缓冲区
+         * 每个用户32bit TxFreq = 4字节
+         * 128个用户总共需要 128 * 4 = 512字节
+         */
+        int userCount = dataCount;  // 每个用户一个32bit值
+        if (userCount > 128) userCount = 128;
+        
+        printf("处理 %d 个用户的TxFreq数据\n", userCount);
+        
+        /* 按用户顺序打包32bit数据到字节数组
+         * 32bit数据可以直接拆分为4个字节
+         */
+        int byteIndex = 0;
+        
+        for (int user = 0; user < userCount; user++) {
+            uint32_t freqValue = txFreqData[user];
+            
+            /* 将32bit数据拆分为4个字节 (大端序) */
+            if (byteIndex + 3 < sizeof(spiDataBuffer)) {
+                spiDataBuffer[byteIndex] = (uint8_t)((freqValue >> 24) & 0xFF);     // 字节0 (最高8位)
+                spiDataBuffer[byteIndex + 1] = (uint8_t)((freqValue >> 16) & 0xFF); // 字节1
+                spiDataBuffer[byteIndex + 2] = (uint8_t)((freqValue >> 8) & 0xFF);  // 字节2
+                spiDataBuffer[byteIndex + 3] = (uint8_t)(freqValue & 0xFF);         // 字节3 (最低8位)
+                
+                byteIndex += 4;
+            }
+        }
+        
+        /* 打印前16个输入数据 (十六进制格式) */
+        int printLen = (byteIndex < 16) ? byteIndex : 16;
+        printf("TxFreq SPI输入数据 (前%d字节): ", printLen);
+        for (int i = 0; i < printLen; i++) {
+            printf("0x%02X ", spiDataBuffer[i]);
+        }
+        printf("\n");
+        
+        printf("TxFreq 数据打包完成: %d用户, 每用户32bit, 总字节数: %d\n", userCount, byteIndex);
+        
+        int ret = TK8710SpiSetInfo(3, spiDataBuffer, byteIndex);
+        if (ret == 0) {
+            printf("TxFreq 数据传输成功: %d个用户, 每用户32bit TxFreq\n", userCount);
+        } else {
+            printf("TxFreq 数据传输失败: %d\n", ret);
+            return -1;
+        }
+    }
+    
+    /* 5. 读取 TxPower 数据 (按用户格式处理: 128个用户，每个用户8bit TxPower) */
+    snprintf(filePath, sizeof(filePath), 
+        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\TxPower.txt");
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("无法打开文件: %s\n", filePath);
+        return -1;
+    }
+    
+    uint8_t txPowerData[128];  // 128个用户，每个用户8bit TxPower
+    dataCount = 0;
+    
+    while (fgets(lineBuffer, sizeof(lineBuffer), fp) != NULL && dataCount < 128) {
+        char *ptr = lineBuffer;
+        while (*ptr != '\0' && dataCount < 128) {
+            uint16_t value;
+            if (sscanf(ptr, "%hu", &value) == 1) {
+                txPowerData[dataCount++] = (uint8_t)(value & 0xFF);  // 确保只取8bit
+                /* 跳过当前数字 */
+                while (*ptr != '\0' && *ptr != ' ' && *ptr != '\t' && *ptr != '\n') ptr++;
+                /* 跳过空白字符 */
+                while (*ptr != '\0' && (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')) ptr++;
+            } else {
+                break;
+            }
+        }
+    }
+    fclose(fp);
+    
+    printf("TxPower 读取了 %d 个8bit数据值\n", dataCount);
+    
+    if (dataCount > 0) {
+        /* 将8bit数据按用户格式打包到字节缓冲区
+         * 每个用户8bit TxPower = 1字节
+         * 128个用户总共需要 128 * 1 = 128字节
+         */
+        int userCount = dataCount;  // 每个用户一个8bit值
+        if (userCount > 128) userCount = 128;
+        
+        printf("处理 %d 个用户的TxPower数据\n", userCount);
+        
+        /* 按用户顺序直接复制8bit数据到字节数组 */
+        int byteIndex = 0;
+        
+        for (int user = 0; user < userCount; user++) {
+            if (byteIndex < sizeof(spiDataBuffer)) {
+                spiDataBuffer[byteIndex] = txPowerData[user];
+                byteIndex++;
+            }
+        }
+        
+        /* 打印前16个输入数据 (十六进制格式) */
+        int printLen = (byteIndex < 16) ? byteIndex : 16;
+        printf("TxPower SPI输入数据 (前%d字节): ", printLen);
+        for (int i = 0; i < printLen; i++) {
+            printf("0x%02X ", spiDataBuffer[i]);
+        }
+        printf("\n");
+        
+        printf("TxPower 数据打包完成: %d用户, 每用户8bit, 总字节数: %d\n", userCount, byteIndex);
+        
+        int ret = TK8710SpiSetInfo(4, spiDataBuffer, byteIndex);
+        if (ret == 0) {
+            printf("TxPower 数据传输成功: %d个用户, 每用户8bit TxPower\n", userCount);
+        } else {
+            printf("TxPower 数据传输失败: %d\n", ret);
+            return -1;
+        }
+    }
+    
+    printf("=== 所有仿真数据传输完成 ===\n\n");
+    return 0;
+}
+
+/**
  * @brief 显示帮助信息
  */
 void show_help(void)
@@ -198,6 +575,7 @@ void show_help(void)
     printf("  s/S - Show system status\n");
     printf("  i/I - Show interrupt statistics\n");
     printf("  c/C - Clear screen\n");
+    printf("  l/L - Load and send simulation data from files\n");
     printf("  q/Q - Quit program\n");
     printf("\nTRM Commands (when TRM enabled):\n");
     printf("  t/T - Show TRM statistics\n");
@@ -528,6 +906,12 @@ int main(int argc, char* argv[])
     }
     printf("HAL started successfully (Master mode, Continuous work)\n");
     
+    /* 自动加载并发送仿真数据 */
+    printf("\n自动加载仿真数据...\n");
+    if (load_and_send_simulation_data() != 0) {
+        printf("警告: 仿真数据加载失败，程序将继续运行\n");
+    }
+    
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");
     
@@ -570,6 +954,13 @@ int main(int argc, char* argv[])
 #else
                 system("clear");
 #endif
+                break;
+                
+            case 'l':
+            case 'L':
+                if (load_and_send_simulation_data() != 0) {
+                    printf("仿真数据加载和传输失败\n");
+                }
                 break;
                 
             case 't':
