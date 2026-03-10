@@ -520,6 +520,57 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
         trig1.data = 0;
         trig1.b.passive_trans = 1;
         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, trx_trig1), trig1.data);
+    } else if (workType == TK8710_MODE_LOOPBACK) {
+        /* Loopback模式: 配置类似Master模式但启用回环功能 */
+        {
+            slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
+            
+            /* 配置寄存器0x9478为0x01110010 - Master模式配置 */
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x01110010);
+            if (ret == TK8710_OK) {
+                TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9478 = 0x01110010");
+            } else {
+                TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9478: %d", ret);
+                return ret;
+            }
+            
+            /* 配置寄存器0x9810为0x03481400 - Master模式配置 */
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9810, 0x03481400);
+            if (ret == TK8710_OK) {
+                TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9810 = 0x03481400");
+            } else {
+                TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9810: %d", ret);
+                return ret;
+            }
+            
+            /* 配置中断使能 - 类似Master模式 */
+            {
+                s_irq_ctrl0 irqCtrl0;
+                irqCtrl0.data = 0xFFFF;  /* 默认全部关闭 */
+                
+                /* Loopback模式中断配置 (类似Master模式) */
+                irqCtrl0.b.s0_irq_mask = 0;  /* S0中断使能 */
+
+                if (slotCfg->s1Cfg[0].byteLen > 0) {
+                    irqCtrl0.b.s1_irq_mask = 0;  /* S1中断使能 */
+                }
+                
+                if (slotCfg->s2Cfg[0].byteLen > 0) {
+                    irqCtrl0.b.md_ud_irq_mask = 0;  /* MD UD中断使能 */
+                    irqCtrl0.b.md_irq_mask = 0;     /* MD中断使能 */
+                }
+                
+                if (slotCfg->s3Cfg[0].byteLen > 0) {
+                    irqCtrl0.b.s3_irq_mask = 0;  /* S3中断使能 */
+                }
+                
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, irq_ctrl0), irqCtrl0.data);
+                if (ret != TK8710_OK) return ret;
+            }
+        }
+        trig0.data = 0;
+        trig0.b.active_trans = 1;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, trx_trig0), trig0.data);
     } else {
         TK8710_LOG_CORE_ERROR("Invalid work type: %d", workType);
         return TK8710_ERR;
