@@ -32,6 +32,7 @@ static volatile uint8_t g_irqInProgress = 0;  /* 中断处理进行标志 */
 /* 测试控制变量 */
 static uint8_t g_forceProcessAllUsers = 0;  /* 是否强制处理所有用户数据（用于测试） */
 static uint8_t g_forceMaxUsersTx = 0;      /* 是否强制按最大用户数发送（用于测试） */
+static uint8_t g_simulationDataLoaded = 0; /* 是否已加载仿真数据（用于测试） */
 
 /* 中断计数器 */
 static uint32_t g_irqCounters[10] = {0};  /* 对应10种中断类型 */
@@ -1365,7 +1366,23 @@ static void tk8710_handle_slot1(void)
     
     /* 处理S1时隙指定信息发送 */
     if (slotCfg->txAutoMode == 1) {
-        tk8710_s1_manual_tx_process();
+        /* 如果已加载仿真数据，跳过手动发送处理 */
+        if (g_simulationDataLoaded) {
+                uint32_t user_val_regs[4] = {0xffffffff,0xffffffff,0xffffffff,0xffffffff}; /* user_val0, user_val1, user_val2, user_val3 */
+                /* 写入MAC寄存器 */
+                for (int reg = 0; reg < 4; reg++) {
+                    uint32_t reg_offset = MAC_BASE + 0x3c + reg * 4;
+                    int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, reg_offset, user_val_regs[reg]);
+                    if (ret == TK8710_OK) {
+                        TK8710_LOG_IRQ_DEBUG("Set MAC user_val%d = 0x%08X", reg, user_val_regs[reg]);
+                    } else {
+                        TK8710_LOG_IRQ_ERROR("Failed to set MAC user_val%d: %d", reg, ret);
+                    }
+                }
+                TK8710_LOG_IRQ_DEBUG("Simulation data loaded, skipping manual TX process");
+            } else {
+                tk8710_s1_manual_tx_process();
+            }
     } else {
         /* 处理S1时隙广播发送 */
         tk8710_s1_broadcast_tx_process();
@@ -2587,5 +2604,26 @@ int TK8710GetRxUserSignalQuality(uint8_t userIndex, uint32_t* rssi, uint8_t* snr
         TK8710_LOG_IRQ_DEBUG("No signal info available for user[%d]", userIndex);
         return TK8710_ERR;
     }
+}
+
+/**
+ * @brief 设置仿真数据加载状态
+ * @param loaded 是否已加载仿真数据 (1-已加载, 0-未加载)
+ * @note 用于测试时控制中断处理行为
+ */
+void TK8710SetSimulationDataLoaded(uint8_t loaded)
+{
+    g_simulationDataLoaded = loaded ? 1 : 0;
+    TK8710_LOG_IRQ_INFO("Simulation data loaded status set to: %s", 
+                       g_simulationDataLoaded ? "YES" : "NO");
+}
+
+/**
+ * @brief 获取仿真数据加载状态
+ * @return 1-已加载仿真数据, 0-未加载仿真数据
+ */
+uint8_t TK8710GetSimulationDataLoaded(void)
+{
+    return g_simulationDataLoaded;
 }
 
