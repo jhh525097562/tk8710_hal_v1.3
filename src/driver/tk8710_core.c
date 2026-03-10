@@ -528,10 +528,10 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
             /* 配置init12寄存器，启用loopback模式 */
             {
                 s_init_12 init12;
-                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 0x30, &init12.data);
+                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
                 if (ret == TK8710_OK) {
                     init12.b.loop = 1;  /* 启用loopback模式 */
-                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x30, init12.data);
+                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
                     if (ret == TK8710_OK) {
                         TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.loop = 1 for loopback mode");
                     } else {
