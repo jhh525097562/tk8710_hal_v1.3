@@ -291,6 +291,39 @@ else
     echo "⚠️  Test8710P2P 源文件不存在"
 fi
 
+# 创建 Test8710Loopback
+if [ -f "test/DriverTest/Test8710Loopback.c" ]; then
+    echo "编译 Test8710Loopback..."
+    # 先编译验证器模块
+    echo "编译验证器模块..."
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+        -c test/example/trm_tx_validator.c \
+        -o ${BUILD_DIR}/trm_tx_validator.o
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ trm_tx_validator.c 编译成功"
+    else
+        echo "❌ trm_tx_validator.c 编译失败"
+        exit 1
+    fi
+    
+    # 编译Test8710Loopback并链接验证器
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
+        test/DriverTest/Test8710Loopback.c \
+        ${BUILD_DIR}/trm_tx_validator.o \
+        -L${BUILD_DIR} -ltk8710_hal_complete \
+        -lpthread -lgpiod \
+        -o ${BUILD_DIR}/Test8710Loopback
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Test8710Loopback 创建成功"
+    else
+        echo "❌ Test8710Loopback 创建失败"
+    fi
+else
+    echo "⚠️  Test8710Loopback 源文件不存在"
+fi
+
 
 # 显示结果
 echo ""

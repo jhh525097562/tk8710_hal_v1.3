@@ -914,7 +914,7 @@ static void tk8710_md_data_process(void)
         TK8710_LOG_IRQ_DEBUG("Master mode: using S2 config, dataLen=%d", dataLen);
     } else if (slotCfg->msMode == TK8710_MODE_LOOPBACK) {
         /* Loopback模式：使用S1时隙配置 */
-        dataLen = slotCfg->s1Cfg[g_irqResult.currentRateIndex].byteLen;
+        dataLen = slotCfg->s3Cfg[g_irqResult.currentRateIndex].byteLen;
         TK8710_LOG_IRQ_DEBUG("Loopback mode: using S1 config, dataLen=%d", dataLen);
     } else {
         /* Slave模式：使用S3时隙配置 */
