@@ -795,7 +795,9 @@ typedef union s_init_12
         uint32_t ls_master  : 1;
         uint32_t RESERVED_0 : 3;
         uint32_t ls_en      : 1;
-        uint32_t RESERVED_1 : 11;
+        uint32_t RESERVED_1 : 3;
+        uint32_t loop : 1;
+        uint32_t RESERVED_2 : 7;
     }b;
 }s_init_12;
 
