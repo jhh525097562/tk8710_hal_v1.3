@@ -68,8 +68,9 @@ typedef struct {
 
 /* 主从模式枚举 */
 typedef enum {
-    TK8710_MODE_SLAVE  = 0,
-    TK8710_MODE_MASTER = 1,
+    TK8710_MODE_SLAVE    = 0,
+    TK8710_MODE_MASTER   = 1,
+    TK8710_MODE_LOOPBACK = 2,
 } msMode_e;
 
 /* 工作模式枚举 */

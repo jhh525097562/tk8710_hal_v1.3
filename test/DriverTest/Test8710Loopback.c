@@ -767,7 +767,22 @@ void show_system_status(void)
     uint8_t brdUserNum = TK8710GetBrdUserNum();
     
     printf("\n=== System Status ===\n");
-    printf("Work mode: %s\n", workType == TK8710_MODE_MASTER ? "Master" : "Slave");
+    const char* modeStr;
+    switch (workType) {
+        case TK8710_MODE_MASTER:
+            modeStr = "Master";
+            break;
+        case TK8710_MODE_SLAVE:
+            modeStr = "Slave";
+            break;
+        case TK8710_MODE_LOOPBACK:
+            modeStr = "Loopback";
+            break;
+        default:
+            modeStr = "Unknown";
+            break;
+    }
+    printf("Work mode: %s\n", modeStr);
     printf("Rate mode: %d\n", rateMode);
     printf("Broadcast users: %d\n", brdUserNum);
     printf("Antenna enable: 0x%02X\n", slotCfg->antEn);
@@ -972,7 +987,7 @@ int main(int argc, char* argv[])
     memset(&slotCfg, 0, sizeof(slotCfg_t));
     
     /* 配置基本参数 (与原配置一致) */
-    slotCfg.msMode = TK8710_MODE_MASTER;
+    slotCfg.msMode = TK8710_MODE_LOOPBACK;
     slotCfg.plCrcEn = 0;
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
@@ -1067,8 +1082,8 @@ int main(int argc, char* argv[])
     }
 
     /* 7. 启动TK8710 */
-    // 启动TK8710芯片，使用Master模式和连续工作模式
-    ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    // 启动TK8710芯片，使用Loopback模式和连续工作模式
+    ret = TK8710Start(TK8710_MODE_LOOPBACK, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_START;
     }    
