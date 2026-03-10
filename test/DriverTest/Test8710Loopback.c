@@ -710,6 +710,13 @@ int load_and_send_simulation_data(int classNum, int caseNum)
             
             ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                 MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+            if(user < 16){
+                tx_pow_ctrl.data = 0;
+                tx_pow_ctrl.b.UserIndex = user + 128;
+                tx_pow_ctrl.b.power = txPowerData[user];
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
+                    MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+            }
         }
         
         /* 打印前16个输入数据 (十六进制格式) */
@@ -988,7 +995,7 @@ int main(int argc, char* argv[])
     
     /* 配置基本参数 (与原配置一致) */
     slotCfg.msMode = TK8710_MODE_LOOPBACK;
-    slotCfg.plCrcEn = 0;
+    slotCfg.plCrcEn = 1;
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
     slotCfg.rfSel = 0xFF;
@@ -1014,46 +1021,46 @@ int main(int argc, char* argv[])
     switch (testMode) {
         case 5:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 1300;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
             slotCfg.s3Cfg[0].da_m = 65000;
             break;
         case 6:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 1400;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 31500;
+            slotCfg.s3Cfg[0].da_m = 65536;
             break;
         case 7:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 7000;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 14500;
+            slotCfg.s3Cfg[0].da_m = 32768;
             break;
         case 8:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 3600;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
             slotCfg.s3Cfg[0].da_m = 8000;
             break;
         case 9:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 1900;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 4500;
+            slotCfg.s3Cfg[0].da_m = 8192;
             break;
         case 10:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 1200;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 1200;
+            slotCfg.s3Cfg[0].da_m = 4096;
             break;
         case 11:
         case 18:
             slotCfg.s0Cfg[0].da_m = 0;
-            slotCfg.s1Cfg[0].da_m = 800;
+            slotCfg.s1Cfg[0].da_m = 60000;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 800;
+            slotCfg.s3Cfg[0].da_m = 0;
             break;
         default:
             printf("Error: Unsupported mode %d\n", testMode);
@@ -1063,7 +1070,7 @@ int main(int argc, char* argv[])
     slotCfg.s0Cfg[0].centerFreq = 509100000;
     slotCfg.s1Cfg[0].byteLen = 22;
     slotCfg.s1Cfg[0].centerFreq = 509100000;
-    slotCfg.s2Cfg[0].byteLen = 22;
+    slotCfg.s2Cfg[0].byteLen = 0;
     slotCfg.s2Cfg[0].centerFreq = 509100000;
     slotCfg.s3Cfg[0].byteLen = 22;
     slotCfg.s3Cfg[0].centerFreq = 509100000;
