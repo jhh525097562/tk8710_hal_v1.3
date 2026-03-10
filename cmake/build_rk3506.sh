@@ -160,8 +160,8 @@ else
     echo "⚠️  test8710main_3506 源文件不存在"
 fi
 
-# 创建 test_Driver_TRM_main_3506
-if [ -f "test/example/test_Driver_TRM_main_3506.c" ]; then
+# 创建 TestTRMmain
+if [ -f "test/example/TestTRMmain.c" ]; then
     # 先编译验证器模块
     echo "编译验证器模块..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
@@ -177,24 +177,24 @@ if [ -f "test/example/test_Driver_TRM_main_3506.c" ]; then
     
     # 编译测试程序并链接验证器
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        test/example/test_Driver_TRM_main_3506.c \
+        test/example/TestTRMmain.c \
         ${BUILD_DIR}/trm_tx_validator.o \
         -L${BUILD_DIR} -ltk8710_hal_complete \
         -lpthread -lgpiod \
-        -o ${BUILD_DIR}/test_Driver_TRM_main_3506
+        -o ${BUILD_DIR}/TestTRMmain
     
     if [ $? -eq 0 ]; then
-        echo "✅ test_Driver_TRM_main_3506 创建成功"
+        echo "✅ TestTRMmain 创建成功"
     else
-        echo "❌ test_Driver_TRM_main_3506 创建失败"
+        echo "❌ TestTRMmain 创建失败"
     fi
 else
-    echo "⚠️  test_Driver_TRM_main_3506 源文件不存在"
+    echo "⚠️  TestTRMmain 源文件不存在"
 fi
 
-# 创建 TestDriverSlave
-if [ -f "test/DriverTest/TestDriverSlave.c" ]; then
-    echo "编译 TestDriverSlave..."
+# 创建 Test8710Slave
+if [ -f "test/DriverTest/Test8710Slave.c" ]; then
+    echo "编译 Test8710Slave..."
     # 先编译验证器模块
     echo "编译验证器模块..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
@@ -208,26 +208,26 @@ if [ -f "test/DriverTest/TestDriverSlave.c" ]; then
         exit 1
     fi
     
-    # 编译TestDriverSlave并链接验证器
+    # 编译Test8710Slave并链接验证器
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/TestDriverSlave.c \
+        test/DriverTest/Test8710Slave.c \
         ${BUILD_DIR}/trm_tx_validator.o \
         -L${BUILD_DIR} -ltk8710_hal_complete \
         -lpthread -lgpiod \
-        -o ${BUILD_DIR}/TestDriverSlave
+        -o ${BUILD_DIR}/Test8710Slave
     
     if [ $? -eq 0 ]; then
-        echo "✅ TestDriverSlave 创建成功"
+        echo "✅ Test8710Slave 创建成功"
     else
-        echo "❌ TestDriverSlave 创建失败"
+        echo "❌ Test8710Slave 创建失败"
     fi
 else
-    echo "⚠️  TestDriverSlave 源文件不存在"
+    echo "⚠️  Test8710Slave 源文件不存在"
 fi
 
-# 创建 TestRxSensitivity
-if [ -f "test/DriverTest/TestRxSensitivity.c" ]; then
-    echo "编译 TestRxSensitivity..."
+# 创建 Test8710RxSensitivity
+if [ -f "test/DriverTest/Test8710RxSensitivity.c" ]; then
+    echo "编译 Test8710RxSensitivity..."
     # 先编译验证器模块
     echo "编译验证器模块..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
@@ -241,21 +241,21 @@ if [ -f "test/DriverTest/TestRxSensitivity.c" ]; then
         exit 1
     fi
     
-    # 编译TestRxSensitivity并链接验证器
+    # 编译Test8710RxSensitivity并链接验证器
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/TestRxSensitivity.c \
+        test/DriverTest/Test8710RxSensitivity.c \
         ${BUILD_DIR}/trm_tx_validator.o \
         -L${BUILD_DIR} -ltk8710_hal_complete \
         -lpthread -lgpiod \
-        -o ${BUILD_DIR}/TestRxSensitivity
+        -o ${BUILD_DIR}/Test8710RxSensitivity
     
     if [ $? -eq 0 ]; then
-        echo "✅ TestRxSensitivity 创建成功"
+        echo "✅ Test8710RxSensitivity 创建成功"
     else
-        echo "❌ TestRxSensitivity 创建失败"
+        echo "❌ Test8710RxSensitivity 创建失败"
     fi
 else
-    echo "⚠️  TestRxSensitivity 源文件不存在"
+    echo "⚠️  Test8710RxSensitivity 源文件不存在"
 fi
 
 # 创建 Test8710P2P
