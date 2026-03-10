@@ -72,12 +72,6 @@ typedef enum {
     TK8710_MODE_MASTER = 1,
 } msMode_e;
 
-/* 工作类型枚举 */
-typedef enum {
-    TK8710_WORK_TYPE_MASTER = 1,
-    TK8710_WORK_TYPE_SLAVE  = 2,
-} workType_e;
-
 /* 工作模式枚举 */
 typedef enum {
     TK8710_WORK_MODE_CONTINUOUS = 1,

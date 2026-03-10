@@ -381,7 +381,7 @@ int TK8710Init(const ChipConfig* initConfig)
 
 /**
  * @brief 芯片进入收发状态
- * @param workType 工作类型: 1=Master, 2=Slave
+ * @param workType 工作类型: 0=Slave, 1=Master
  * @param workMode 工作模式: 1=连续, 2=单次
  * @return 0-成功, 1-失败, 2-超时
  */
@@ -402,6 +402,34 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_5), init5.data);
     if (ret != TK8710_OK) return ret;
     
+    // /* 配置寄存器0x9478为0x01110010 */
+    // ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x01110010);
+    // if (ret == TK8710_OK) {
+    //     TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9478 = 0x01110010");
+    // } else {
+    //     TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9478: %d", ret);
+    //     return ret;
+    // }
+
+    /* 配置寄存器0x9810为0x03481400 */
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9810, 0x03481400);
+    if (ret == TK8710_OK) {
+        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9810 = 0x03481400");
+    } else {
+        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9810: %d", ret);
+        return ret;
+    }
+
+    /* 配置寄存器0x980c为0x000FF200 */
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x980c, 0x000FF200);
+    if (ret == TK8710_OK) {
+        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x980c = 0x000FF200");
+    } else {
+        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x980c: %d", ret);
+        return ret;
+    }
+
+
     /* 根据工作类型启动传输 */
     if (workType == TK8710_MODE_MASTER) {
         /* Master模式: 配置trx_trig0寄存器 (0x74) 启动主动传输 */
@@ -442,6 +470,26 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
         {
             slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_SLAVE;
+            
+            /* 配置rx_fe_regs->ddc寄存器 */
+            {
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x0000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x1000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x2000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x3000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x4000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x5000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x6000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x7000, 0x1b33333);
+                if (ret != TK8710_OK) return ret;
+            }
             
             /* 配置中断使能 */
             {

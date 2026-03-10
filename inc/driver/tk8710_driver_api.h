@@ -28,7 +28,7 @@ int TK8710Init(const ChipConfig* initConfig);
 
 /**
  * @brief 芯片进入收发状态
- * @param workType 工作类型: 1=Master, 2=Slave
+ * @param workType 工作类型: 0=Slave, 1=Master
  * @param workMode 工作模式: 1=连续, 2=单次
  * @return 0-成功, 1-失败, 2-超时
  */

@@ -113,14 +113,14 @@ TK8710_HalError hal_config(const slotCfg_t* slotConfig)
  * @return TK8710_HAL_OK成功，其他值失败
  * 
  * 启动HAL，开始硬件工作，可以收发数据
- * 调用TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS)启动芯片
+ * 调用TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS)启动芯片
  */
 TK8710_HalError hal_start(void)
 {
     int ret;
     
     // 启动TK8710芯片，使用Master模式和连续工作模式
-    ret = TK8710Start(TK8710_WORK_TYPE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_START;
     }

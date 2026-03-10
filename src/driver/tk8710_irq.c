@@ -231,6 +231,8 @@ void TK8710_IRQHandler(void)
                         break;
                     case TK8710_IRQ_MD_UD:
                         break;
+                    case TK8710_IRQ_RX_BCN:
+                        break;
                     default:
                         /* 其他中断类型，调用错误回调 */
                         if (g_driverCallbacks.onError) {
@@ -672,8 +674,43 @@ static void tk8710_handle_rx_bcn(void)
     /* TODO: 实现BCN接收处理 */
     g_irqResult.irq_type = TK8710_IRQ_RX_BCN;
     
-    /* 读取BCN频偏 */
-    /* TODO: 从相应寄存器读取bcn_freq_offset */
+    /* 读取BCN频偏和BCN bits */
+    {
+        s_bcn_obv1 bcnObv1;
+        s_bcn_obv2 bcnObv2;
+        
+        /* 读取BCN状态信息 */
+        int ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
+                                RX_BCN_BASE + offsetof(struct rx_bcn, bcn_obv1), 
+                                &bcnObv1.data);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_IRQ_ERROR("Failed to read bcn_obv1 register");
+            return;
+        }
+        
+        /* 读取BCN频偏和bits信息 */
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
+                           RX_BCN_BASE + offsetof(struct rx_bcn, bcn_obv2), 
+                           &bcnObv2.data);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_IRQ_ERROR("Failed to read bcn_obv2 register");
+            return;
+        }
+        
+        /* 设置中断结果中的BCN信息 */
+        g_irqResult.bcn_freq_offset = (int16_t)bcnObv2.b.freq_offset;  /* 转换为有符号数 */
+        /* 如果offset大于32768，则减去65536（处理16位有符号数的负数表示） */
+        if (g_irqResult.bcn_freq_offset > 32768) {
+            g_irqResult.bcn_freq_offset -= 65536;
+        }
+        g_irqResult.rx_bcnbits = bcnObv2.b.bcn_bits_out;
+        g_irqResult.rxbcn_status = bcnObv1.b.sync_on;  /* 同步状态 */
+        
+        /* 打印读取到的BCN信息 */
+        TK8710_LOG_IRQ_INFO("BCN Info: bits=%u, freq_offset=%d, q=%u, sync=%u", 
+                           bcnObv2.b.bcn_bits_out, (int16_t)bcnObv2.b.freq_offset,
+                           bcnObv1.b.bcn_q, bcnObv1.b.sync_on);
+    }
     
     /* 读取BCN计数器 */
     /* TODO: 从obv_0读取counters_bcn_success和counters_bcn_total */
@@ -720,8 +757,12 @@ static void tk8710_handle_md_ud(void)
     
     /* 检查是否为指定信息发送模式 */
     if (TK8710GetTxAutoMode() == 1) {
-        /* 指定信息发送模式：在中断中获取用户信息 */
-        tk8710_md_ud_get_user_info();
+        /* 指定信息发送模式：在中断中获取用户信息（仅Master模式） */
+        if (TK8710GetWorkType() == TK8710_MODE_MASTER) {
+            tk8710_md_ud_get_user_info();
+        } else {
+            TK8710_LOG_IRQ_DEBUG("Slave mode, skip user info retrieval");
+        }
     } else {
         /* 自动发送模式：不需要获取用户信息 */
         TK8710_LOG_IRQ_DEBUG("Auto TX mode, skip user info retrieval");
@@ -990,8 +1031,10 @@ static void tk8710_handle_slot0(void)
     /* 设置中断类型 */
     g_irqResult.irq_type = TK8710_IRQ_S0;
     
-    /* 处理BCN轮流发送 */
-    tk8710_s0_bcn_rotation_process();
+    /* 处理BCN轮流发送 - 仅在Master模式下运行 */
+    if (TK8710GetWorkType() == TK8710_MODE_MASTER) {
+        tk8710_s0_bcn_rotation_process();
+    }
 }
 
 /**

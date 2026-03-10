@@ -812,6 +812,32 @@ int main(int argc, char* argv[])
     }
     int ret;
     char input;
+    int testMode = 6;  /* 默认模式6 */
+    
+    /* 检查命令行参数 */
+    if (argc > 1) {
+        if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+            printf("Usage: %s [mode] [--help|-h]\n", argv[0]);
+            printf("  mode: Test mode (5,6,7,8,9,10,11,18), default: 6\n");
+            printf("    Mode 5:  s0=40*256, s1=0, s2=0, s3=135072\n");
+            printf("    Mode 6:  s0=46*256, s1=0, s2=0, s3=69536\n");
+            printf("    Mode 7:  s0=113*256, s1=0, s2=0, s3=36768\n");
+            printf("    Mode 8:  s0=146*256, s1=0, s2=0, s3=20384\n");
+            printf("    Mode 9:  s0=64*256, s1=0, s2=0, s3=12192\n");
+            printf("    Mode 10: s0=19*256, s1=0, s2=0, s3=8096\n");
+            printf("    Mode 11: s0=256, s1=0, s2=0, s3=6084\n");
+            printf("    Mode 18: s0=256, s1=0, s2=0, s3=6084\n");
+            printf("  --help, -h: Show this help\n");
+            return 0;
+        }
+        
+        testMode = atoi(argv[1]);
+        if (testMode < 5 || testMode > 18 || (testMode > 11 && testMode < 18)) {
+            printf("Error: Invalid mode %d. Supported modes: 5,6,7,8,9,10,11,18\n", testMode);
+            return 1;
+        }
+        printf("Using test mode: %d\n", testMode);
+    }
     
 #ifdef _WIN32
     /* 设置控制台编码为UTF-8 */
@@ -905,8 +931,8 @@ int main(int argc, char* argv[])
     memset(&slotCfg, 0, sizeof(slotCfg_t));
     
     /* 配置基本参数 (与原配置一致) */
-    slotCfg.msMode = TK8710_MODE_SLAVE;
-    slotCfg.plCrcEn = 1;
+    slotCfg.msMode = TK8710_MODE_MASTER;
+    slotCfg.plCrcEn = 0;
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
     slotCfg.rfSel = 0xFF;
@@ -924,18 +950,64 @@ int main(int argc, char* argv[])
     }
     
     /* 单速率配置 */
-    printf("Using single-rate configuration\n");
+    printf("Using single-rate configuration for mode %d\n", testMode);
     slotCfg.rateCount = 1;
-    slotCfg.rateModes[0] = TK8710_RATE_MODE_6;
-    slotCfg.s0Cfg[0].da_m = 46*256;
-    slotCfg.s1Cfg[0].da_m = 0;
-    slotCfg.s2Cfg[0].da_m = 0;
-    slotCfg.s3Cfg[0].da_m = 69536;
+    slotCfg.rateModes[0] = testMode;
+    
+    /* 根据模式设置不同的da_m值 */
+    switch (testMode) {
+        case 5:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1300;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 65000;
+            break;
+        case 6:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1400;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 31500;
+            break;
+        case 7:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 7000;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 14500;
+            break;
+        case 8:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 3600;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 8000;
+            break;
+        case 9:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1900;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 4500;
+            break;
+        case 10:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1200;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 1200;
+            break;
+        case 11:
+        case 18:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 800;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 800;
+            break;
+        default:
+            printf("Error: Unsupported mode %d\n", testMode);
+            return -1;
+    }
     slotCfg.s0Cfg[0].byteLen = 0;
     slotCfg.s0Cfg[0].centerFreq = 509100000;
-    slotCfg.s1Cfg[0].byteLen = 0;
+    slotCfg.s1Cfg[0].byteLen = 22;
     slotCfg.s1Cfg[0].centerFreq = 509100000;
-    slotCfg.s2Cfg[0].byteLen = 0;
+    slotCfg.s2Cfg[0].byteLen = 22;
     slotCfg.s2Cfg[0].centerFreq = 509100000;
     slotCfg.s3Cfg[0].byteLen = 22;
     slotCfg.s3Cfg[0].centerFreq = 509100000;
@@ -943,41 +1015,11 @@ int main(int argc, char* argv[])
     /* 调用 8710 config 配置时隙 */
     ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);
     if (ret != TK8710_OK) {
-        printf("8710 config (slot) failed: %d\n", ret);
         return -1;
     }
     printf("Slot parameter configuration completed\n");
     
-    /* 7. 配置测试选项 */
-    printf("Configure test options:\n");
-    printf("Enable force process all users for testing? (y/n): ");
-    char testChoice;
-    scanf(" %c", &testChoice);
-    if (testChoice == 'y' || testChoice == 'Y') {
-        TK8710SetForceProcessAllUsers(1);
-        printf("Force process all users: ENABLED\n");
-    } else {
-        TK8710SetForceProcessAllUsers(0);
-        printf("Force process all users: DISABLED\n");
-    }
-    
-    printf("Enable force max users TX for testing? (y/n): ");
-    scanf(" %c", &testChoice);
-    if (testChoice == 'y' || testChoice == 'Y') {
-        TK8710SetForceMaxUsersTx(1);
-        printf("Force max users TX: ENABLED\n");
-    } else {
-        TK8710SetForceMaxUsersTx(0);
-        printf("Force max users TX: DISABLED\n");
-    }
-
-    /* 9. 调用 hal_start 启动工作 */
-    // halRet = hal_start();
-    // if (halRet != TK8710_HAL_OK) {
-    //     printf("HAL start failed: %d\n", halRet);
-    //     return -1;
-    // }
-    // printf("HAL started successfully (Master mode, Continuous work)\n");
+    /* 7. 启动TK8710 */
 
     // 启动TK8710芯片，使用Master模式和连续工作模式
     ret = TK8710Start(TK8710_MODE_SLAVE, TK8710_WORK_MODE_CONTINUOUS);
@@ -985,10 +1027,10 @@ int main(int argc, char* argv[])
         return TK8710_HAL_ERROR_START;
     }    
     /* 自动加载并发送仿真数据 */
-    // printf("\n自动加载仿真数据...\n");
-    // if (load_and_send_simulation_data() != 0) {
-    //     printf("警告: 仿真数据加载失败，程序将继续运行\n");
-    // }
+    printf("\n自动加载仿真数据...\n");
+    if (load_and_send_simulation_data() != 0) {
+        printf("警告: 仿真数据加载失败，程序将继续运行\n");
+    }
     
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");

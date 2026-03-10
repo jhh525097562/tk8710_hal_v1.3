@@ -42,9 +42,9 @@ TK8710芯片硬件抽象层（Hardware Abstraction Layer），提供分层独立
 tk8710_hal_v1.3/
 ├── .gitignore              # Git忽略文件配置
 ├── README.md               # 项目说明文档
+├── TK8710 用户指南_V1.4.pdf # 用户指南文档
 ├── inc/                    # 头文件目录
-│   ├── common/             # 公共模块头文件
-│   │   └── mempool.h       # 内存池管理
+│   ├── 8710_hal_api.h      # HAL API头文件
 │   ├── driver/             # Driver层头文件
 │   │   ├── tk8710.h          # Driver主头文件（向后兼容）
 │   │   ├── tk8710_driver_api.h # Driver公共API接口
@@ -62,8 +62,7 @@ tk8710_hal_v1.3/
 │       ├── trm_data.h      # 数据管理
 │       └── trm_log.h       # TRM日志系统
 ├── src/                    # 源文件目录
-│   ├── common/             # 公共模块实现
-│   │   └── mempool.c       # 内存池实现
+│   ├── 8710_hal_api.c      # HAL API实现
 │   ├── driver/             # Driver层实现
 │   │   ├── tk8710_config.c # 芯片配置
 │   │   ├── tk8710_core.c   # Driver核心功能
@@ -78,44 +77,31 @@ tk8710_hal_v1.3/
 │       ├── trm_power.c     # 功率管理
 │       └── trm_slot.c      # 时隙管理
 ├── port/                   # 平台移植层
-│   ├── README_RK3506.md    # RK3506移植说明
 │   ├── tk8710_hal.h        # HAL主接口
-│   ├── tk8710_rk3506.c     # RK3506 Linux实现
-│   ├── tk8710_jtool.c      # Windows JTOOL实现
-│   └── jtool/              # JTOOL相关文件
-│       ├── jtool.dll       # JTOOL动态库
-│       ├── jtool.h         # JTOOL头文件
-│       ├── x64/            # 64位JTOOL库
-│       └── x86/            # 32位JTOOL库
+│   ├── rk3506/             # RK3506平台实现
+│   │   ├── tk8710_rk3506.c # RK3506 Linux实现
+│   │   └── README_RK3506.md # RK3506移植说明
+│   ├── jtool/              # Windows JTOOL实现
+│   │   ├── tk8710_jtool.c  # JTOOL主实现
+│   │   ├── jtool.dll       # JTOOL动态库
+│   │   ├── jtool.h         # JTOOL头文件
+│   │   ├── x64/            # 64位JTOOL库
+│   │   └── x86/            # 32位JTOOL库
+│   └── README_RK3506.md    # RK3506移植说明
 ├── test/                   # 测试用例目录
-│   ├── unit/               # 单元测试
-│   │   ├── test_framework.c # 测试框架
-│   │   ├── test_framework.h # 测试框架头文件
-│   │   ├── test_simple.c   # 简单测试
-│   │   ├── test_trm_beam.c # 波束管理测试
-│   │   ├── test_trm_slot.c # 时隙管理测试
-│   │   ├── test_driver.c   # Driver测试
-│   │   ├── test_rk3506_hal.c # RK3506 HAL测试
-│   │   └── test_boundary.c # 边界测试
-│   ├── integration/        # 集成测试
-│   │   ├── test_irq.c      # 中断测试
-│   │   ├── test_tx_rx.c    # 收发测试
-│   │   └── jtool.dll       # JTOOL测试库
+│   ├── DriverTest/         # Driver测试
+│   │   ├── TestDriverSlave.c # Slave模式测试
+│   │   ├── test_file_read.c # 文件读取测试
+│   │   ├── test_gwrxah_packing.c # GWRXAH打包测试
+│   │   └── 仿真数据加载功能说明.md # 功能说明
+│   ├── unit/               # 单元测试（空目录）
+│   ├── integration/        # 集成测试（空目录）
 │   └── example/            # 示例程序
-│       ├── basic_example.c # 基础示例
-│       ├── advanced_example.c # 高级示例
-│       ├── gateway_demo.c  # 网关演示
-│       ├── loopback_test.c # 回环测试
-│       ├── parallel_arch_example.c # 并行架构示例
 │       ├── test8710main_3506.c # 3506主测试程序
 │       ├── test8710main_jtool.c # JTOOL主测试程序
 │       ├── test_Driver_TRM_main_3506.c # Driver+TRM测试
-│       ├── trm_config_example.c # TRM配置示例
 │       ├── trm_tx_validator.c # TRM验证器
-│       ├── trm_tx_validator.h # TRM验证器头文件
-│       ├── validator_example.c # 验证器示例
-│       ├── TRM_TxValidator_Usage.md # 验证器使用说明
-│       └── jtool.dll       # JTOOL示例库
+│       └── trm_tx_validator.h # TRM验证器头文件
 ├── cmake/                  # 构建工具目录
 │   ├── Build.md            # 构建说明
 │   ├── CMakeLists.txt      # CMake配置
@@ -124,9 +110,16 @@ tk8710_hal_v1.3/
 │   ├── build_rk3506.sh     # RK3506构建脚本
 │   └── toolchain-rk3506.cmake # RK3506工具链
 ├── docs/                   # 文档目录
-│   ├── API_Reference.md    # API参考文档
+│   ├── TK8710_HAL_API.md   # HAL API文档
+│   ├── TK8710_TRM_Driver_API.md # TRM和Driver API文档
 │   ├── Porting_Guide.md    # 移植指南
-│   └── trm_driver_callback_integration.md # 回调集成文档
+│   ├── TRM_Driver_功能与流程说明.md # 功能说明
+│   ├── TurMass™ MAC 协议规范 - v3.10.md # 协议规范
+│   ├── 8710_HAL编程指南*.md # HAL编程指南（多个版本）
+│   ├── 卫星物联网网关和一般地面网关T层设计-qdm20260305.md # 网关设计
+│   ├── TK8710_Driver_API_Parameters.md # API参数说明
+│   ├── assets/             # 文档资源
+│   └── image/              # 文档图片
 ├── build_jtool/            # JTOOL编译输出
 │   ├── basic_example       # JTOOL基础示例程序
 │   ├── test8710main_jtool  # JTOOL测试程序

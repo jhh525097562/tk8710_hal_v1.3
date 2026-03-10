@@ -473,7 +473,7 @@ int main(int argc, char* argv[])
         slotCfg.s3Cfg[0].byteLen = 26;
         slotCfg.s3Cfg[0].centerFreq = 503100000;
     }
-    
+
     /* 调用 hal_config 配置时隙 */
     halRet = hal_config(&slotCfg);
     if (halRet != TK8710_HAL_OK) {
@@ -527,7 +527,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     printf("HAL started successfully (Master mode, Continuous work)\n");
-    
+
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");
     
@@ -589,6 +589,14 @@ int main(int argc, char* argv[])
         }
     }
     
+    TK8710LogConfig_t defaultLogConfig = {
+        .level = TK8710_LOG_ALL,
+        .module_mask = TK8710_LOG_MODULE_ALL,
+        .callback = NULL,
+        .enable_timestamp = 1,
+        .enable_module_name = 1
+    };
+    TK8710LogInit(&defaultLogConfig);
     /* 打印最终的中断时间统计报告 */
     printf("\n=== 最终中断处理时间统计报告 ===\n");
     TK8710PrintIrqTimeStats();
