@@ -234,6 +234,10 @@ void TK8710_IRQHandler(void)
                         break;
                     case TK8710_IRQ_RX_BCN:
                         break;
+                    case TK8710_IRQ_BRD_UD://slave时，TRM需要考虑
+                        break;
+                    case TK8710_IRQ_BRD_DATA://slave，TRM需要考虑
+                        break;
                     default:
                         /* 其他中断类型，调用错误回调 */
                         if (g_driverCallbacks.onError) {
@@ -913,7 +917,7 @@ static void tk8710_md_data_process(void)
         dataLen = slotCfg->s2Cfg[g_irqResult.currentRateIndex].byteLen;
         TK8710_LOG_IRQ_DEBUG("Master mode: using S2 config, dataLen=%d", dataLen);
     } else if (slotCfg->msMode == TK8710_MODE_LOOPBACK) {
-        /* Loopback模式：使用S1时隙配置 */
+        /* Loopback模式：使用S3时隙配置 */
         dataLen = slotCfg->s3Cfg[g_irqResult.currentRateIndex].byteLen;
         TK8710_LOG_IRQ_DEBUG("Loopback mode: using S1 config, dataLen=%d", dataLen);
     } else {
@@ -1372,17 +1376,23 @@ static void tk8710_handle_slot1(void)
     if (slotCfg->txAutoMode == 1) {
         /* 如果已加载仿真数据，跳过手动发送处理 */
         if (g_simulationDataLoaded) {
+                int ret;
                 uint32_t user_val_regs[4] = {0xffffffff,0xffffffff,0xffffffff,0xffffffff}; /* user_val0, user_val1, user_val2, user_val3 */
                 /* 写入MAC寄存器 */
                 for (int reg = 0; reg < 4; reg++) {
                     uint32_t reg_offset = MAC_BASE + 0x3c + reg * 4;
-                    int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, reg_offset, user_val_regs[reg]);
+                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, reg_offset, user_val_regs[reg]);
                     if (ret == TK8710_OK) {
                         TK8710_LOG_IRQ_DEBUG("Set MAC user_val%d = 0x%08X", reg, user_val_regs[reg]);
                     } else {
                         TK8710_LOG_IRQ_ERROR("Failed to set MAC user_val%d: %d", reg, ret);
                     }
                 }
+                s_init_17 brdUserVal;
+                brdUserVal.data = 0;
+                brdUserVal.b.brd_user_val = 0xffff;
+
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), brdUserVal.data);
                 TK8710_LOG_IRQ_DEBUG("Simulation data loaded, skipping manual TX process");
             } else {
                 tk8710_s1_manual_tx_process();

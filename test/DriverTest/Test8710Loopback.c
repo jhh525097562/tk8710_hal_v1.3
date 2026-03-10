@@ -156,8 +156,11 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                             uint32_t freq26 = freqSignal & 0x03FFFFFF;  /* 取26位 */
                             int32_t freqValue = freq26 > (1<<25) ? (int32_t)(freq26 - (1<<26)) : (int32_t)freq26;
                             
-                            printf("用户%u: freq=%dHz (raw=0x%08X), rssi=%d, snr=%u, 丢包=%u/%u\n", 
-                                   userIndex, freqValue/128, freq26, rssiValue, snrValue, g_totalPacketLostCount, g_totalPacketCount);
+                            /* 只打印前10个用户的信息 */
+                            if (userIndex < 10) {
+                                printf("用户%u: freq=%dHz (raw=0x%08X), rssi=%d, snr=%u, 丢包=%u/%u\n", 
+                                       userIndex, freqValue/128, freq26, rssiValue, snrValue, g_totalPacketLostCount, g_totalPacketCount);
+                            }
                             
                             validUserCount++;
                             g_lastValidUserIndex = userIndex;
@@ -698,7 +701,18 @@ int load_and_send_simulation_data(int classNum, int caseNum)
         /* 按用户顺序直接复制8bit数据到字节数组 */
         int byteIndex = 0;
         int ret = 0;
+        uint8_t Data[30];
+        uint8_t Len = 22;
+
         for (int user = 0; user < userCount; user++) {
+            for(int i = 0; i < Len; i++){
+                if(i < 4){
+                    Data[i] = user + i;
+                }else{
+                    Data[i] = rand()%255;
+                }
+                
+            }
             if (byteIndex < sizeof(spiDataBuffer)) {
                 spiDataBuffer[byteIndex] = txPowerData[user];
                 byteIndex++;
@@ -710,12 +724,16 @@ int load_and_send_simulation_data(int classNum, int caseNum)
             
             ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                 MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+
+            ret = TK8710WriteBuffer(user, Data, Len);
             if(user < 16){
                 tx_pow_ctrl.data = 0;
                 tx_pow_ctrl.b.UserIndex = user + 128;
                 tx_pow_ctrl.b.power = txPowerData[user];
                 ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                     MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+                                    /* 发送广播数据 */
+               ret = TK8710WriteBuffer(user + 128, Data, Len);
             }
         }
         

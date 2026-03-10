@@ -641,6 +641,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                 init3.data = 0;
                 init3.b.da2_m = slotCfg->s2Cfg[0].da_m & 0xFFFFFF;  /* da2_m from S2[0] */
                 init3.b.tx_fix_freq = slotCfg->txAutoMode & 0x01;     /* tx_fix_freq */
+                //init3.b.rx_fix_freq = 1;     /* rx_fix_freq */
                 ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                     MAC_BASE + offsetof(struct mac, init_3), init3.data);
                 if (ret != TK8710_OK) return ret;

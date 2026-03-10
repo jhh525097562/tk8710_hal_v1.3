@@ -525,25 +525,25 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
         {
             slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             
-            /* 配置init12寄存器，启用loopback模式 */
-            {
-                s_init_12 init12;
-                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
-                if (ret == TK8710_OK) {
-                    init12.b.loop = 1;  /* 启用loopback模式 */
-                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
-                    if (ret == TK8710_OK) {
-                        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.loop = 1 for loopback mode");
-                    } else {
-                        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.loop: %d", ret);
-                        return ret;
-                    }
-                } else {
-                    TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
-                    return ret;
-                }
-            }
-            
+            // /* 配置init12寄存器，启用loopback模式 */
+            // {
+            //     s_init_12 init12;
+            //     ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
+            //     if (ret == TK8710_OK) {
+            //         init12.b.loop = 1;  /* 启用loopback模式 */
+            //         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
+            //         if (ret == TK8710_OK) {
+            //             TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.loop = 1 for loopback mode");
+            //         } else {
+            //             TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.loop: %d", ret);
+            //             return ret;
+            //         }
+            //     } else {
+            //         TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
+            //         return ret;
+            //     }
+            // }
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), 0x01011000);
             /* 配置中断使能 - 类似Master模式 */
             {
                 s_irq_ctrl0 irqCtrl0;
@@ -555,6 +555,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
                 if (slotCfg->s1Cfg[0].byteLen > 0) {
                     irqCtrl0.b.brd_ud_irq_mask = 0;  /* BRD UD中断使能 */
                     irqCtrl0.b.brd_irq_mask = 0;     /* BRD中断使能 */
+                    irqCtrl0.b.s1_irq_mask = 0; /* s1中断使能 */
                 }
                 
                 if (slotCfg->s2Cfg[0].byteLen > 0) {
