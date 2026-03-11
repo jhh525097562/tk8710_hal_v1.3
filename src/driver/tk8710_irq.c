@@ -629,7 +629,7 @@ static int tk8710_configure_multi_rate(uint8_t rateIndex)
     /* 配置 init_3: da2_m, tx_fix_freq */
     init3.data = 0;
     init3.b.da2_m = slotCfg->s2Cfg[rateIndex].da_m & 0xFFFFFF;  /* da2_m from S2[rateIndex] */
-    init3.b.tx_fix_freq = slotCfg->txAutoMode & 0x01;     /* tx_fix_freq */
+    init3.b.tx_fix_freq = slotCfg->txBeamCtrlMode & 0x01;     /* tx_fix_freq */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
         MAC_BASE + offsetof(struct mac, init_3), init3.data);
     if (ret != TK8710_OK) {
@@ -761,7 +761,7 @@ static void tk8710_handle_md_ud(void)
     g_irqResult.mdUserDataValid = 0;  /* 默认无效 */
     
     /* 检查是否为指定信息发送模式 */
-    if (TK8710GetTxAutoMode() == 1) {
+    if (TK8710GetTxBeamCtrlMode() == 1) {
         /* 指定信息发送模式：在中断中获取用户信息（Master和Loopback模式） */
         if (TK8710GetWorkType() == TK8710_MODE_MASTER || TK8710GetWorkType() == TK8710_MODE_LOOPBACK) {
             tk8710_md_ud_get_user_info();
@@ -1056,8 +1056,8 @@ static void tk8710_s0_bcn_rotation_process(void)
     uint8_t currentAntenna;
     
     /* 检查是否启用BCN轮流发送 (txBcnEn == 0xFF) */
-    if (slotCfg->txBcnEn != 0xFF) {
-        TK8710_LOG_IRQ_DEBUG("BCN rotation disabled (txBcnEn=0x%02X)", slotCfg->txBcnEn);
+    if (slotCfg->txBcnAntEn != 0xFF) {
+        TK8710_LOG_IRQ_DEBUG("BCN rotation disabled (txBcnAntEn=0x%02X)", slotCfg->txBcnAntEn);
         
         /* 不是轮流发送时，设置g_currentBcnAntenna为BCN选择的天线 */
         g_currentBcnAntenna = 0;  /* 使用天线0 */
@@ -1373,7 +1373,7 @@ static void tk8710_handle_slot1(void)
     tk8710_s1_auto_tx_process();
     
     /* 处理S1时隙指定信息发送 */
-    if (slotCfg->txAutoMode == 1) {
+    if (slotCfg->txBeamCtrlMode == 1) {
         /* 如果已加载仿真数据，跳过手动发送处理 */
         if (g_simulationDataLoaded) {
                 int ret;
@@ -1413,7 +1413,7 @@ static void tk8710_s1_auto_tx_process(void)
     uint8_t i;
     
     /* 检查是否启用自动发送模式 */
-    if (slotCfg->txAutoMode != 0) {
+    if (slotCfg->txBeamCtrlMode != 0) {
         TK8710_LOG_IRQ_DEBUG("Auto TX mode disabled");
         return;
     }
@@ -1613,12 +1613,11 @@ static void tk8710_s1_manual_tx_process(void)
             brdUserVal.b.brd_user_val = (1 << slotCfg->brdUserNum) - 1;
             
             ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), brdUserVal.data);
-            if (ret == TK8710_OK) {
-                TK8710_LOG_IRQ_DEBUG("Broadcast user valid bits set: 0x%04X (users: %d)", 
-                                    brdUserVal.b.brd_user_val, slotCfg->brdUserNum);
-            } else {
-                TK8710_LOG_IRQ_ERROR("Failed to set broadcast user valid bits: %d", ret);
+            if (ret != TK8710_OK) {
+                TK8710_LOG_IRQ_ERROR("Failed to configure broadcast user valid bits (init_17)");
+                return;
             }
+            
         }
         
         TK8710_LOG_IRQ_INFO("Manual TX broadcast configured as first user");
@@ -2232,7 +2231,7 @@ static void tk8710_s1_broadcast_tx_process(void)
                 uint64_t ah40 = 0;
                 
                 if (ant == g_currentBcnAntenna) {
-                    /* 当前BCN天线：I路=8192U, Q路=0 */
+                    /* 当前广播天线：I路=8192U, Q路=0 */
                     ah40 = ((uint64_t)8192U << 20) | 0;  /* I=8192U (20bit), Q=0 (20bit) */
                 } else {
                     /* 其他天线：I路=0, Q路=0 */
@@ -2428,7 +2427,7 @@ static void tk8710_md_data_read_signal_info(void)
     
     /* 2. 读取用户频点 (GetInfo type=0) - 只读取CRC正确的用户 */
     /* 在指定信息发送模式下，直接使用已获取的频率数据，避免重复SPI读取 */
-    if (TK8710GetTxAutoMode() == 1) {
+    if (TK8710GetTxBeamCtrlMode() == 1) {
         /* 指定信息发送模式：直接使用g_userInfoRxBuffers中的频率数据 */
         for (i = 0; i < maxUsers; i++) {
             if (g_irqResult.crcResults[i].crcValid && g_userInfoRxBuffers[i].valid) {
@@ -2640,4 +2639,3 @@ uint8_t TK8710GetSimulationDataLoaded(void)
 {
     return g_simulationDataLoaded;
 }
-

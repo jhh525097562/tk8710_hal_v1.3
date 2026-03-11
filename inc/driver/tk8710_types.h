@@ -372,8 +372,8 @@ typedef struct {
     float      brdFreq[TK8710_MAX_BRD_USERS]; /*广播时隙发送用户的频率*/
     uint8_t    antEn;           /* 天线使能, 默认0xFF(8天线) */
     uint8_t    rfSel;           /* RF天线选择, 默认0xFF(8天线) */
-    uint8_t    txAutoMode;      /* 下行发送模式: 0=自动发送, 1=指定信息发送 */
-    uint8_t    txBcnEn;         /* BCN发送使能 */
+    uint8_t    txBeamCtrlMode;  /* 下行波束控制模式: 0=芯片自动控制波束, 1=外部指定信息控制 */
+    uint8_t    txBcnAntEn;      /* 发送BCN天线使能 */
     uint8_t    bcnRotation[TK8710_MAX_ANTENNAS];  /* BCN发送使能为0xff时，从bcnRotation中轮流获取当前发送bcn天线*/
     uint32_t   rx_delay;        /* RX delay, 默认0 */
     uint32_t   md_agc;          /* DATA AGC长度, 默认1024 */

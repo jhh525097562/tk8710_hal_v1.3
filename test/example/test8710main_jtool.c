@@ -444,9 +444,9 @@ int config_slot_parameters(void)
     slotCfg.brdUserNum = 1;                      /* 广播用户数 */
     slotCfg.antEn = 0xFF;                        /* 使能所有天线 */
     slotCfg.rfSel = 0xFF;                        /* 选择所有RF */
-    slotCfg.txAutoMode = 1;                      /* 自动发送模式 */
-    g_txAutoMode = (slotCfg.txAutoMode == 0);  /* 0=自动发送, 1=指定信息发送 */
-    slotCfg.txBcnEn = 0x7f;                         /* 使能BCN发送 */
+    slotCfg.txBeamCtrlMode = 1;                      /* 波束控制模式 */
+    g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);  /* 0=芯片自动控制, 1=外部指定信息控制 */
+    slotCfg.txBcnAntEn = 0x7f;                         /* 发送BCN天线使能 */
     
     /* 配置BCN轮流发送 */
     for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
@@ -601,8 +601,8 @@ void show_system_status(void)
     printf("Broadcast users: %d\n", brdUserNum);
     printf("Antenna enable: 0x%02X\n", slotCfg->antEn);
     printf("RF select: 0x%02X\n", slotCfg->rfSel);
-    printf("Transmit mode: %s\n", slotCfg->txAutoMode ? "Specified info transmit" : "Auto transmit");
-    printf("BCN enable: %s\n", slotCfg->txBcnEn ? "Yes" : "No");
+    printf("Transmit mode: %s\n", slotCfg->txBeamCtrlMode ? "Specified info transmit" : "Auto transmit");
+    printf("BCN antenna enable: %s\n", slotCfg->txBcnAntEn ? "Yes" : "No");
     printf("Slot configuration:\n");
     printf("  S1(FDL): %d bytes, freq: %u\n", slotCfg->s1Cfg[0].byteLen, slotCfg->s1Cfg[0].centerFreq);
     printf("  S2(ADL): %d bytes, freq: %u\n", slotCfg->s2Cfg[0].byteLen, slotCfg->s2Cfg[0].centerFreq);

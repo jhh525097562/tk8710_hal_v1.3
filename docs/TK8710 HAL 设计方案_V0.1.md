@@ -2755,7 +2755,7 @@ int Tk8710SetTxData(TK8710DownlinkType downlinkType, uint8_t userIdBrdIndex,
 发送数据到 TK8710 芯片。
 
 **输入参数**：
-- `downlinkType`：下行类型
+- `downlinkType`：下行发送位置: 0=slot1, 1=slot3
 - `userIdBrdIndex`：用户 ID 或广播索引
 - `data`：数据指针
 - `len`：数据长度

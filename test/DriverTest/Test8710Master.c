@@ -17,7 +17,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "tk8710_hal.h"
+#include "driver/tk8710.h"
 #include "tk8710.h"
 #include "8710_hal_api.h"   /* HAL API接口 */
 #include "driver/tk8710_driver_api.h"  /* Driver API接口 */
@@ -74,7 +74,7 @@ static void signal_handler(int sig)
 
 /* 下行发送状态跟踪 */
 static volatile bool g_hasValidUsers = false;     /* 是否有有效用户 */
-static volatile bool g_txAutoMode = false;         /* 自动发送模式 */
+static volatile bool g_txBeamCtrlMode = false;         /* 波束控制模式 */
 
 /* TRM相关变量 */
 static uint32_t g_trmSendCount = 0;               /* TRM发送计数 */
@@ -351,9 +351,11 @@ void show_trm_statistics(void)
 
 /**
  * @brief 从文件读取数据并通过SPI传输
+ * @param classNum class序号 (如: 1, 3, 等)
+ * @param caseNum case序号 (如: 11, 17, 等)
  * @return 0-成功, 非0-失败
  */
-int load_and_send_simulation_data(void)
+int load_and_send_simulation_data(int classNum, int caseNum)
 {
     char filePath[256];
     FILE *fp;
@@ -361,11 +363,11 @@ int load_and_send_simulation_data(void)
     uint8_t spiDataBuffer[2048];
     int dataCount;
     
-    printf("\n=== 开始加载仿真数据并传输 ===\n");
+    printf("\n=== 开始加载目录：/class%d/case%d下仿真数据并传输 ===\n", classNum, caseNum);
     
     /* 1. 读取 ANoise 数据 */
     snprintf(filePath, sizeof(filePath), 
-        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\ANoise.txt");
+        "./class%d/case%d/ANoise.txt", classNum, caseNum);
     fp = fopen(filePath, "r");
     if (fp == NULL) {
         printf("无法打开文件: %s\n", filePath);
@@ -393,7 +395,7 @@ int load_and_send_simulation_data(void)
             }
             printf("\n");
             
-            int ret = TK8710SpiSetInfo(0, spiDataBuffer, 16);
+            int ret = TK8710SpiSetInfo(TK8710_SET_INFO_ANOISE, spiDataBuffer, 16);
             if (ret == 0) {
                 printf("ANoise 数据传输成功: 8个值\n");
             } else {
@@ -407,7 +409,7 @@ int load_and_send_simulation_data(void)
     
     /* 2. 读取 GWRXAH 数据 (按用户格式处理: 128个用户，每个用户16个20bit AH) */
     snprintf(filePath, sizeof(filePath), 
-        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\GWRXAH.txt");
+        "./class%d/case%d/GWRXAH.txt", classNum, caseNum);
     fp = fopen(filePath, "r");
     if (fp == NULL) {
         printf("无法打开文件: %s\n", filePath);
@@ -484,7 +486,7 @@ int load_and_send_simulation_data(void)
         
         printf("GWRXAH 数据打包完成: %d用户, 每用户16个AH, 总字节数: %d\n", userCount, byteIndex);
         
-        int ret = TK8710SpiSetInfo(1, spiDataBuffer, byteIndex);
+        int ret = TK8710SpiSetInfo(TK8710_SET_INFO_AH, spiDataBuffer, byteIndex);
         if (ret == 0) {
             printf("GWRXAH 数据传输成功: %d个用户, 每用户16个AH\n", userCount);
         } else {
@@ -495,7 +497,7 @@ int load_and_send_simulation_data(void)
     
     /* 3. 读取 GWRxPilotPower 数据 (按用户格式处理: 128个用户，每个用户40bit PilotPower) */
     snprintf(filePath, sizeof(filePath), 
-        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\GWRxPilotPower.txt");
+        "./class%d/case%d/GWRxPilotPower.txt", classNum, caseNum);
     fp = fopen(filePath, "r");
     if (fp == NULL) {
         printf("无法打开文件: %s\n", filePath);
@@ -564,7 +566,7 @@ int load_and_send_simulation_data(void)
         
         printf("GWRxPilotPower 数据打包完成: %d用户, 每用户40bit, 总字节数: %d\n", userCount, byteIndex);
         
-        int ret = TK8710SpiSetInfo(2, spiDataBuffer, byteIndex);
+        int ret = TK8710SpiSetInfo(TK8710_SET_INFO_PILOT_POW, spiDataBuffer, byteIndex);
         if (ret == 0) {
             printf("GWRxPilotPower 数据传输成功: %d个用户, 每用户40bit PilotPower\n", userCount);
         } else {
@@ -575,7 +577,7 @@ int load_and_send_simulation_data(void)
     
     /* 4. 读取 TxFreq 数据 (按用户格式处理: 128个用户，每个用户32bit TxFreq) */
     snprintf(filePath, sizeof(filePath), 
-        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\TxFreq.txt");
+        "./class%d/case%d/TxFreq.txt", classNum, caseNum);
     fp = fopen(filePath, "r");
     if (fp == NULL) {
         printf("无法打开文件: %s\n", filePath);
@@ -643,7 +645,7 @@ int load_and_send_simulation_data(void)
         
         printf("TxFreq 数据打包完成: %d用户, 每用户32bit, 总字节数: %d\n", userCount, byteIndex);
         
-        int ret = TK8710SpiSetInfo(3, spiDataBuffer, byteIndex);
+        int ret = TK8710SpiSetInfo(TK8710_SET_INFO_TX_FREQ, spiDataBuffer, byteIndex);
         if (ret == 0) {
             printf("TxFreq 数据传输成功: %d个用户, 每用户32bit TxFreq\n", userCount);
         } else {
@@ -654,7 +656,7 @@ int load_and_send_simulation_data(void)
     
     /* 5. 读取 TxPower 数据 (按用户格式处理: 128个用户，每个用户8bit TxPower) */
     snprintf(filePath, sizeof(filePath), 
-        "D:\\data\\K2301\\K2301PHY_CaseList_Data\\Simulation_Database\\class3\\case2\\TxPower.txt");
+        "./class%d/case%d/TxPower.txt", classNum, caseNum);
     fp = fopen(filePath, "r");
     if (fp == NULL) {
         printf("无法打开文件: %s\n", filePath);
@@ -695,12 +697,19 @@ int load_and_send_simulation_data(void)
         
         /* 按用户顺序直接复制8bit数据到字节数组 */
         int byteIndex = 0;
-        
+        int ret = 0;
         for (int user = 0; user < userCount; user++) {
             if (byteIndex < sizeof(spiDataBuffer)) {
                 spiDataBuffer[byteIndex] = txPowerData[user];
                 byteIndex++;
             }
+            s_tx_pow_ctrl tx_pow_ctrl;
+            tx_pow_ctrl.data = 0;
+            tx_pow_ctrl.b.UserIndex = user;
+            tx_pow_ctrl.b.power = txPowerData[user];
+            
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
+                MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
         }
         
         /* 打印前16个输入数据 (十六进制格式) */
@@ -712,8 +721,7 @@ int load_and_send_simulation_data(void)
         printf("\n");
         
         printf("TxPower 数据打包完成: %d用户, 每用户8bit, 总字节数: %d\n", userCount, byteIndex);
-        
-        int ret = TK8710SpiSetInfo(4, spiDataBuffer, byteIndex);
+
         if (ret == 0) {
             printf("TxPower 数据传输成功: %d个用户, 每用户8bit TxPower\n", userCount);
         } else {
@@ -722,7 +730,11 @@ int load_and_send_simulation_data(void)
         }
     }
     
-    printf("=== 所有仿真数据传输完成 ===\n\n");
+    printf("=== 所有仿真数据传输完成 ===\n");
+    
+    /* 设置仿真数据加载标志，通知中断处理系统 */
+    TK8710SetSimulationDataLoaded(1);
+    printf("仿真数据加载标志已设置\n\n");
     return 0;
 }
 
@@ -760,8 +772,8 @@ void show_system_status(void)
     printf("Broadcast users: %d\n", brdUserNum);
     printf("Antenna enable: 0x%02X\n", slotCfg->antEn);
     printf("RF select: 0x%02X\n", slotCfg->rfSel);
-    printf("Transmit mode: %s\n", slotCfg->txAutoMode ? "Specified info transmit" : "Auto transmit");
-    printf("BCN enable: %s\n", slotCfg->txBcnEn ? "Yes" : "No");
+    printf("Transmit mode: %s\n", slotCfg->txBeamCtrlMode ? "Specified info transmit" : "Auto transmit");
+    printf("BCN antenna enable: %s\n", slotCfg->txBcnAntEn ? "Yes" : "No");
     printf("Slot configuration:\n");
     printf("  S1(FDL): %d bytes, freq: %u\n", slotCfg->s1Cfg[0].byteLen, slotCfg->s1Cfg[0].centerFreq);
     printf("  S2(ADL): %d bytes, freq: %u\n", slotCfg->s2Cfg[0].byteLen, slotCfg->s2Cfg[0].centerFreq);
@@ -812,6 +824,61 @@ int main(int argc, char* argv[])
     }
     int ret;
     char input;
+    int testMode = 6;  /* 默认模式6 */
+    int classNum = 3;  /* 默认class序号 */
+    int caseNum = 11;  /* 默认case序号 */
+    
+    /* 检查命令行参数 */
+    if (argc > 1) {
+        if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+            printf("Usage: %s [mode] [class] [case] [--help|-h]\n", argv[0]);
+            printf("  mode: Test mode (5,6,7,8,9,10,11,18), default: 6\n");
+            printf("    Mode 5:  s0=40*256, s1=0, s2=0, s3=135072\n");
+            printf("    Mode 6:  s0=46*256, s1=0, s2=0, s3=69536\n");
+            printf("    Mode 7:  s0=113*256, s1=0, s2=0, s3=36768\n");
+            printf("    Mode 8:  s0=146*256, s1=0, s2=0, s3=20384\n");
+            printf("    Mode 9:  s0=64*256, s1=0, s2=0, s3=12192\n");
+            printf("    Mode 10: s0=19*256, s1=0, s2=0, s3=8096\n");
+            printf("    Mode 11: s0=256, s1=0, s2=0, s3=6084\n");
+            printf("    Mode 18: s0=256, s1=0, s2=0, s3=6084\n");
+            printf("  class: Simulation data class number (1,3,etc), default: 3\n");
+            printf("  case:  Simulation data case number (11,17,etc), default: 11\n");
+            printf("  --help, -h: Show this help\n");
+            printf("\nExamples:\n");
+            printf("  %s 6 3 11    # Use mode 6, class 3, case 11\n", argv[0]);
+            printf("  %s 6 1 17    # Use mode 6, class 1, case 17\n", argv[0]);
+            printf("  %s 6         # Use mode 6, default class 3, case 11\n", argv[0]);
+            return 0;
+        }
+        
+        testMode = atoi(argv[1]);
+        if (testMode < 5 || testMode > 18 || (testMode > 11 && testMode < 18)) {
+            printf("Error: Invalid mode %d. Supported modes: 5,6,7,8,9,10,11,18\n", testMode);
+            return 1;
+        }
+        
+        /* 解析class参数 */
+        if (argc > 2) {
+            classNum = atoi(argv[2]);
+            if (classNum <= 0) {
+                printf("Error: Invalid class number %d. Must be positive integer\n", classNum);
+                return 1;
+            }
+        }
+        
+        /* 解析case参数 */
+        if (argc > 3) {
+            caseNum = atoi(argv[3]);
+            if (caseNum <= 0) {
+                printf("Error: Invalid case number %d. Must be positive integer\n", caseNum);
+                return 1;
+            }
+        }
+        
+        printf("Using test mode: %d, class: %d, case: %d\n", testMode, classNum, caseNum);
+    } else {
+        printf("Using default: mode %d, class %d, case %d\n", testMode, classNum, caseNum);
+    }
     
 #ifdef _WIN32
     /* 设置控制台编码为UTF-8 */
@@ -890,7 +957,7 @@ int main(int argc, char* argv[])
     }
    /* 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
-        .level = TK8710_LOG_INFO,
+        .level = TK8710_LOG_WARN,
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,
         .enable_timestamp = 1,
@@ -905,14 +972,14 @@ int main(int argc, char* argv[])
     memset(&slotCfg, 0, sizeof(slotCfg_t));
     
     /* 配置基本参数 (与原配置一致) */
-    slotCfg.msMode = TK8710_MODE_SLAVE;
-    slotCfg.plCrcEn = 1;
+    slotCfg.msMode = TK8710_MODE_MASTER;
+    slotCfg.plCrcEn = 0;
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
     slotCfg.rfSel = 0xFF;
-    slotCfg.txAutoMode = 0;
-    g_txAutoMode = (slotCfg.txAutoMode == 0);
-    slotCfg.txBcnEn = 0xff;
+    slotCfg.txBeamCtrlMode = 1;
+    g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);
+    slotCfg.txBcnAntEn = 0x7f;
     slotCfg.rx_delay = 0;
     slotCfg.md_agc = 1024;
     slotCfg.brdFreq[0] = 20000.0;
@@ -924,18 +991,64 @@ int main(int argc, char* argv[])
     }
     
     /* 单速率配置 */
-    printf("Using single-rate configuration\n");
+    printf("Using single-rate configuration for mode %d\n", testMode);
     slotCfg.rateCount = 1;
-    slotCfg.rateModes[0] = TK8710_RATE_MODE_6;
-    slotCfg.s0Cfg[0].da_m = 46*256;
-    slotCfg.s1Cfg[0].da_m = 0;
-    slotCfg.s2Cfg[0].da_m = 0;
-    slotCfg.s3Cfg[0].da_m = 69536;
+    slotCfg.rateModes[0] = testMode;
+    
+    /* 根据模式设置不同的da_m值 */
+    switch (testMode) {
+        case 5:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1300;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 65000;
+            break;
+        case 6:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1400;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 31500;
+            break;
+        case 7:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 7000;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 14500;
+            break;
+        case 8:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 3600;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 8000;
+            break;
+        case 9:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1900;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 4500;
+            break;
+        case 10:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 1200;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 1200;
+            break;
+        case 11:
+        case 18:
+            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s1Cfg[0].da_m = 800;
+            slotCfg.s2Cfg[0].da_m = 0;
+            slotCfg.s3Cfg[0].da_m = 800;
+            break;
+        default:
+            printf("Error: Unsupported mode %d\n", testMode);
+            return -1;
+    }
     slotCfg.s0Cfg[0].byteLen = 0;
     slotCfg.s0Cfg[0].centerFreq = 509100000;
-    slotCfg.s1Cfg[0].byteLen = 0;
+    slotCfg.s1Cfg[0].byteLen = 22;
     slotCfg.s1Cfg[0].centerFreq = 509100000;
-    slotCfg.s2Cfg[0].byteLen = 0;
+    slotCfg.s2Cfg[0].byteLen = 22;
     slotCfg.s2Cfg[0].centerFreq = 509100000;
     slotCfg.s3Cfg[0].byteLen = 22;
     slotCfg.s3Cfg[0].centerFreq = 509100000;
@@ -943,53 +1056,23 @@ int main(int argc, char* argv[])
     /* 调用 8710 config 配置时隙 */
     ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);
     if (ret != TK8710_OK) {
-        printf("8710 config (slot) failed: %d\n", ret);
         return -1;
     }
     printf("Slot parameter configuration completed\n");
     
-    /* 7. 配置测试选项 */
-    printf("Configure test options:\n");
-    printf("Enable force process all users for testing? (y/n): ");
-    char testChoice;
-    scanf(" %c", &testChoice);
-    if (testChoice == 'y' || testChoice == 'Y') {
-        TK8710SetForceProcessAllUsers(1);
-        printf("Force process all users: ENABLED\n");
-    } else {
-        TK8710SetForceProcessAllUsers(0);
-        printf("Force process all users: DISABLED\n");
-    }
-    
-    printf("Enable force max users TX for testing? (y/n): ");
-    scanf(" %c", &testChoice);
-    if (testChoice == 'y' || testChoice == 'Y') {
-        TK8710SetForceMaxUsersTx(1);
-        printf("Force max users TX: ENABLED\n");
-    } else {
-        TK8710SetForceMaxUsersTx(0);
-        printf("Force max users TX: DISABLED\n");
+    /* 自动加载并发送仿真数据 */
+    printf("\n自动加载仿真数据...\n");
+    if (load_and_send_simulation_data(classNum, caseNum) != 0) {
+        printf("警告: 仿真数据加载失败，程序将继续运行\n");
     }
 
-    /* 9. 调用 hal_start 启动工作 */
-    // halRet = hal_start();
-    // if (halRet != TK8710_HAL_OK) {
-    //     printf("HAL start failed: %d\n", halRet);
-    //     return -1;
-    // }
-    // printf("HAL started successfully (Master mode, Continuous work)\n");
-
+    /* 7. 启动TK8710 */
     // 启动TK8710芯片，使用Master模式和连续工作模式
-    ret = TK8710Start(TK8710_MODE_SLAVE, TK8710_WORK_MODE_CONTINUOUS);
+    ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_START;
     }    
-    /* 自动加载并发送仿真数据 */
-    // printf("\n自动加载仿真数据...\n");
-    // if (load_and_send_simulation_data() != 0) {
-    //     printf("警告: 仿真数据加载失败，程序将继续运行\n");
-    // }
-    
+
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");
     
@@ -1036,7 +1119,7 @@ int main(int argc, char* argv[])
                 
             case 'l':
             case 'L':
-                if (load_and_send_simulation_data() != 0) {
+                if (load_and_send_simulation_data(classNum, caseNum) != 0) {
                     printf("仿真数据加载和传输失败\n");
                 }
                 break;

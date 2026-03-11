@@ -206,7 +206,7 @@ void TRM_ProcessBeamRamReleases(void)
 
 /**
  * @brief 统一发送数据接口（支持用户数据和广播数据）
- * @param downlinkType 下行类型 (TK8710_DOWNLINK_A=广播, TK8710_DOWNLINK_B=用户数据)
+ * @param downlinkType 下行位置 (TK8710_DOWNLINK_A=slot1发送, TK8710_DOWNLINK_B=slot3发送)
  * @param userId_brdIndex 用户ID或广播索引
  * @param data 数据指针
  * @param len 数据长度

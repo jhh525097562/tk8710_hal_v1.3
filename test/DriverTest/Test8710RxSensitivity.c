@@ -74,7 +74,7 @@ static void signal_handler(int sig)
 
 /* 下行发送状态跟踪 */
 static volatile bool g_hasValidUsers = false;     /* 是否有有效用户 */
-static volatile bool g_txAutoMode = false;         /* 自动发送模式 */
+static volatile bool g_txBeamCtrlMode = false;         /* 波束控制模式 */
 
 /* TRM相关变量 */
 static uint32_t g_trmSendCount = 0;               /* TRM发送计数 */
@@ -760,8 +760,8 @@ void show_system_status(void)
     printf("Broadcast users: %d\n", brdUserNum);
     printf("Antenna enable: 0x%02X\n", slotCfg->antEn);
     printf("RF select: 0x%02X\n", slotCfg->rfSel);
-    printf("Transmit mode: %s\n", slotCfg->txAutoMode ? "Specified info transmit" : "Auto transmit");
-    printf("BCN enable: %s\n", slotCfg->txBcnEn ? "Yes" : "No");
+    printf("Transmit mode: %s\n", slotCfg->txBeamCtrlMode ? "Specified info transmit" : "Auto transmit");
+    printf("BCN antenna enable: %s\n", slotCfg->txBcnAntEn ? "Yes" : "No");
     printf("Slot configuration:\n");
     printf("  S1(FDL): %d bytes, freq: %u\n", slotCfg->s1Cfg[0].byteLen, slotCfg->s1Cfg[0].centerFreq);
     printf("  S2(ADL): %d bytes, freq: %u\n", slotCfg->s2Cfg[0].byteLen, slotCfg->s2Cfg[0].centerFreq);
@@ -936,9 +936,9 @@ int main(int argc, char* argv[])
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
     slotCfg.rfSel = 0xFF;
-    slotCfg.txAutoMode = 0;
-    g_txAutoMode = (slotCfg.txAutoMode == 0);
-    slotCfg.txBcnEn = 0xff;
+    slotCfg.txBeamCtrlMode = 0;
+    g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);
+    slotCfg.txBcnAntEn = 0xff;
     slotCfg.rx_delay = 0;
     slotCfg.md_agc = 1024;
     slotCfg.brdFreq[0] = 20000.0;

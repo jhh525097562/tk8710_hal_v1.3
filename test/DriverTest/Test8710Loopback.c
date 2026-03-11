@@ -1,7 +1,7 @@
 /**
- * @file test8710main.c
- * @brief TK8710 主测试程序
- * @note 完整的初始化、配置、工作和中断处理流程
+ * @file Test8710Loopback.c
+ * @brief 8710Loopback 主测试程序
+ * @note 完整的初始化、配置、工作和中断处理流程,运行完Test8710Loopback.c后需要硬件复位一下才行
  * 
  * RK3506 编译方法:
  *   arm-buildroot-linux-gnueabihf-gcc -I../inc -I../port test8710main.c \
@@ -74,7 +74,7 @@ static void signal_handler(int sig)
 
 /* 下行发送状态跟踪 */
 static volatile bool g_hasValidUsers = false;     /* 是否有有效用户 */
-static volatile bool g_txAutoMode = false;         /* 自动发送模式 */
+static volatile bool g_txBeamCtrlMode = false;         /* 波束控制模式 */
 
 /* TRM相关变量 */
 static uint32_t g_trmSendCount = 0;               /* TRM发送计数 */
@@ -812,8 +812,8 @@ void show_system_status(void)
     printf("Broadcast users: %d\n", brdUserNum);
     printf("Antenna enable: 0x%02X\n", slotCfg->antEn);
     printf("RF select: 0x%02X\n", slotCfg->rfSel);
-    printf("Transmit mode: %s\n", slotCfg->txAutoMode ? "Specified info transmit" : "Auto transmit");
-    printf("BCN enable: %s\n", slotCfg->txBcnEn ? "Yes" : "No");
+    printf("Transmit mode: %s\n", slotCfg->txBeamCtrlMode ? "Specified info transmit" : "Auto transmit");
+    printf("BCN antenna enable: %s\n", slotCfg->txBcnAntEn ? "Yes" : "No");
     printf("Slot configuration:\n");
     printf("  S1(FDL): %d bytes, freq: %u\n", slotCfg->s1Cfg[0].byteLen, slotCfg->s1Cfg[0].centerFreq);
     printf("  S2(ADL): %d bytes, freq: %u\n", slotCfg->s2Cfg[0].byteLen, slotCfg->s2Cfg[0].centerFreq);
@@ -984,7 +984,8 @@ int main(int argc, char* argv[])
         .irq_ctrl0   = 0x7FF,
         .irq_ctrl1   = 0,
         .spiConfig   = NULL,
-        .rfConfig    = (struct ChiprfConfig_s*)&rfConfig  /* RF配置在TK8710Init中自动调用 */
+        // .rfConfig    = (struct ChiprfConfig_s*)&rfConfig  /* RF配置在TK8710Init中自动调用 */
+        .rfConfig    = NULL  /* RF配置在TK8710Init中自动调用 */
     };
     
     /* 3. 准备初始化配置 */
@@ -1017,9 +1018,9 @@ int main(int argc, char* argv[])
     slotCfg.brdUserNum = 0;
     slotCfg.antEn = 0xFF;
     slotCfg.rfSel = 0xFF;
-    slotCfg.txAutoMode = 1;
-    g_txAutoMode = (slotCfg.txAutoMode == 0);
-    slotCfg.txBcnEn = 0x7f;
+    slotCfg.txBeamCtrlMode = 1;
+    g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);
+    slotCfg.txBcnAntEn = 0x7f;
     slotCfg.rx_delay = 0;
     slotCfg.md_agc = 1024;
     slotCfg.brdFreq[0] = 20000.0;
@@ -1188,7 +1189,7 @@ int main(int argc, char* argv[])
     TK8710PrintIrqTimeStats();
 
     TK8710Reset(TK8710_RST_STATE_MACHINE);
-    
+    TK8710Reset(TK8710_RST_ALL);
     printf("Program ended\n");
     return 0;
 }

@@ -759,7 +759,7 @@ typedef union s_init_9
     {
         uint32_t ant_en  : 8;
         uint32_t rf_sel  : 8;
-        uint32_t tx_bcn_en  : 8;
+        uint32_t tx_bcn_ant_en  : 8;
 //        uint32_t rx_bcn_en : 8;
         uint32_t RESERVED_0 : 8;
     }b;

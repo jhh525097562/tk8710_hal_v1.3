@@ -312,13 +312,13 @@ int TK8710Init(const ChipConfig* initConfig)
     init9.data = 0;
     init9.b.ant_en = cfg->ant_en;
     init9.b.rf_sel = cfg->rf_sel;
-    init9.b.tx_bcn_en = cfg->tx_bcn_en;
+    init9.b.tx_bcn_ant_en = cfg->tx_bcn_en;
     /* 更新antEn、rfSel和txBcnEn到g_slotCfg */
     {
         slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
         slotCfg->antEn = cfg->ant_en;
         slotCfg->rfSel = cfg->rf_sel;
-        slotCfg->txBcnEn = cfg->tx_bcn_en;
+        slotCfg->txBcnAntEn = cfg->tx_bcn_en;
     }
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), init9.data);
     if (ret != TK8710_OK) return ret;
@@ -836,7 +836,7 @@ int TK8710Txbcnctl(uint8_t bcnantennasel, uint8_t bcnbits)
     ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), &init9.data);
     if (ret != TK8710_OK) return ret;
     
-    init9.b.tx_bcn_en = bcnantennasel;
+    init9.b.tx_bcn_ant_en = bcnantennasel;
     
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), init9.data);
     if (ret != TK8710_OK) return ret;

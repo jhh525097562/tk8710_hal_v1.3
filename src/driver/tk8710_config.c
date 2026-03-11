@@ -24,8 +24,8 @@ static slotCfg_t g_slotCfg = {
     .brdUserNum = 1,                      /* 广播用户数 */
     .antEn = 0xFF,                        /* 使能所有天线 */
     .rfSel = 0xFF,                        /* 选择所有RF */
-    .txAutoMode = 1,                      /* 自动发送模式 */
-    .txBcnEn = 0x7f,                      /* 使能BCN发送 */
+    .txBeamCtrlMode = 1,                      /* 外部指定信息控制模式 */
+    .txBcnAntEn = 0x7f,                      /* 发送BCN天线使能 */
     
     /* BCN轮流发送配置 */
     .bcnRotation = {0, 1, 2, 3, 4, 5, 6, 7},  /* 轮流使用所有天线 */
@@ -554,9 +554,9 @@ const slotCfg_t* TK8710GetSlotConfig(void)
  * @brief 获取下行发送模式
  * @return 0=自动发送, 1=指定信息发送
  */
-uint8_t TK8710GetTxAutoMode(void)
+uint8_t TK8710GetTxBeamCtrlMode(void)
 {
-    return g_slotCfg.txAutoMode;
+    return g_slotCfg.txBeamCtrlMode;
 }
 
 /*============================================================================
@@ -640,7 +640,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                 s_init_3 init3;
                 init3.data = 0;
                 init3.b.da2_m = slotCfg->s2Cfg[0].da_m & 0xFFFFFF;  /* da2_m from S2[0] */
-                init3.b.tx_fix_freq = slotCfg->txAutoMode & 0x01;     /* tx_fix_freq */
+                init3.b.tx_fix_freq = slotCfg->txBeamCtrlMode & 0x01;     /* tx_fix_freq */
                 //init3.b.rx_fix_freq = 1;     /* rx_fix_freq */
                 ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                     MAC_BASE + offsetof(struct mac, init_3), init3.data);
@@ -672,8 +672,8 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
             /* 保存时隙配置到全局变量 (包含brdUserNum) */
             memcpy(&g_slotCfg, slotCfg, sizeof(slotCfg_t));
             
-            TK8710_LOG_CONFIG_INFO("Slot config updated: rateCount=%d, rateModes[0]=%d, brdUserNum=%d, txAutoMode=%d", 
-                                 slotCfg->rateCount, slotCfg->rateModes[0], slotCfg->brdUserNum, slotCfg->txAutoMode);
+            TK8710_LOG_CONFIG_INFO("Slot config updated: rateCount=%d, rateModes[0]=%d, brdUserNum=%d, txBeamCtrlMode=%d", 
+                                 slotCfg->rateCount, slotCfg->rateModes[0], slotCfg->brdUserNum, slotCfg->txBeamCtrlMode);
             
             /* 从寄存器读取时隙时间长度并更新 */
             {
@@ -788,7 +788,7 @@ int TK8710GetConfig(TK8710ConfigType type, void* params)
             if (ret != TK8710_OK) return ret;
             cfg->ant_en = init9.b.ant_en;
             cfg->rf_sel = init9.b.rf_sel;
-            cfg->tx_bcn_en = init9.b.tx_bcn_en;
+            cfg->tx_bcn_en = init9.b.tx_bcn_ant_en;
             
             /* 读取 init_11 */
             ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_11), &init11.data);

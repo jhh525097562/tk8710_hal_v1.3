@@ -68,12 +68,12 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
 
 /**
  * @brief 设置下行发送数据和功率
- * @param downlinkType 下行类型: 0=下行1(广播数据), 1=下行2(专用数据)
+ * @param downlinkType 下行时隙位置: 0=slot1发送, 1=slot3发送
  * @param index 索引: 下行1时范围(0-15), 下行2时范围(0-127)
  * @param data 数据指针
  * @param dataLen 数据长度
  * @param txPower 发送功率
- * @param beamType 波束类型: 0=广播数据, 1=专用数据
+ * @param beamType 波束类型: 0=广播波束, 1=专用数据波束
  * @return 0-成功, 1-失败
  */
 int TK8710SetTxData(TK8710DownlinkType downlinkType, uint8_t index, const uint8_t* data, uint16_t dataLen, uint8_t txPower, uint8_t beamType);
