@@ -967,18 +967,6 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
             toneFreq = txTone->freq;
             toneGain = txTone->gain;
             
-            /* 配置寄存器 0xc030 = 0x8 */
-            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc030, 0x8);
-            if (ret != TK8710_OK) return ret;
-            
-            /* 配置寄存器 0x9478 = 0x10100010 */
-            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x10100010);
-            if (ret != TK8710_OK) return ret;
-            
-            /* 配置寄存器 0xc030 = 0x4 */
-            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc030, 0x4);
-            if (ret != TK8710_OK) return ret;
-            
             /* 循环配置8个天线的TX Tone */
             for (i = 0; i < 8; i++) {
                 /* 配置tx_config_31 (0xd0): Tone频率 */
@@ -994,6 +982,18 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                 if (ret != TK8710_OK) return ret;
             }
             
+            /* 配置寄存器 0xc030 = 0x8 */
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc030, 0x8);
+            if (ret != TK8710_OK) return ret;
+            
+            /* 配置寄存器 0x9478 = 0x10100010 */
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x10100010);
+            if (ret != TK8710_OK) return ret;
+            
+            /* 配置寄存器 0xc030 = 0x4 */
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc030, 0x4);
+            if (ret != TK8710_OK) return ret;
+
             return TK8710_OK;
         }
         

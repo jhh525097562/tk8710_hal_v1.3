@@ -362,8 +362,8 @@ int load_and_send_simulation_data(int classNum, int caseNum)
 {
     char filePath[256];
     FILE *fp;
-    char lineBuffer[4096];
-    uint8_t spiDataBuffer[2048];
+    char lineBuffer[16384];  /* 增加缓冲区大小以容纳2048个20bit值 (2048×8=16384字符) */
+    uint8_t spiDataBuffer[5120];  /* 增加缓冲区大小以容纳128用户×16AH×20bit=5120字节 */
     int dataCount;
     
     printf("\n=== 开始加载目录：/class%d/case%d下仿真数据并传输 ===\n", classNum, caseNum);
@@ -867,11 +867,14 @@ int main(int argc, char* argv[])
     int testMode = 6;  /* 默认模式6 */
     int classNum = 3;  /* 默认class序号 */
     int caseNum = 11;  /* 默认case序号 */
+    int s1ByteLen = 22; /* 默认S1 byteLen */
+    int s2ByteLen = 0;  /* 默认S2 byteLen */
+    int s3ByteLen = 22; /* 默认S3 byteLen */
     
     /* 检查命令行参数 */
     if (argc > 1) {
         if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-            printf("Usage: %s [mode] [class] [case] [--help|-h]\n", argv[0]);
+            printf("Usage: %s [mode] [class] [case] [s1_byteLen] [s2_byteLen] [s3_byteLen] [--help|-h]\n", argv[0]);
             printf("  mode: Test mode (5,6,7,8,9,10,11,18), default: 6\n");
             printf("    Mode 5:  s0=40*256, s1=0, s2=0, s3=135072\n");
             printf("    Mode 6:  s0=46*256, s1=0, s2=0, s3=69536\n");
@@ -883,11 +886,14 @@ int main(int argc, char* argv[])
             printf("    Mode 18: s0=256, s1=0, s2=0, s3=6084\n");
             printf("  class: Simulation data class number (1,3,etc), default: 3\n");
             printf("  case:  Simulation data case number (11,17,etc), default: 11\n");
+            printf("  s1_byteLen: S1 slot byte length, default: 22 (0-512)\n");
+            printf("  s2_byteLen: S2 slot byte length, default: 0 (0-512)\n");
+            printf("  s3_byteLen: S3 slot byte length, default: 22 (0-512)\n");
             printf("  --help, -h: Show this help\n");
             printf("\nExamples:\n");
-            printf("  %s 6 3 11    # Use mode 6, class 3, case 11\n", argv[0]);
-            printf("  %s 6 1 17    # Use mode 6, class 1, case 17\n", argv[0]);
-            printf("  %s 6         # Use mode 6, default class 3, case 11\n", argv[0]);
+            printf("  %s 6 3 11                # Use mode 6, class 3, case 11, default byteLen 22,0,22\n", argv[0]);
+            printf("  %s 6 3 11 30 0 25      # Use mode 6, class 3, case 11, S1=30, S2=0, S3=25\n", argv[0]);
+            printf("  %s 6 1 17 22 10 30      # Use mode 6, class 1, case 17, S1=22, S2=10, S3=30\n", argv[0]);
             return 0;
         }
         
@@ -915,7 +921,35 @@ int main(int argc, char* argv[])
             }
         }
         
-        printf("Using test mode: %d, class: %d, case: %d\n", testMode, classNum, caseNum);
+        /* 解析S1 byteLen参数 */
+        if (argc > 4) {
+            s1ByteLen = atoi(argv[4]);
+            if (s1ByteLen < 0 || s1ByteLen > 512) {
+                printf("Error: Invalid S1 byteLen %d. Must be 0-512\n", s1ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析S2 byteLen参数 */
+        if (argc > 5) {
+            s2ByteLen = atoi(argv[5]);
+            if (s2ByteLen < 0 || s2ByteLen > 512) {
+                printf("Error: Invalid S2 byteLen %d. Must be 0-512\n", s2ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析S3 byteLen参数 */
+        if (argc > 6) {
+            s3ByteLen = atoi(argv[6]);
+            if (s3ByteLen < 0 || s3ByteLen > 512) {
+                printf("Error: Invalid S3 byteLen %d. Must be 0-512\n", s3ByteLen);
+                return 1;
+            }
+        }
+        
+        printf("Using test mode: %d, class: %d, case: %d, S1 byteLen: %d, S2 byteLen: %d, S3 byteLen: %d\n", 
+               testMode, classNum, caseNum, s1ByteLen, s2ByteLen, s3ByteLen);
     } else {
         printf("Using default: mode %d, class %d, case %d\n", testMode, classNum, caseNum);
     }
@@ -1087,11 +1121,11 @@ int main(int argc, char* argv[])
     }
     slotCfg.s0Cfg[0].byteLen = 0;
     slotCfg.s0Cfg[0].centerFreq = 509100000;
-    slotCfg.s1Cfg[0].byteLen = 22;
+    slotCfg.s1Cfg[0].byteLen = s1ByteLen;
     slotCfg.s1Cfg[0].centerFreq = 509100000;
-    slotCfg.s2Cfg[0].byteLen = 0;
+    slotCfg.s2Cfg[0].byteLen = s2ByteLen;
     slotCfg.s2Cfg[0].centerFreq = 509100000;
-    slotCfg.s3Cfg[0].byteLen = 22;
+    slotCfg.s3Cfg[0].byteLen = s3ByteLen;
     slotCfg.s3Cfg[0].centerFreq = 509100000;
     
     /* 调用 8710 config 配置时隙 */

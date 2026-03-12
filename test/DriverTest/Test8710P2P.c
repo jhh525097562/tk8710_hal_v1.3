@@ -359,8 +359,8 @@ int load_and_send_simulation_data(int classNum, int caseNum)
 {
     char filePath[256];
     FILE *fp;
-    char lineBuffer[4096];
-    uint8_t spiDataBuffer[2048];
+    char lineBuffer[16384];  /* 增加缓冲区大小以容纳2048个20bit值 (2048×8=16384字符) */
+    uint8_t spiDataBuffer[5120];  /* 增加缓冲区大小以容纳128用户×16AH×20bit=5120字节 */
     int dataCount;
     
     printf("\n=== 开始加载目录：/class%d/case%d下仿真数据并传输 ===\n", classNum, caseNum);

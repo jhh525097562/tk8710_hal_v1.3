@@ -25,10 +25,13 @@ INCLUDES="-I./inc -I./inc/driver -I./inc/trm -I./port -I./port/rk3506"
 echo ""
 echo "编译所有模块..."
 
-# 编译公共模块
-echo "编译公共模块..."
-files=("src/driver/tk8710_log.c")
-for file in "${files[@]}"; do
+# 编译src/driver目录下的所有C文件
+echo "编译src/driver目录下的所有模块..."
+driver_files=$(find src/driver -name "*.c" -type f)
+driver_count=$(echo "$driver_files" | wc -l)
+echo "发现 $driver_count 个C文件"
+
+for file in $driver_files; do
     echo "编译 $file..."
     arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c $file -o ${BUILD_DIR}/$(basename $file .c).o
     if [ $? -eq 0 ]; then
@@ -36,19 +39,6 @@ for file in "${files[@]}"; do
     else
         echo "❌ $file 编译失败"
         exit 1
-    fi
-done
-
-# 编译驱动模块（跳过有问题的文件）
-echo "编译驱动模块..."
-driver_files=("src/driver/tk8710_config.c" "src/driver/tk8710_irq.c" "src/driver/tk8710_core.c")
-for file in "${driver_files[@]}"; do
-    echo "编译 $file..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c $file -o ${BUILD_DIR}/$(basename $file .c).o
-    if [ $? -eq 0 ]; then
-        echo "✅ $file 编译成功"
-    else
-        echo "❌ $file 编译失败，跳过..."
     fi
 done
 
@@ -355,6 +345,39 @@ if [ -f "test/DriverTest/Test8710Loopback.c" ]; then
     fi
 else
     echo "⚠️  Test8710Loopback 源文件不存在"
+fi
+
+# 创建 Test8710RFTxTone
+if [ -f "test/DriverTest/Test8710RFTxTone.c" ]; then
+    echo "编译 Test8710RFTxTone..."
+    # 先编译验证器模块
+    echo "编译验证器模块..."
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+        -c test/example/trm_tx_validator.c \
+        -o ${BUILD_DIR}/trm_tx_validator.o
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ trm_tx_validator.c 编译成功"
+    else
+        echo "❌ trm_tx_validator.c 编译失败"
+        exit 1
+    fi
+    
+    # 编译Test8710RFTxTone并链接验证器
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
+        test/DriverTest/Test8710RFTxTone.c \
+        ${BUILD_DIR}/trm_tx_validator.o \
+        -L${BUILD_DIR} -ltk8710_hal_complete \
+        -lpthread -lgpiod \
+        -o ${BUILD_DIR}/Test8710RFTxTone
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Test8710RFTxTone 创建成功"
+    else
+        echo "❌ Test8710RFTxTone 创建失败"
+    fi
+else
+    echo "⚠️  Test8710RFTxTone 源文件不存在"
 fi
 
 
