@@ -187,7 +187,7 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                 /* 没有CRC正确的用户，计为丢包 */
                 uint32_t expectedUserCount = GetExpectedUserCount(g_testMode);
                 g_packetLostCount = g_packetLostCount + expectedUserCount;
-                printf("帧号：(%d), 丢包: 接收用户数(0) < 期望用户数(%u)\n", expectedUserCount);
+                printf("帧号：(%d), 丢包: 接收用户数(0) < 期望用户数(%u)\n", g_packetCount,expectedUserCount);
             }
             
             /* 每100包重新开始统计 */
@@ -1061,19 +1061,19 @@ int main(int argc, char* argv[])
     /* 根据模式设置不同的da_m值 */
     switch (testMode) {
         case 5:
-            slotCfg.s0Cfg[0].da_m = 46*256;
+            slotCfg.s0Cfg[0].da_m = 0;
             slotCfg.s1Cfg[0].da_m = 1300;
             slotCfg.s2Cfg[0].da_m = 0;
             slotCfg.s3Cfg[0].da_m = 65000;
             break;
         case 6:
-            slotCfg.s0Cfg[0].da_m = 46*256;
+            slotCfg.s0Cfg[0].da_m = 0;
             slotCfg.s1Cfg[0].da_m = 1400;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 69536;
+            slotCfg.s3Cfg[0].da_m = 31500;
             break;
         case 7:
-            slotCfg.s0Cfg[0].da_m = 14500;
+            slotCfg.s0Cfg[0].da_m = 0;
             slotCfg.s1Cfg[0].da_m = 7000;
             slotCfg.s2Cfg[0].da_m = 0;
             slotCfg.s3Cfg[0].da_m = 14500;
