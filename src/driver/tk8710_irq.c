@@ -762,12 +762,13 @@ static void tk8710_handle_md_ud(void)
     
     /* 检查是否为指定信息发送模式 */
     if (TK8710GetTxBeamCtrlMode() == 1) {
-        /* 指定信息发送模式：在中断中获取用户信息（Master和Loopback模式） */
-        if (TK8710GetWorkType() == TK8710_MODE_MASTER || TK8710GetWorkType() == TK8710_MODE_LOOPBACK) {
-            tk8710_md_ud_get_user_info();
-        } else {
-            TK8710_LOG_IRQ_DEBUG("Slave mode, skip user info retrieval");
-        }
+        // /* 指定信息发送模式：在中断中获取用户信息（Master和Loopback模式） */
+        // if (TK8710GetWorkType() == TK8710_MODE_MASTER || TK8710GetWorkType() == TK8710_MODE_LOOPBACK) {
+        //     tk8710_md_ud_get_user_info();
+        // } else {
+        //     TK8710_LOG_IRQ_DEBUG("Slave mode, skip user info retrieval");
+        // }
+        tk8710_md_ud_get_user_info();
     } else {
         /* 自动发送模式：不需要获取用户信息 */
         TK8710_LOG_IRQ_DEBUG("Auto TX mode, skip user info retrieval");

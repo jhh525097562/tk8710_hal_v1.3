@@ -82,11 +82,12 @@ static uint32_t g_trmRxCount = 0;                 /* TRM接收计数 */
 static uint32_t g_irqCount = 0;                  /* 中断计数 */
 
 /* 丢包统计变量 */
-static uint32_t g_packetCount = 0;               /* 当前统计周期内的包计数 */
-static uint32_t g_packetLostCount = 0;           /* 当前统计周期内的丢包计数 */
-static uint32_t g_totalPacketCount = 0;         /* 总包计数 */
-static uint32_t g_totalPacketLostCount = 0;     /* 总丢包计数 */
-static uint32_t g_lastValidUserIndex = 0;       /* 上次有效用户索引 */
+static volatile uint32_t g_packetCount = 0;               /* 当前统计周期内的包计数 */
+static volatile uint32_t g_packetLostCount = 0;           /* 当前统计周期内的丢包计数 */
+static volatile uint32_t g_totalPacketCount = 0;         /* 总包计数 */
+static volatile uint32_t g_lastValidUserIndex = 0;       /* 上次有效用户索引 */
+static volatile uint32_t g_simulationDataLoaded = 0;
+static int g_testMode = 6;  /* 全局测试模式 */
 
 /* TRM回调函数声明 */
 static void OnTrmRxData(const TRM_RxDataList* rxDataList);
@@ -97,6 +98,9 @@ static void OnDriverRxData(TK8710IrqResult* irqResult);
 static void OnDriverTxSlot(TK8710IrqResult* irqResult);
 static void OnDriverSlotEnd(TK8710IrqResult* irqResult);
 static void OnDriverError(TK8710IrqResult* irqResult);
+
+/* 辅助函数声明 */
+static uint32_t GetExpectedUserCount(int mode);
 
 /*============================================================================
  * Driver回调函数实现
@@ -136,6 +140,7 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
             if (irqResult->crcValidCount > 0) {
                 printf("=== 用户信号质量信息 ===\n");
                 uint8_t validUserCount = 0;
+                uint32_t expectedUserCount = GetExpectedUserCount(g_testMode);
                 
                 for (uint8_t userIndex = 0; userIndex < TK8710_MAX_DATA_USERS; userIndex++) {
                     /* 检查该用户的CRC结果 */
@@ -156,9 +161,12 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                             uint32_t freq26 = freqSignal & 0x03FFFFFF;  /* 取26位 */
                             int32_t freqValue = freq26 > (1<<25) ? (int32_t)(freq26 - (1<<26)) : (int32_t)freq26;
                             
-                            printf("用户%u: freq=%dHz (raw=0x%08X), rssi=%d, snr=%u, 丢包=%u/%u\n", 
-                                   userIndex, freqValue/128, freq26, rssiValue, snrValue, g_totalPacketLostCount, g_totalPacketCount);
-                            
+                            /* 只打印前10个用户的信息 */
+                            if (userIndex < 10) {
+                                printf("用户%u: freq=%dHz (raw=0x%08X), rssi=%d, snr=%u\n", 
+                                       userIndex, freqValue/128, freq26, rssiValue, snrValue);
+                            }
+
                             validUserCount++;
                             g_lastValidUserIndex = userIndex;
                         } else {
@@ -168,30 +176,29 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                     }
                 }
                 
-                /* 如果没有收到预期的用户数据，计为丢包 */
-                if (validUserCount == 0) {
-                    g_packetLostCount++;
-                    g_totalPacketLostCount++;
-                    printf("丢包: 未收到有效用户数据\n");
+                /* 如果接收用户数小于期望用户数，计为丢包 */
+                if (validUserCount < expectedUserCount) {
+                    g_packetLostCount = g_packetLostCount + (expectedUserCount - validUserCount);
+                    printf("帧号：(%d), 丢包: 接收用户数(%u) < 期望用户数(%u)\n", g_packetCount,validUserCount, expectedUserCount);
                 }
                 
                 printf("========================\n");
             } else {
                 /* 没有CRC正确的用户，计为丢包 */
-                g_packetLostCount++;
-                g_totalPacketLostCount++;
-                printf("丢包: 无CRC正确用户\n");
+                uint32_t expectedUserCount = GetExpectedUserCount(g_testMode);
+                g_packetLostCount = g_packetLostCount + expectedUserCount;
+                printf("帧号：(%d), 丢包: 接收用户数(0) < 期望用户数(%u)\n", expectedUserCount);
             }
             
             /* 每100包重新开始统计 */
             if (g_packetCount >= 100) {
+                uint32_t expectedUserCount = GetExpectedUserCount(g_testMode);
+                uint32_t totalExpectedUsers = g_packetCount * expectedUserCount;
                 printf("\n=== 丢包统计 (100包) ===\n");
+                printf("测试模式: %d, 期望用户数: %u\n", g_testMode, expectedUserCount);
                 printf("接收包数: %u\n", g_packetCount);
                 printf("丢包数: %u\n", g_packetLostCount);
-                printf("丢包率: %.2f%%\n", (float)g_packetLostCount * 100.0f / g_packetCount);
-                printf("总包数: %u\n", g_totalPacketCount);
-                printf("总丢包数: %u\n", g_totalPacketLostCount);
-                printf("总丢包率: %.2f%%\n", (float)g_totalPacketLostCount * 100.0f / g_totalPacketCount);
+                printf("总丢包率: %.2f%% (基于期望用户总数)\n", (float)g_packetLostCount * 1.0f / (g_totalPacketCount * expectedUserCount));
                 printf("========================\n\n");
                 
                 /* 重置当前统计周期 */
@@ -696,9 +703,20 @@ int load_and_send_simulation_data(int classNum, int caseNum)
         printf("处理 %d 个用户的TxPower数据\n", userCount);
         
         /* 按用户顺序直接复制8bit数据到字节数组 */
-        int byteIndex = 0;
+        size_t byteIndex = 0;
         int ret = 0;
+        uint8_t Data[30];
+        uint8_t Len = 22;
+
         for (int user = 0; user < userCount; user++) {
+            for(int i = 0; i < Len; i++){
+                if(i < 4){
+                    Data[i] = user + i;
+                }else{
+                    Data[i] = rand()%255;
+                }
+                
+            }
             if (byteIndex < sizeof(spiDataBuffer)) {
                 spiDataBuffer[byteIndex] = txPowerData[user];
                 byteIndex++;
@@ -710,6 +728,17 @@ int load_and_send_simulation_data(int classNum, int caseNum)
             
             ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                 MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+
+            ret = TK8710WriteBuffer(user, Data, Len);
+            if(user < 16){
+                tx_pow_ctrl.data = 0;
+                tx_pow_ctrl.b.UserIndex = user + 128;
+                tx_pow_ctrl.b.power = txPowerData[user];
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
+                    MAC_BASE + offsetof(struct mac, tx_pow_ctrl), tx_pow_ctrl.data);
+                                    /* 发送广播数据 */
+               ret = TK8710WriteBuffer(user + 128, Data, Len);
+            }
         }
         
         /* 打印前16个输入数据 (十六进制格式) */
@@ -736,6 +765,30 @@ int load_and_send_simulation_data(int classNum, int caseNum)
     TK8710SetSimulationDataLoaded(1);
     printf("仿真数据加载标志已设置\n\n");
     return 0;
+}
+
+/**
+ * @brief 根据测试模式获取期望的发送用户数
+ * @param mode 测试模式
+ * @return 期望的用户数
+ */
+static uint32_t GetExpectedUserCount(int mode) {
+    switch (mode) {
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            return 128;
+        case 9:
+            return 64;
+        case 10:
+            return 32;
+        case 11:
+        case 18:
+            return 16;
+        default:
+            return 1;  // 默认值
+    }
 }
 
 /**
@@ -828,6 +881,9 @@ int main(int argc, char* argv[])
     int classNum = 3;  /* 默认class序号 */
     int caseNum = 11;  /* 默认case序号 */
     
+    /* 设置全局测试模式 */
+    g_testMode = testMode;
+    
     /* 检查命令行参数 */
     if (argc > 1) {
         if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
@@ -856,6 +912,8 @@ int main(int argc, char* argv[])
             printf("Error: Invalid mode %d. Supported modes: 5,6,7,8,9,10,11,18\n", testMode);
             return 1;
         }
+        /* 更新全局测试模式 */
+        g_testMode = testMode;
         
         /* 解析class参数 */
         if (argc > 2) {
@@ -917,14 +975,14 @@ int main(int argc, char* argv[])
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,
-        // .txadc = {//C号板
-        //     {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
-        //     {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
-        // }
-        .txadc = {//2号板
-            {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
-            {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        .txadc = {//D号板
+            {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
+            {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
         }
+        // .txadc = {//2号板
+        //     {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
+        //     {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        // }
     };
     
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
@@ -961,7 +1019,7 @@ int main(int argc, char* argv[])
     }
    /* 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
-        .level = TK8710_LOG_WARN,
+        .level = TK8710_LOG_INFO,
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,
         .enable_timestamp = 1,
@@ -983,7 +1041,7 @@ int main(int argc, char* argv[])
     slotCfg.rfSel = 0xFF;
     slotCfg.txBeamCtrlMode = 1;
     g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);
-    slotCfg.txBcnAntEn = 0x7f;
+    slotCfg.txBcnAntEn = 0xFF;
     slotCfg.rx_delay = 0;
     slotCfg.md_agc = 1024;
     slotCfg.brdFreq[0] = 20000.0;
@@ -1002,16 +1060,16 @@ int main(int argc, char* argv[])
     /* 根据模式设置不同的da_m值 */
     switch (testMode) {
         case 5:
-            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s0Cfg[0].da_m = 65000;
             slotCfg.s1Cfg[0].da_m = 1300;
             slotCfg.s2Cfg[0].da_m = 0;
             slotCfg.s3Cfg[0].da_m = 65000;
             break;
         case 6:
-            slotCfg.s0Cfg[0].da_m = 0;
+            slotCfg.s0Cfg[0].da_m = 46*256;
             slotCfg.s1Cfg[0].da_m = 1400;
             slotCfg.s2Cfg[0].da_m = 0;
-            slotCfg.s3Cfg[0].da_m = 31500;
+            slotCfg.s3Cfg[0].da_m = 69536;
             break;
         case 7:
             slotCfg.s0Cfg[0].da_m = 0;

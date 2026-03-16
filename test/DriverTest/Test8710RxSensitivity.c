@@ -1026,6 +1026,25 @@ int main(int argc, char* argv[])
     /* 7. 启动TK8710 */
 
     // 启动TK8710芯片，使用Master模式和连续工作模式
+    /* 配置rx_fe_regs->ddc寄存器 */
+    {
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x0000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x1000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x2000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x3000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x4000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x5000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x6000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x7000, 0x1b33333);
+        if (ret != TK8710_OK) return ret;
+    }
     ret = TK8710Start(TK8710_MODE_SLAVE, TK8710_WORK_MODE_CONTINUOUS);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_START;
