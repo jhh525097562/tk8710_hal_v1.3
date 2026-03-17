@@ -51,7 +51,48 @@ typedef struct {
     TK8710LogCallback callback;     /* 日志输出回调 */
     uint8_t enable_timestamp;       /* 是否启用时间戳 */
     uint8_t enable_module_name;     /* 是否启用模块名 */
+    uint8_t enable_file_logging;    /* 是否启用文件日志 */
+    const char* log_file_dir;       /* 日志文件目录 (可为NULL, 使用当前目录) */
 } TK8710LogConfig_t;
+
+/* 日志文件配置常量 */
+#define TK8710_LOG_FILE_MAX_SIZE    (2 * 1024 * 1024)   /* 单个日志文件最大2MB */
+#define TK8710_LOG_FILE_MAX_COUNT   5                   /* 最大日志文件数量 */
+#define TK8710_LOG_FILE_NAME_PREFIX "tk8710_driver"      /* 日志文件前缀 */
+#define TK8710_LOG_FILE_NAME_EXT    ".log"              /* 日志文件扩展名 */
+
+/**
+ * @brief 启用文件日志功能
+ * @param enable 是否启用 (1-启用, 0-禁用)
+ * @param logDir 日志文件目录路径 (可为NULL, 使用当前目录)
+ * @return 0-成功, 1-失败
+ * @note 启用后会自动创建日志文件, 达到2MB后自动轮转, 最多保留5个文件
+ */
+int TK8710LogEnableFileLogging(uint8_t enable, const char* logDir);
+
+/**
+ * @brief 检查文件日志是否启用
+ * @return 1-启用, 0-禁用
+ */
+uint8_t TK8710LogIsFileLoggingEnabled(void);
+
+/**
+ * @brief 强制刷新日志文件缓冲区
+ * @return 0-成功, 1-失败
+ */
+int TK8710LogFlushFile(void);
+
+/**
+ * @brief 获取当前日志文件索引
+ * @return 当前日志文件索引 (0-4)
+ */
+int TK8710LogGetCurrentFileIndex(void);
+
+/**
+ * @brief 获取当前日志文件大小
+ * @return 当前日志文件大小 (字节)
+ */
+long TK8710LogGetCurrentFileSize(void);
 
 /* 全局日志配置变量声明 */
 extern TK8710LogConfig_t g_logConfig;

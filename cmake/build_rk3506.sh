@@ -129,6 +129,55 @@ else
     exit 1
 fi
 
+# 创建静态库后，编译test/DriverTest目录下的所有C文件并立即链接
+echo ""
+echo "编译test/DriverTest目录下的所有测试程序..."
+
+# 先编译验证器模块（所有测试程序都需要）
+echo "编译验证器模块..."
+arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+    -c test/example/trm_tx_validator.c \
+    -o ${BUILD_DIR}/trm_tx_validator.o
+
+if [ $? -eq 0 ]; then
+    echo "✅ trm_tx_validator.c 编译成功"
+else
+    echo "❌ trm_tx_validator.c 编译失败"
+    exit 1
+fi
+
+# 编译并链接每个测试程序
+test_files=$(find test/DriverTest -name "*.c" -type f)
+test_count=$(echo "$test_files" | wc -l)
+echo "发现 $test_count 个测试C文件"
+
+for file in $test_files; do
+    basename_file=$(basename "$file" .c)
+    echo ""
+    echo "编译并链接 $file..."
+    
+    # 编译为 .o 文件
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./port/rk3506 -I./test/example -c "$file" -o ${BUILD_DIR}/${basename_file}.o
+    if [ $? -ne 0 ]; then
+        echo "❌ $file 编译失败"
+        exit 1
+    fi
+    
+    # 立即链接为可执行文件
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
+        ${BUILD_DIR}/${basename_file}.o \
+        ${BUILD_DIR}/trm_tx_validator.o \
+        -L${BUILD_DIR} -ltk8710_hal_complete \
+        -lpthread -lgpiod \
+        -o ${BUILD_DIR}/${basename_file}
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ ${basename_file} 创建成功"
+    else
+        echo "❌ ${basename_file} 创建失败"
+    fi
+done
+
 # 创建示例程序
 echo ""
 echo "创建示例程序..."
@@ -181,205 +230,6 @@ if [ -f "test/example/TestTRMmain.c" ]; then
 else
     echo "⚠️  TestTRMmain 源文件不存在"
 fi
-
-# 创建 Test8710Slave
-if [ -f "test/DriverTest/Test8710Slave.c" ]; then
-    echo "编译 Test8710Slave..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710Slave并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710Slave.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710Slave
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710Slave 创建成功"
-    else
-        echo "❌ Test8710Slave 创建失败"
-    fi
-else
-    echo "⚠️  Test8710Slave 源文件不存在"
-fi
-
-# 创建 Test8710Master
-if [ -f "test/DriverTest/Test8710Master.c" ]; then
-    echo "编译 Test8710Master..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710Master并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710Master.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710Master
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710Master 创建成功"
-    else
-        echo "❌ Test8710Master 创建失败"
-    fi
-else
-    echo "⚠️  Test8710Master 源文件不存在"
-fi
-
-# 创建 Test8710RxSensitivity
-if [ -f "test/DriverTest/Test8710RxSensitivity.c" ]; then
-    echo "编译 Test8710RxSensitivity..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710RxSensitivity并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710RxSensitivity.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710RxSensitivity
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710RxSensitivity 创建成功"
-    else
-        echo "❌ Test8710RxSensitivity 创建失败"
-    fi
-else
-    echo "⚠️  Test8710RxSensitivity 源文件不存在"
-fi
-
-# 创建 Test8710P2P
-if [ -f "test/DriverTest/Test8710P2P.c" ]; then
-    echo "编译 Test8710P2P..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710P2P并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710P2P.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710P2P
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710P2P 创建成功"
-    else
-        echo "❌ Test8710P2P 创建失败"
-    fi
-else
-    echo "⚠️  Test8710P2P 源文件不存在"
-fi
-
-# 创建 Test8710Loopback
-if [ -f "test/DriverTest/Test8710Loopback.c" ]; then
-    echo "编译 Test8710Loopback..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710Loopback并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710Loopback.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710Loopback
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710Loopback 创建成功"
-    else
-        echo "❌ Test8710Loopback 创建失败"
-    fi
-else
-    echo "⚠️  Test8710Loopback 源文件不存在"
-fi
-
-# 创建 Test8710RFTxTone
-if [ -f "test/DriverTest/Test8710RFTxTone.c" ]; then
-    echo "编译 Test8710RFTxTone..."
-    # 先编译验证器模块
-    echo "编译验证器模块..."
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
-        -c test/example/trm_tx_validator.c \
-        -o ${BUILD_DIR}/trm_tx_validator.o
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ trm_tx_validator.c 编译成功"
-    else
-        echo "❌ trm_tx_validator.c 编译失败"
-        exit 1
-    fi
-    
-    # 编译Test8710RFTxTone并链接验证器
-    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port -I./test/example \
-        test/DriverTest/Test8710RFTxTone.c \
-        ${BUILD_DIR}/trm_tx_validator.o \
-        -L${BUILD_DIR} -ltk8710_hal_complete \
-        -lpthread -lgpiod \
-        -o ${BUILD_DIR}/Test8710RFTxTone
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Test8710RFTxTone 创建成功"
-    else
-        echo "❌ Test8710RFTxTone 创建失败"
-    fi
-else
-    echo "⚠️  Test8710RFTxTone 源文件不存在"
-fi
-
 
 # 显示结果
 echo ""

@@ -1050,7 +1050,18 @@ int main(int argc, char* argv[])
         .rfConfig    = (struct ChiprfConfig_s*)&rfConfig  /* RF配置在TK8710Init中自动调用 */
     };
     
-    /* 3. 准备初始化配置 */
+    /* 3. 初始化默认日志系统（如果尚未初始化） */
+    TK8710LogConfig_t defaultLogConfig = {
+        .level = TK8710_LOG_WARN,
+        .module_mask = TK8710_LOG_MODULE_ALL,
+        .callback = NULL,
+        .enable_timestamp = 1,
+        .enable_module_name = 1,
+        .enable_file_logging = 1,
+        .log_file_dir = NULL
+    };
+    TK8710LogInit(&defaultLogConfig);
+    
     /* 5. 调用 8710 init 完成芯片、RF初始化 */
     printf("Initializing 8710 (chip + RF)...\n");
     ret = TK8710Init(&chipConfig);
@@ -1058,15 +1069,6 @@ int main(int argc, char* argv[])
         printf("8710 initialization failed: %d\n", ret);
         return -1;
     }
-   /* 初始化默认日志系统（如果尚未初始化） */
-    TK8710LogConfig_t defaultLogConfig = {
-        .level = TK8710_LOG_WARN,
-        .module_mask = TK8710_LOG_MODULE_ALL,
-        .callback = NULL,
-        .enable_timestamp = 1,
-        .enable_module_name = 1
-    };
-    TK8710LogInit(&defaultLogConfig);
 
     printf("HAL initialization completed (including RF)\n");
     

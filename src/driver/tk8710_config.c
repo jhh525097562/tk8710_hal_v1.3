@@ -5,6 +5,7 @@
 
 #include "../inc/driver/tk8710.h"
 #include "../inc/driver/tk8710_regs.h"
+#include "../inc/driver/tk8710_rf_regs.h"
 #include "driver/tk8710_log.h"
 #include "../port/tk8710_hal.h"
 #include <stddef.h>
@@ -95,6 +96,16 @@ static void tk8710_acm_trig(void)
 
 /* 前向声明 */
 static int tk8710_acm_get_snr(int* TmpSNR, uint8_t snrThreshold);
+
+/* 寄存器测试函数声明 */
+static void test_rx_fe_regs(void);
+static void test_mac_regs(void);
+static void test_tx_fe_regs(void);
+static void test_rx_bcn_regs(void);
+static void test_tx_mod_regs(void);
+static void test_rx_mup_regs(void);
+static void test_acm_regs(void);
+static void test_rf_freq_regs(void);
 
 /*============================================================================
  * ACM校准内部函数
@@ -997,6 +1008,47 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
             return TK8710_OK;
         }
         
+        case TK8710_DBG_TYPE_REG_RW:
+        {
+            /* 寄存器读写测试 - 参考8710测试代码实现 */
+            TK8710_LOG_CONFIG_INFO("开始寄存器读写测试...\n");
+            
+            /* 测试RX FE寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试RX FE寄存器...\n");
+            test_rx_fe_regs();
+            
+            /* 测试MAC寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试MAC寄存器...\n");
+            test_mac_regs();
+            
+            /* 测试TX FE寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试TX FE寄存器...\n");
+            test_tx_fe_regs();
+            
+            /* 测试RX BCN寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试RX BCN寄存器...\n");
+            test_rx_bcn_regs();
+            
+            /* 测试TX MOD寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试TX MOD寄存器...\n");
+            test_tx_mod_regs();
+            
+            /* 测试RX MUP寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试RX MUP寄存器...\n");
+            test_rx_mup_regs();
+            
+            /* 测试ACM寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试ACM寄存器...\n");
+            test_acm_regs();
+            
+            /* 测试RF频率寄存器 */
+            TK8710_LOG_CONFIG_INFO("测试RF频率寄存器...\n");
+            test_rf_freq_regs();
+            
+            TK8710_LOG_CONFIG_INFO("寄存器读写测试完成\n");
+            break;
+        }
+        
         case TK8710_DBG_TYPE_FFT_OUT:
         case TK8710_DBG_TYPE_CAPTURE_DATA:
         case TK8710_DBG_TYPE_ACM_CAL_FACTOR:
@@ -1008,4 +1060,462 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
         default:
             return TK8710_ERR;
     }
+}
+
+/*============================================================================
+ * 寄存器测试函数实现
+ *============================================================================*/
+
+/**
+ * @brief 测试RX FE寄存器
+ */
+static void test_rx_fe_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试rx_ds_flt_0寄存器 */
+        uint32_t addr1 = RX_FE_BASE + offsetof(struct rx_top, rx_ds_flt_0);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入rx_ds_flt_0失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取rx_ds_flt_0失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_fe_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试rx_dfe2寄存器 */
+        uint32_t addr2 = RX_FE_BASE + offsetof(struct rx_top, rx_dfe2);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入rx_dfe2失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取rx_dfe2失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_fe_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("RX FE寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试MAC寄存器
+ */
+static void test_mac_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试init_6寄存器 */
+        uint32_t addr1 = MAC_BASE + offsetof(struct mac, init_6);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入init_6失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取init_6失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!mac_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试init_7寄存器 */
+        uint32_t addr2 = MAC_BASE + offsetof(struct mac, init_7);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入init_7失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取init_7失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!mac_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("MAC寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试TX FE寄存器
+ */
+static void test_tx_fe_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试tx_bcn_4寄存器 */
+        uint32_t addr1 = TX_FE_BASE + offsetof(struct tx_dac_if, tx_bcn_4);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入tx_bcn_4失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取tx_bcn_4失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!tx_fe_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试tx_config_27寄存器 */
+        uint32_t addr2 = TX_FE_BASE + offsetof(struct tx_dac_if, tx_config_27);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入tx_config_27失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取tx_config_27失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!tx_fe_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("TX FE寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试RX BCN寄存器
+ */
+static void test_rx_bcn_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试bcn_3寄存器 */
+        uint32_t addr1 = RX_BCN_BASE + offsetof(struct rx_bcn, bcn_3);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入bcn_3失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取bcn_3失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_bcn_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试bcn_5寄存器 */
+        uint32_t addr2 = RX_BCN_BASE + offsetof(struct rx_bcn, bcn_5);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入bcn_5失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取bcn_5失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_bcn_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("RX BCN寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试TX MOD寄存器
+ */
+static void test_tx_mod_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试tm_config_1寄存器 */
+        uint32_t addr1 = TX_MOD_BASE + offsetof(struct tx_top, tm_config_1);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入tm_config_1失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取tm_config_1失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!tx_mod_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试tm_config_3寄存器 */
+        uint32_t addr2 = TX_MOD_BASE + offsetof(struct tx_top, tm_config_3);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入tm_config_3失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取tm_config_3失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!tx_mod_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("TX MOD寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试RX MUP寄存器
+ */
+static void test_rx_mup_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试ud_ctrl0寄存器 */
+        uint32_t addr1 = RX_MUP_BASE + offsetof(struct rx_mup, ud_ctrl0);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入ud_ctrl0失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取ud_ctrl0失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_mup_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试ud_ctrl7寄存器 */
+        uint32_t addr2 = RX_MUP_BASE + offsetof(struct rx_mup, ud_ctrl7);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入ud_ctrl7失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取ud_ctrl7失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!rx_mup_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("RX MUP寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试ACM寄存器
+ */
+static void test_acm_regs(void)
+{
+    int i;
+    uint32_t value_tmp;
+    int count = 0;
+    
+    for (i = 0; i < 100; i++) {
+        /* 测试acm_ctrl1寄存器 */
+        uint32_t addr1 = ACM_BASE + offsetof(struct acm, acm_ctrl1);
+        int ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr1, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入acm_ctrl1失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr1, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取acm_ctrl1失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!acm_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr1, (unsigned long)value_tmp, i, count);
+        }
+
+        /* 测试acm_ctrl11寄存器 */
+        uint32_t addr2 = ACM_BASE + offsetof(struct acm, acm_ctrl11);
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr2, i);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("写入acm_ctrl11失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, addr2, &value_tmp);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CONFIG_ERROR("读取acm_ctrl11失败: ret=%d\n", ret);
+            continue;
+        }
+        
+        if (value_tmp != (uint32_t)i) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!acm_reg = 0x%08lX, read=%lu not match write=%d, count=%d!!!!\n", 
+                                   (unsigned long)addr2, (unsigned long)value_tmp, i, count);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("ACM寄存器测试完成，错误计数: %d\n", count);
+}
+
+/**
+ * @brief 测试RF频率寄存器
+ * @note  写入TX和RX频率，然后读取验证，测试100次
+ *        频率从470000000Hz开始，步进50000Hz
+ */
+static void test_rf_freq_regs(void)
+{
+    int i;
+    int count = 0;
+    uint32_t freq_hz;
+    uint32_t freq_reg;
+    uint8_t rfSel = 0xFF;  /* 使用RF0-7 */
+    double freq_step = RF_SX1257_FREQ_STEP;  /* 使用SX1257频率步进 */
+    
+    /* RF频率寄存器地址 */
+    uint16_t rx_msb_addr = RF_CMD_FRF_RX_MSB >> 8;
+    uint16_t rx_mid_addr = RF_CMD_FRF_RX_MID >> 8;
+    uint16_t rx_lsb_addr = RF_CMD_FRF_RX_LSB >> 8;
+    uint16_t tx_msb_addr = RF_CMD_FRF_TX_MSB >> 8;
+    uint16_t tx_mid_addr = RF_CMD_FRF_TX_MID >> 8;
+    uint16_t tx_lsb_addr = RF_CMD_FRF_TX_LSB >> 8;
+    
+    TK8710_LOG_CONFIG_INFO("测试RF频率寄存器，起始频率: 470MHz，步进: 50KHz\n");
+    
+    for (i = 0; i < 100; i++) {
+        /* 计算频率值：从470MHz开始，步进50KHz */
+        freq_hz = 470000000 + (i * 50000);
+        freq_reg = (uint32_t)((double)freq_hz / freq_step);
+        
+        /* 写入RX频率 */
+        tk8710_rf_write(rfSel, rx_msb_addr, (freq_reg >> 16) & 0xFF);
+        tk8710_rf_write(rfSel, rx_mid_addr, (freq_reg >> 8) & 0xFF);
+        tk8710_rf_write(rfSel, rx_lsb_addr, (freq_reg >> 0) & 0xFF);
+        
+        /* 写入TX频率 */
+        tk8710_rf_write(rfSel, tx_msb_addr, (freq_reg >> 16) & 0xFF);
+        tk8710_rf_write(rfSel, tx_mid_addr, (freq_reg >> 8) & 0xFF);
+        tk8710_rf_write(rfSel, tx_lsb_addr, (freq_reg >> 0) & 0xFF);
+        
+        /* 读取RX频率验证 */
+        uint32_t rx_msb, rx_mid, rx_lsb;
+        uint32_t tx_msb, tx_mid, tx_lsb;
+        uint32_t rx_freq_reg, tx_freq_reg;
+        
+        tk8710_rf_read(rfSel, rx_msb_addr, &rx_msb);
+        tk8710_rf_read(rfSel, rx_mid_addr, &rx_mid);
+        tk8710_rf_read(rfSel, rx_lsb_addr, &rx_lsb);
+        rx_freq_reg = ((rx_msb & 0xFF) << 16) | ((rx_mid & 0xFF) << 8) | (rx_lsb & 0xFF);
+        
+        tk8710_rf_read(rfSel, tx_msb_addr, &tx_msb);
+        tk8710_rf_read(rfSel, tx_mid_addr, &tx_mid);
+        tk8710_rf_read(rfSel, tx_lsb_addr, &tx_lsb);
+        tx_freq_reg = ((tx_msb & 0xFF) << 16) | ((tx_mid & 0xFF) << 8) | (tx_lsb & 0xFF);
+        
+        /* 验证 */
+        if (rx_freq_reg != freq_reg) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!RF RX频率不匹配: write=0x%06X, read=0x%06X, freq=%u Hz, count=%d!!!!\n",
+                                   (unsigned int)freq_reg, (unsigned int)rx_freq_reg, (unsigned int)freq_hz, count);
+        }
+        
+        if (tx_freq_reg != freq_reg) {
+            count++;
+            TK8710_LOG_CONFIG_ERROR("!!!!RF TX频率不匹配: write=0x%06X, read=0x%06X, freq=%u Hz, count=%d!!!!\n",
+                                   (unsigned int)freq_reg, (unsigned int)tx_freq_reg, (unsigned int)freq_hz, count);
+        }
+        
+        /* 每10次打印一次进度 */
+        if ((i + 1) % 10 == 0) {
+            TK8710_LOG_CONFIG_INFO("RF频率测试进度: %d/100, 当前频率: %u Hz\n", i + 1, (unsigned int)freq_hz);
+        }
+    }
+    
+    TK8710_LOG_CONFIG_INFO("RF频率寄存器测试完成，错误计数: %d\n", count);
 }

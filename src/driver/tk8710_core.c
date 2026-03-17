@@ -154,7 +154,7 @@ uint8_t TK8710GetWorkType(void)
  * @param data 写入数据
  * @return 0-成功, 非0-失败
  */
-static int tk8710_rf_write(uint8_t rfSel, uint16_t addr, uint32_t data)
+int tk8710_rf_write(uint8_t rfSel, uint16_t addr, uint32_t data)
 {
     int ret;
     s_init_9 init9;
@@ -188,7 +188,7 @@ static int tk8710_rf_write(uint8_t rfSel, uint16_t addr, uint32_t data)
  * @param data 读取数据输出
  * @return 0-成功, 非0-失败
  */
-static int tk8710_rf_read(uint8_t rfSel, uint16_t addr, uint32_t* data)
+int tk8710_rf_read(uint8_t rfSel, uint16_t addr, uint32_t* data)
 {
     int ret;
     s_init_9 init9;
@@ -248,7 +248,9 @@ int TK8710Init(const ChipConfig* initConfig)
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,
         .enable_timestamp = 1,
-        .enable_module_name = 1
+        .enable_module_name = 1,
+        .enable_file_logging = 1,
+        .log_file_dir = NULL
     };
     TK8710LogInit(&defaultLogConfig);
     

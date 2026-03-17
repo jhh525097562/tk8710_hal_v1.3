@@ -160,6 +160,7 @@ typedef enum {
     TK8710_DBG_TYPE_ACM_CAL_FACTOR,
     TK8710_DBG_TYPE_ACM_SNR,
     TK8710_DBG_TYPE_TX_TONE,
+    TK8710_DBG_TYPE_REG_RW,  /* 读写寄存器测试类型 */
 } TK8710DebugCtrlType;
 
 /* 调试操作类型枚举 */
