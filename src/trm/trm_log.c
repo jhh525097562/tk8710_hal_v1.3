@@ -10,13 +10,24 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <pthread.h>
+
+/* TRM日志文件相关变量 */
+static FILE* g_trmLogFile = NULL;           /* 当前日志文件指针 */
+static int g_trmCurrentFileIndex = 0;       /* 当前日志文件索引 */
+static int g_trmFileLoggingEnabled = 0;     /* 文件日志是否启用 */
+static pthread_mutex_t g_trmLogMutex = PTHREAD_MUTEX_INITIALIZER;  /* 日志互斥锁 */
 
 /* TRM独立日志配置 */
 TRMLogConfig g_trmLogConfig = {
     .level = TRM_LOG_INFO,          /* 默认信息级别 */
     .enable_timestamp = 1,          /* 默认启用时间戳 */
     .enable_module_name = 1,        /* 默认启用模块名 */
-    .enable_file_info = 1           /* 默认启用文件信息（包含函数名和行数） */
+    .enable_file_info = 1,          /* 默认启用文件信息（包含函数名和行数） */
+    .enable_file_logging = 0,       /* 默认禁用文件日志 */
+    .log_file_dir = NULL            /* 默认当前目录 */
 };
 
 /* TRM日志输出回调函数 */
@@ -77,6 +88,143 @@ static const char* TRM_GetFilename(const char* filepath)
         return filename + 1; /* 跳过'\' */
     }
     return filepath;
+}
+
+/**
+ * @brief 获取日志文件路径
+ * @param buffer 缓冲区
+ * @param size 缓冲区大小
+ * @param index 文件索引
+ */
+static void get_log_file_path(char* buffer, int size, int index)
+{
+    const char* dir = g_trmLogConfig.log_file_dir;
+    if (dir == NULL || strlen(dir) == 0) {
+        snprintf(buffer, size, "trm_log_%d.log", index);
+    } else {
+        snprintf(buffer, size, "%s/trm_log_%d.log", dir, index);
+    }
+}
+
+/**
+ * @brief 获取文件大小
+ * @param filename 文件名
+ * @return 文件大小（字节），-1表示文件不存在
+ */
+static long get_file_size(const char* filename)
+{
+    struct stat st;
+    if (stat(filename, &st) == 0) {
+        return st.st_size;
+    }
+    return -1;
+}
+
+/**
+ * @brief 关闭当前日志文件
+ */
+static void close_log_file(void)
+{
+    if (g_trmLogFile != NULL) {
+        fflush(g_trmLogFile);
+        fclose(g_trmLogFile);
+        g_trmLogFile = NULL;
+    }
+}
+
+/**
+ * @brief 打开指定索引的日志文件
+ * @param index 文件索引
+ * @return 0-成功, -1-失败
+ */
+static int open_log_file(int index)
+{
+    char path[512];
+    get_log_file_path(path, sizeof(path), index);
+    
+    g_trmLogFile = fopen(path, "a+");
+    if (g_trmLogFile == NULL) {
+        return -1;
+    }
+    
+    g_trmCurrentFileIndex = index;
+    return 0;
+}
+
+/**
+ * @brief 轮转日志文件
+ * @note 当前文件写满2M后，切换到另一个未满的文件；如果都满了，覆盖第0个文件
+ */
+static void rotate_log_file(void)
+{
+    int nextIndex = 0;
+    char path[512];
+    int foundUnfilled = 0;
+    
+    pthread_mutex_lock(&g_trmLogMutex);
+    
+    /* 先关闭当前文件 */
+    close_log_file();
+    
+    /* 扫描所有文件，查找未满的文件 */
+    for (int i = 0; i < TRM_LOG_FILE_MAX_COUNT; i++) {
+        if (i == g_trmCurrentFileIndex) {
+            continue;  /* 跳过当前文件 */
+        }
+        
+        get_log_file_path(path, sizeof(path), i);
+        long size = get_file_size(path);
+        
+        if (size < TRM_LOG_FILE_MAX_SIZE) {
+            /* 找到未满的文件 */
+            nextIndex = i;
+            foundUnfilled = 1;
+            break;
+        }
+    }
+    
+    /* 如果所有文件都满了，覆盖第0个文件 */
+    if (!foundUnfilled) {
+        nextIndex = 0;
+        get_log_file_path(path, sizeof(path), 0);
+        remove(path);  /* 删除旧文件 */
+    }
+    
+    /* 打开新的日志文件 */
+    if (open_log_file(nextIndex) != 0) {
+        g_trmFileLoggingEnabled = 0;
+    }
+    
+    pthread_mutex_unlock(&g_trmLogMutex);
+}
+
+/**
+ * @brief 写入日志到文件
+ * @param buffer 日志内容
+ */
+static void write_log_to_file(const char* buffer)
+{
+    if (!g_trmFileLoggingEnabled || g_trmLogFile == NULL) {
+        return;
+    }
+    
+    pthread_mutex_lock(&g_trmLogMutex);
+    
+    /* 检查当前文件大小 */
+    long currentSize = ftell(g_trmLogFile);
+    if (currentSize >= TRM_LOG_FILE_MAX_SIZE) {
+        pthread_mutex_unlock(&g_trmLogMutex);
+        rotate_log_file();
+        pthread_mutex_lock(&g_trmLogMutex);
+    }
+    
+    /* 写入日志 */
+    if (g_trmLogFile != NULL) {
+        fprintf(g_trmLogFile, "%s", buffer);
+        fflush(g_trmLogFile);
+    }
+    
+    pthread_mutex_unlock(&g_trmLogMutex);
 }
 
 /**
@@ -145,6 +293,11 @@ void TRM_LogOutput(TRMLogLevel level, const char* tag,
         printf("%s", buffer);
         fflush(stdout);
     }
+    
+    /* 同时写入文件日志 */
+    if (g_trmFileLoggingEnabled) {
+        write_log_to_file(buffer);
+    }
 }
 
 /**
@@ -166,9 +319,10 @@ void TRM_LogInit(TRMLogLevel level)
 /**
  * @brief 配置TRM日志系统
  * @param level 日志级别
+ * @param enable_file_logging 是否启用文件日志
  * @return 0-成功, 1-失败
  */
-int TRM_LogConfig(TRMLogLevel level)
+int TRM_LogConfig(TRMLogLevel level, uint8_t enable_file_logging)
 {
     g_trmLogConfig.level = level;
     g_trmLogConfig.enable_timestamp = 1;
@@ -176,8 +330,15 @@ int TRM_LogConfig(TRMLogLevel level)
     g_trmLogConfig.enable_file_info = 1;
     g_trmLogCallback = NULL;
     
+    /* 配置并启用文件日志 */
+    if (enable_file_logging) {
+        TRM_LogEnableFileLogging(1, NULL);
+    }
+    
     TRM_LogOutput(TRM_LOG_INFO, "TRM", __FILE__, __LINE__, __func__, 
-                  "TRM日志系统配置完成 - 级别:%s", TRM_LogGetLevelName(level));
+                  "TRM日志系统配置完成 - 级别:%s, 文件日志:%s", 
+                  TRM_LogGetLevelName(level),
+                  enable_file_logging ? "启用" : "禁用");
     
     return 0;
 }
@@ -226,4 +387,61 @@ void TRM_LogEnableModuleName(uint8_t enable)
 void TRM_LogEnableFileInfo(uint8_t enable)
 {
     g_trmLogConfig.enable_file_info = enable;
+}
+
+/**
+ * @brief 启用/禁用文件日志
+ * @param enable 是否启用
+ * @param dir 日志文件目录，NULL表示当前目录
+ */
+void TRM_LogEnableFileLogging(uint8_t enable, const char* dir)
+{
+    g_trmLogConfig.enable_file_logging = enable;
+    g_trmLogConfig.log_file_dir = dir;
+    
+    if (enable) {
+        /* 初始化文件日志系统 */
+        pthread_mutex_lock(&g_trmLogMutex);
+        
+        /* 关闭之前的日志文件 */
+        close_log_file();
+        
+        /* 查找第一个未满的文件 */
+        char path[512];
+        int startIndex = 0;
+        int foundUnfilled = 0;
+        
+        for (int i = 0; i < TRM_LOG_FILE_MAX_COUNT; i++) {
+            get_log_file_path(path, sizeof(path), i);
+            long size = get_file_size(path);
+            if (size < TRM_LOG_FILE_MAX_SIZE && size >= 0) {
+                /* 找到未满的文件 */
+                startIndex = i;
+                foundUnfilled = 1;
+                break;
+            }
+        }
+        
+        /* 如果所有文件都满了，从第0个文件重新开始 */
+        if (!foundUnfilled) {
+            startIndex = 0;
+            get_log_file_path(path, sizeof(path), 0);
+            remove(path);
+        }
+        
+        /* 打开日志文件 */
+        if (open_log_file(startIndex) == 0) {
+            g_trmFileLoggingEnabled = 1;
+        } else {
+            g_trmFileLoggingEnabled = 0;
+        }
+        
+        pthread_mutex_unlock(&g_trmLogMutex);
+    } else {
+        /* 禁用文件日志 */
+        pthread_mutex_lock(&g_trmLogMutex);
+        close_log_file();
+        g_trmFileLoggingEnabled = 0;
+        pthread_mutex_unlock(&g_trmLogMutex);
+    }
 }

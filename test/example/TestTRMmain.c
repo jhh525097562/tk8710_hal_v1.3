@@ -362,12 +362,13 @@ int main(int argc, char* argv[])
         .tk8710Init = &chipConfig,
         .driverLogConfig = {
             .logLevel = TK8710_LOG_WARN,  /* TK8710_LOG_INFO TK8710_LOG_ALL TK8710_LOG_NONE TK8710_LOG_WARN */
-            .moduleMask = 0xFFFFFFFF
+            .moduleMask = 0xFFFFFFFF,
+            .enable_file_logging = 1
         },
         .trmInitConfig = &trmConfig,
         .trmLogConfig = {
             .logLevel = TRM_LOG_INFO,     /* TRM_LOG_INFO TRM_LOG_DEBUG */
-            .enableStats = true
+            .enable_file_logging = 1
         }
     };
     

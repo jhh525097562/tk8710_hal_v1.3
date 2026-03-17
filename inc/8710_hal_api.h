@@ -45,6 +45,7 @@ typedef struct {
     struct {
         TK8710LogLevel logLevel;      /**< 日志级别 */
         uint32_t moduleMask;          /**< 模块掩码 */
+        uint8_t enable_file_logging;  /**< 是否启用文件日志 */
     } driverLogConfig;
     
     /* TRM配置 */
@@ -53,7 +54,7 @@ typedef struct {
     /* TRM日志配置 */
     struct {
         uint8_t logLevel;             /**< TRM日志级别 */
-        bool enableStats;             /**< 是否启用统计 */
+        uint8_t enable_file_logging;  /**< 是否启用文件日志 */
     } trmLogConfig;
 } TK8710_HalInitConfig;
 

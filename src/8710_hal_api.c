@@ -41,8 +41,8 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
         },
         .trmInitConfig = NULL,           // 使用TRM层默认配置
         .trmLogConfig = {
-            .logLevel = 2,
-            .enableStats = true
+            .logLevel = TRM_LOG_INFO,
+            .enable_file_logging = 1
         }
     };
     
@@ -56,7 +56,7 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
     }
     
     // 3. 配置日志
-    ret = TK8710LogConfig(cfg->driverLogConfig.logLevel, cfg->driverLogConfig.moduleMask);
+    ret = TK8710LogConfig(cfg->driverLogConfig.logLevel, cfg->driverLogConfig.moduleMask, cfg->driverLogConfig.enable_file_logging);
     if (ret != TK8710_OK) {
         return TK8710_HAL_ERROR_INIT;
     }
@@ -68,7 +68,7 @@ TK8710_HalError hal_init(const TK8710_HalInitConfig* config)
     }
     
     // 5. 配置TRM日志
-    ret = TRM_LogConfig(cfg->trmLogConfig.logLevel);
+    ret = TRM_LogConfig(cfg->trmLogConfig.logLevel, cfg->trmLogConfig.enable_file_logging);
     if (ret != TRM_OK) {
         return TK8710_HAL_ERROR_INIT;
     }

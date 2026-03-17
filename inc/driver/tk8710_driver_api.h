@@ -179,7 +179,7 @@ int TK8710GpioIrqEnable(uint8_t gpioPin, uint8_t enable);
  * @param module_mask 模块掩码
  * @return 0-成功, 1-失败
  */
-int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask);
+int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask, uint8_t enable_file_logging);
 
 #ifdef __cplusplus
 }

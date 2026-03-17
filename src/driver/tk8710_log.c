@@ -451,9 +451,10 @@ const char* TK8710LogGetLevelName(TK8710LogLevel level)
  * @brief 简化的日志初始化函数
  * @param level 日志级别
  * @param module_mask 模块掩码
+ * @param enable_file_logging 是否启用文件日志
  * @return 0-成功, 1-失败
  */
-int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
+int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask, uint8_t enable_file_logging)
 {
     TK8710LogConfig_t logConfig = {
         .level = level,
@@ -461,7 +462,7 @@ int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask)
         .callback = NULL,
         .enable_timestamp = 1,
         .enable_module_name = 1,
-        .enable_file_logging = 0,
+        .enable_file_logging = enable_file_logging,
         .log_file_dir = NULL
     };
     

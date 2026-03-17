@@ -186,14 +186,14 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                 /* MD_DATA中断计数（直接使用全局变量） */
                 g_mdDataCount++;
                 
-                /* 如果MD_DATA中断达到100次，认为测试完成 */
-                if (g_mdDataCount >= 100) {
+                /* 如果MD_DATA中断达到20次，认为测试完成 */
+                if (g_mdDataCount >= 20) {
                     g_trmTestRunning = 0;
                     g_trmTestCompleted = 1;
                     g_currentTest->maxValidUsers = g_trmMaxValidUsers;
                     g_currentTest->testDuration = g_trmTestDuration;
                     g_currentTest->passed = (g_trmMaxValidUsers >= g_currentTest->threshold) ? 1 : 0;
-                    printf("MD_DATA中断达到100次，测试完成\n");
+                    printf("MD_DATA中断达到20次，测试完成\n");
                 }
             }
             
@@ -776,14 +776,14 @@ static void run_automatic_test(void)
                     uint32_t currentTime = tv.tv_sec * 1000 + tv.tv_usec / 1000;
                     g_trmTestDuration = currentTime - g_trmTestStartTime;
                     
-                    /* 如果时间超过5分钟（300秒），强制结束测试 */
-                    if (g_trmTestDuration > 300000) {
+                    /* 如果时间超过1分钟（60秒），强制结束测试 */
+                    if (g_trmTestDuration > 60000) {
                         g_trmTestRunning = 0;
                         g_trmTestCompleted = 1;
                         g_currentTest->maxValidUsers = g_trmMaxValidUsers;
                         g_currentTest->testDuration = g_trmTestDuration;
                         g_currentTest->passed = (g_trmMaxValidUsers >= g_currentTest->threshold) ? 1 : 0;
-                        printf("测试超时（5分钟），强制结束\n");
+                        printf("测试超时（1分钟），强制结束\n");
                         break;
                     }
                 }

@@ -171,9 +171,10 @@ const char* TK8710LogGetModuleName(TK8710LogModule module);
  * @brief 简化初始化日志系统
  * @param level 日志级别
  * @param module_mask 模块掩码
+ * @param enable_file_logging 是否启用文件日志
  * @return 0-成功, 1-失败
  */
-int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask);
+int TK8710LogConfig(TK8710LogLevel level, uint32_t module_mask, uint8_t enable_file_logging);
 
 /**
  * @brief 获取级别名称

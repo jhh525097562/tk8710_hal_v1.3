@@ -227,9 +227,10 @@ int TRM_GetStats(TRM_Stats* stats);
 /**
  * @brief 配置TRM日志系统
  * @param level 日志级别
+ * @param enable_file_logging 是否启用文件日志
  * @return TRM_OK成功，其他失败
  */
-int TRM_LogConfig(TRMLogLevel level);
+int TRM_LogConfig(TRMLogLevel level, uint8_t enable_file_logging);
 
 #ifdef __cplusplus
 }
