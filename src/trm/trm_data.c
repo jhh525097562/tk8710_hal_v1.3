@@ -9,6 +9,7 @@
 #include "../inc/driver/tk8710_driver_api.h"
 #include "../inc/driver/tk8710_internal.h"
 #include "../port/tk8710_hal.h"
+#include "../inc/trm/trm_mac_parser.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -27,12 +28,6 @@ extern TrmContext* TRM_GetContext(void);
 #define TX_DATA_MAX_LEN 512       /* 最大发送数据长度 */
 #define BEAM_RELEASE_QUEUE_SIZE 2048  /* 波束RAM释放队列大小 */
 
-/* MHDR字段偏移定义 (参考MAC协议规范6.1.1) */
-#define MHDR_BYTE2_OFFSET       1     /* MHDR第二个字节偏移 */
-#define MHDR_QOSPRI_SHIFT       6     /* QosPri位偏移 (bit 7:6) */
-#define MHDR_QOSPRI_MASK        0x03  /* QosPri掩码 (2位) */
-#define MHDR_QOSTTL_SHIFT       4     /* QosTTL位偏移 (bit 5:4) */
-#define MHDR_QOSTTL_MASK        0x03  /* QosTTL掩码 (2位) */
 
 /* 发送数据项 */
 typedef struct {
@@ -364,9 +359,18 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     uint8_t priority = 3;  /* 默认最低优先级 */
     uint8_t ttl = 0;       /* 默认TTL */
     if (len >= 2) {
-        uint8_t mhdrByte2 = data[MHDR_BYTE2_OFFSET];
-        priority = (mhdrByte2 >> MHDR_QOSPRI_SHIFT) & MHDR_QOSPRI_MASK;
-        ttl = (mhdrByte2 >> MHDR_QOSTTL_SHIFT) & MHDR_QOSTTL_MASK;
+        uint8_t mhdrByte2 = data[1];
+        priority = (mhdrByte2 >> 6) & 0x03;
+        ttl = (mhdrByte2 >> 4) & 0x03;
+    }
+    
+    /* 同时获取QoS信息 */
+    uint8_t qosPri, qosTtl;
+    if (TRM_GetMacFrameQosInfo(data, len, &qosPri, &qosTtl) == 0) {
+        TRM_LOG_DEBUG("TRM: MAC Frame - User ID: 0x%08X, QoS Pri=%d, TTL=%d", 
+                      userId, qosPri, qosTtl);
+    } else {
+        TRM_LOG_DEBUG("TRM: MAC Frame - User ID: 0x%08X, QoS info unavailable", userId);
     }
     
     /* 确保优先级在有效范围内 */
@@ -795,13 +799,24 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
         if (TK8710GetRxUserData(userIndex, &userData, &dataLen) == TK8710_OK) {
             // TRM_LOG_DEBUG("TRM: User[%d] received %d bytes\n", userIndex, dataLen);
             
-            /* 从接收数据的前4个字节提取用户ID */
+            /* 使用新的MAC协议解析辅助函数提取用户ID和QoS信息 */
             if (dataLen >= 4) {
-                beam.userId = (userData[0] << 24) | (userData[1] << 16) | (userData[2] << 8) | userData[3];
-                TRM_LOG_DEBUG("TRM: Extracted user ID from data: 0x%08X", beam.userId);
+                /* 尝试解析为标准MAC协议帧 */
+                uint32_t extractedUserId;
+                uint8_t qosPri, qosTtl;
+                
+                if (TRM_ExtractUserIdFromMacFrame(userData, dataLen, &extractedUserId) == 0) {
+                    /* 成功从MAC帧中提取用户ID */
+                    beam.userId = extractedUserId;
+                } else {
+                    /* 无法解析为标准MAC帧，使用前4字节作为用户ID */
+                    beam.userId = (userData[0] << 24) | (userData[1] << 16) | (userData[2] << 8) | userData[3];
+                    TRM_LOG_DEBUG("TRM: Extracted user ID from raw data (non-MAC frame): 0x%08X", beam.userId);
+                }
             } else {
-                /* 数据长度不足4字节，保持原有ID */
-                TRM_LOG_WARN("TRM: Data length %d < 4, using default user ID %d", dataLen, beam.userId);
+                /* 数据长度不足4字节，使用用户索引作为ID */
+                beam.userId = userIndex;
+                TRM_LOG_WARN("TRM: Data length %d < 4, using user index %d", dataLen, beam.userId);
             }
             
             beam.valid = 1;

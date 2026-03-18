@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include "driver/tk8710_types.h"
 #include "trm_log.h"
+#include "trm_mac_parser.h"
 
 #ifdef __cplusplus
 extern "C" {
