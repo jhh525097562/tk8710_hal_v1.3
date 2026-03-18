@@ -186,14 +186,14 @@ static void OnDriverRxData(TK8710IrqResult* irqResult)
                 /* MD_DATA中断计数（直接使用全局变量） */
                 g_mdDataCount++;
                 
-                /* 如果MD_DATA中断达到20次，认为测试完成 */
-                if (g_mdDataCount >= 20) {
+                /* 如果MD_DATA中断达到10次，认为测试完成 */
+                if (g_mdDataCount >= 10) {
                     g_trmTestRunning = 0;
                     g_trmTestCompleted = 1;
                     g_currentTest->maxValidUsers = g_trmMaxValidUsers;
                     g_currentTest->testDuration = g_trmTestDuration;
                     g_currentTest->passed = (g_trmMaxValidUsers >= g_currentTest->threshold) ? 1 : 0;
-                    printf("MD_DATA中断达到20次，测试完成\n");
+                    printf("MD_DATA中断达到10次，测试完成\n");
                 }
             }
             

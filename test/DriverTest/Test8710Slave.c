@@ -1009,6 +1009,13 @@ int main(int argc, char* argv[])
         .rfConfig    = (struct ChiprfConfig_s*)&rfConfig  /* RF配置在TK8710Init中自动调用 */
     };
     
+    /* 5. 调用 8710 init 完成芯片、RF初始化 */
+    printf("Initializing 8710 (chip + RF)...\n");
+    ret = TK8710Init(&chipConfig);
+    if (ret != TK8710_OK) {
+        printf("8710 initialization failed: %d\n", ret);
+        return -1;
+    }
     /* 3. 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
         .level = TK8710_LOG_INFO,
@@ -1021,14 +1028,6 @@ int main(int argc, char* argv[])
     };
     TK8710LogInit(&defaultLogConfig);
     
-    /* 5. 调用 8710 init 完成芯片、RF初始化 */
-    printf("Initializing 8710 (chip + RF)...\n");
-    ret = TK8710Init(&chipConfig);
-    if (ret != TK8710_OK) {
-        printf("8710 initialization failed: %d\n", ret);
-        return -1;
-    }
-
     printf("HAL initialization completed (including RF)\n");
     
     /* 6. 配置时隙参数 - 使用 hal_config */

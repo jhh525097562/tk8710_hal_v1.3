@@ -8,6 +8,9 @@
 #include "../inc/driver/tk8710_rf_regs.h"
 #include "driver/tk8710_log.h"
 #include "../port/tk8710_hal.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -1051,6 +1054,138 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
         
         case TK8710_DBG_TYPE_FFT_OUT:
         case TK8710_DBG_TYPE_CAPTURE_DATA:
+        {
+            int ret;
+            int16_t* captureBuffer16;
+            uint8_t* captureBuffer;
+            uint32_t captureLength;
+            char filename[256];
+            FILE* outputFile;
+            int antenna;
+            
+            // 1. 创建8710CaptureData目录
+            ret = system("mkdir -p 8710CaptureData");
+            if (ret != 0) {
+                TK8710_LOG_CONFIG_WARN("创建8710CaptureData目录失败，继续执行...\n");
+            }
+            
+            // 2. 配置s_ram_rd0寄存器，启用采集功能 (cap_en = 1)
+            s_ram_rd0 ramRd0;
+            ramRd0.data = 0;
+            ramRd0.b.cap_en = 1;  // 启用采集
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_MUP_BASE + offsetof(struct rx_mup, ram_rd0), ramRd0.data);
+            if (ret != TK8710_OK) {
+                TK8710_LOG_CONFIG_ERROR("配置s_ram_rd0寄存器失败: ret=%d\n", ret);
+                return ret;
+            }
+            TK8710_LOG_CONFIG_INFO("已配置s_ram_rd0寄存器，cap_en=1\n");
+            
+            // 3. 根据当前运行模式确定采集的数据长度
+            uint8_t currentRateMode = TK8710GetRateMode();
+            RateModeParams rateParams;
+            
+            // 获取当前速率模式参数
+            if (TK8710GetRateModeParams(currentRateMode, &rateParams) != TK8710_OK) {
+                TK8710_LOG_CONFIG_ERROR("获取速率模式%d参数失败\n", currentRateMode);
+                return TK8710_ERR;
+            }
+            
+            // 根据模式设置采集长度：
+            // mode5-8：每根天线16384个数据；mode9：每根天线4096、mode10:2048、mode11和18:1024
+            switch (currentRateMode) {
+                case 5: case 6: case 7: case 8:
+                    captureLength = 16384;
+                    break;
+                case 9:
+                    captureLength = 4096;
+                    break;
+                case 10:
+                    captureLength = 2048;
+                    break;
+                case 11: case 18:
+                    captureLength = 1024;
+                    break;
+                default:
+                    captureLength = 16384;  // 默认值
+                    TK8710_LOG_CONFIG_WARN("未知模式%d，使用默认采集长度16384\n", currentRateMode);
+                    break;
+            }
+            
+            TK8710_LOG_CONFIG_INFO("当前模式：%d，信号带宽：%d KHz，最大用户数：%d，采集长度：%d\n", 
+                                        currentRateMode, rateParams.signalBwKHz, rateParams.maxUsers, captureLength);
+            
+            // 4. 分配采集缓冲区（按16bit数据分配）
+            captureBuffer16 = (int16_t*)malloc(captureLength * sizeof(int16_t));
+            if (captureBuffer16 == NULL) {
+                TK8710_LOG_CONFIG_ERROR("分配采集缓冲区失败\n");
+                return TK8710_ERR;
+            }
+            // 转换为uint8_t指针用于SPI传输
+            captureBuffer = (uint8_t*)captureBuffer16;
+            
+            // 5. 循环采集8根天线的数据
+            for (antenna = 0; antenna < 8; antenna++) {
+                // 调用TK8710SpiGetInfo获取天线数据
+                // infotype: 12-19 对应天线0-7
+                uint8_t infoType = TK8710_GET_INFO_CAPTURE_0 + antenna;
+                ret = TK8710SpiGetInfo(infoType, captureBuffer, captureLength * 2 - 10);
+                if (ret != TK8710_OK) {
+                    TK8710_LOG_CONFIG_ERROR("获取天线%d数据失败: ret=%d\n", antenna + 1, ret);
+                    continue;
+                }
+                
+                // 转换大端字节序为小端（TK8710输出大端：0x33,0x11 → 需要转换为0x11,0x33）
+                for (uint32_t i = 0; i < captureLength; i++) {
+                    uint8_t temp = captureBuffer[i * 2];        // 保存高字节
+                    captureBuffer[i * 2] = captureBuffer[i * 2 + 1];  // 低字节移到前面
+                    captureBuffer[i * 2 + 1] = temp;              // 高字节移到后面
+                }
+                
+                // // 调试输出：显示前4个16bit数据的字节序转换
+                // if (antenna == 0) {
+                //     TK8710_LOG_CONFIG_INFO("字节序转换示例（天线1前4个数据）：\n");
+                //     for (uint32_t i = 0; i < 4 && i < captureLength; i++) {
+                //         uint16_t original = (captureBuffer[i * 2 + 1] << 8) | captureBuffer[i * 2];
+                //         TK8710_LOG_CONFIG_INFO("  数据%d: 原始字节[0x%02X,0x%02X] → 转换后0x%04X\n", 
+                //                             (int)(i+1), captureBuffer[i * 2 + 1], captureBuffer[i * 2], original);
+                //     }
+                // }
+                
+                // 生成文件名：AntennaData1到AntennaData8
+                snprintf(filename, sizeof(filename), "8710CaptureData/AntennaData%d.bin", antenna + 1);
+                
+                // 保存数据到文件（按字节写入转换后的16bit数据）
+                outputFile = fopen(filename, "wb");
+                if (outputFile == NULL) {
+                    TK8710_LOG_CONFIG_ERROR("创建文件%s失败\n", filename);
+                    continue;
+                }
+                
+                size_t written = fwrite(captureBuffer, 1, captureLength * 2, outputFile);
+                fclose(outputFile);
+                
+                if (written == captureLength * 2) {
+                    TK8710_LOG_CONFIG_INFO("天线%d数据采集完成，保存到%s，数据长度: %u bytes (%d个16bit采样点)\n", 
+                                        antenna + 1, filename, (unsigned int)written, captureLength);
+                } else {
+                    TK8710_LOG_CONFIG_ERROR("保存天线%d数据失败，写入字节数: %u，期望: %u\n", 
+                                        antenna + 1, (unsigned int)written, (unsigned int)(captureLength * 2));
+                }
+            }
+            
+            // 6. 释放缓冲区
+            free(captureBuffer16);
+
+            ramRd0.data = 0;
+            ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_MUP_BASE + offsetof(struct rx_mup, ram_rd0), ramRd0.data);
+            if (ret != TK8710_OK) {
+                TK8710_LOG_CONFIG_ERROR("配置s_ram_rd0寄存器失败: ret=%d\n", ret);
+                return ret;
+            }
+
+            TK8710_LOG_CONFIG_INFO("采集数据功能执行完成\n");
+            return TK8710_OK;
+        }
         case TK8710_DBG_TYPE_ACM_CAL_FACTOR:
         case TK8710_DBG_TYPE_ACM_SNR:
             /* TODO: 待实现 */

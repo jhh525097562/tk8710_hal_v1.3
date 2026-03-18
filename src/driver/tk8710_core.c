@@ -431,7 +431,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
         return ret;
     }
 
-
+    
     /* 根据工作类型启动传输 */
     if (workType == TK8710_MODE_MASTER) {
         /* Master模式: 配置trx_trig0寄存器 (0x74) 启动主动传输 */
@@ -439,6 +439,26 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
             slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_MASTER;
             
+            /* 配置init12寄存器，启用本地同步功能 */
+            {
+                s_init_12 init12;
+                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
+                if (ret == TK8710_OK) {
+                    init12.b.ls_en = 1;
+                    init12.b.ls_master = 1; 
+                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
+                    if (ret == TK8710_OK) {
+                        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.ls_en = 1 for local sync mode");
+                    } else {
+                        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.ls_en: %d", ret);
+                        return ret;
+                    }
+                } else {
+                    TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
+                    return ret;
+                }
+            }
+
             /* 配置中断使能 */
             {
                 s_irq_ctrl0 irqCtrl0;
@@ -473,6 +493,26 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
             slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_SLAVE;
             
+            /* 配置init12寄存器，启用本地同步功能 */
+            {
+                s_init_12 init12;
+                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
+                if (ret == TK8710_OK) {
+                    init12.b.ls_en = 1;
+                    init12.b.ls_master = 0; 
+                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
+                    if (ret == TK8710_OK) {
+                        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.ls_en = 1 for local sync mode");
+                    } else {
+                        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.ls_en: %d", ret);
+                        return ret;
+                    }
+                } else {
+                    TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
+                    return ret;
+                }
+            }
+
             // /* 配置rx_fe_regs->ddc寄存器 */
             // {
             //     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_FE_BASE + offsetof(struct rx_top, ddc) + 0x0000, 0x1b33333);
@@ -582,7 +622,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
         TK8710_LOG_CORE_ERROR("Invalid work type: %d", workType);
         return TK8710_ERR;
     }
-    
+
     TK8710_LOG_CORE_INFO("Work started: type=%d, mode=%d", workType, workMode);
     return ret;
 }

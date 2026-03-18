@@ -57,8 +57,8 @@
 #define TK8710_NOP_BYTE             0x00        /* NOP占位字节 */
 
 /* 最大传输缓冲区大小 */
-#define TK8710_SPI_TX_BUF_SIZE      10240
-#define TK8710_SPI_RX_BUF_SIZE      10240
+#define TK8710_SPI_TX_BUF_SIZE      16384*2+4
+#define TK8710_SPI_RX_BUF_SIZE      16384*2+4
 
 /*============================================================================
  * 私有变量
@@ -816,12 +816,14 @@ int TK8710SpiGetInfo(uint8_t infoType, uint8_t* data, uint16_t len)
     int ret;
     
     if (g_spiFd < 0 || data == NULL || len == 0) {
+        printf("1\n");
         return -1;
     }
     
     /* 接收长度: 1(opcode) + 1(type) + len(data) */
     rxLen = 2 + len;
     if (rxLen > TK8710_SPI_RX_BUF_SIZE) {
+        printf("2\n");
         return -1;
     }
     
@@ -833,6 +835,7 @@ int TK8710SpiGetInfo(uint8_t infoType, uint8_t* data, uint16_t len)
     /* 全双工传输 */
     ret = TK8710SpiTransfer(g_spiTxBuf, g_spiRxBuf, rxLen);
     if (ret != 0) {
+        printf("3\n");
         return -1;
     }
     
