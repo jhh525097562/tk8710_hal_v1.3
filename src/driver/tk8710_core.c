@@ -493,25 +493,25 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
             slotCfg_t* slotCfg = (slotCfg_t*)TK8710GetSlotConfig();
             slotCfg->msMode = TK8710_MODE_SLAVE;
             
-            /* 配置init12寄存器，启用本地同步功能 */
-            {
-                s_init_12 init12;
-                ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
-                if (ret == TK8710_OK) {
-                    init12.b.ls_en = 1;
-                    init12.b.ls_master = 0; 
-                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
-                    if (ret == TK8710_OK) {
-                        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.ls_en = 1 for local sync mode");
-                    } else {
-                        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.ls_en: %d", ret);
-                        return ret;
-                    }
-                } else {
-                    TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
-                    return ret;
-                }
-            }
+            // /* 配置init12寄存器，启用本地同步功能 */
+            // {
+            //     s_init_12 init12;
+            //     ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), &init12.data);
+            //     if (ret == TK8710_OK) {
+            //         init12.b.ls_en = 1;
+            //         init12.b.ls_master = 0; 
+            //         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_12), init12.data);
+            //         if (ret == TK8710_OK) {
+            //             TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set init12.ls_en = 1 for local sync mode");
+            //         } else {
+            //             TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set init12.ls_en: %d", ret);
+            //             return ret;
+            //         }
+            //     } else {
+            //         TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to read init12 register: %d", ret);
+            //         return ret;
+            //     }
+            // }
 
             // /* 配置rx_fe_regs->ddc寄存器 */
             // {

@@ -34,6 +34,17 @@ extern "C" {
 #define TK8710_MAX_BRD_USERS    16
 #define TK8710_MAX_ANTENNAS     8
 
+/* ACM校准因子结构体 */
+typedef struct {
+    uint32_t i_factor;  /* I路校准因子 */
+    uint32_t q_factor;  /* Q路校准因子 */
+} AcmCalibrationFactor;
+
+/* ACM校准因子集合结构体 */
+typedef struct {
+    AcmCalibrationFactor channels[TK8710_MAX_ANTENNAS];  /* 8个射频通道的校准因子 */
+} AcmCalibrationFactors;
+
 /* 速率模式枚举 */
 typedef enum {
     TK8710_RATE_MODE_5  = 5,
@@ -159,8 +170,11 @@ typedef enum {
     TK8710_DBG_TYPE_CAPTURE_DATA,
     TK8710_DBG_TYPE_ACM_CAL_FACTOR,
     TK8710_DBG_TYPE_ACM_SNR,
+    TK8710_DBG_TYPE_ACM_AUTO_GAIN,  /* 校准信号增益自动获取 */
+    TK8710_DBG_TYPE_ACM_CALIBRATE,   /* 校准 */
     TK8710_DBG_TYPE_TX_TONE,
     TK8710_DBG_TYPE_REG_RW,  /* 读写寄存器测试类型 */
+    
 } TK8710DebugCtrlType;
 
 /* 调试操作类型枚举 */
@@ -292,7 +306,7 @@ typedef struct {
     /* 信号质量信息 */
     uint8_t  signalInfoValid;     /* 信号信息有效性 */
     uint8_t  currentRateIndex;    /* 当前速率序号 (0-based) */
-    
+    uint32_t ANoiseInfo[TK8710_MAX_ANTENNAS];           /* 8根天线的ANoise信息 */
 } TK8710IrqResult;
 
 /* 专用回调函数类型 */

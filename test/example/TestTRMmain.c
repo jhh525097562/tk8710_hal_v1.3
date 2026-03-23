@@ -273,7 +273,10 @@ int main(int argc, char* argv[])
     int ret;
     char input;
     bool use_multi_rate = false;
-    
+    int testMode = 6;  /* 默认模式6 */
+    int s1ByteLen = 26;  /* 默认s1 byteLen */
+    int s2ByteLen = 26;  /* 默认s2 byteLen */
+    int s3ByteLen = 26;  /* 默认s3 byteLen */
     /* 检查命令行参数 */
     if (argc > 1) {
         if (strcmp(argv[1], "--multi-rate") == 0 || strcmp(argv[1], "-m") == 0) {
@@ -285,6 +288,41 @@ int main(int argc, char* argv[])
             printf("  --help, -h       : Show this help\n");
             return 0;
         }
+        testMode = atoi(argv[1]);
+        if (testMode < 5 || testMode > 18 || (testMode > 11 && testMode < 18)) {
+            printf("Error: Invalid mode %d. Supported modes: 5,6,7,8,9,10,11,18\n", testMode);
+            return 1;
+        }
+
+        /* 解析s1ByteLen参数 */
+        if (argc > 2) {
+            s1ByteLen = atoi(argv[2]);
+            if (s1ByteLen <= 0 || s1ByteLen > 255) {
+                printf("Error: Invalid s1ByteLen %d. Must be positive integer <= 255\n", s1ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析s2ByteLen参数 */
+        if (argc > 3) {
+            s2ByteLen = atoi(argv[3]);
+            if (s2ByteLen <= 0 || s2ByteLen > 255) {
+                printf("Error: Invalid s2ByteLen %d. Must be positive integer <= 255\n", s2ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析s3ByteLen参数 */
+        if (argc > 4) {
+            s3ByteLen = atoi(argv[4]);
+            if (s3ByteLen <= 0 || s3ByteLen > 255) {
+                printf("Error: Invalid s3ByteLen %d. Must be positive integer <= 255\n", s3ByteLen);
+                return 1;
+            }
+        }
+        
+        printf("Using test mode: %d, s1ByteLen: %d, s2ByteLen: %d, s3ByteLen: %d\n", 
+               testMode, s1ByteLen, s2ByteLen, s3ByteLen);
     }
     
 #ifdef _WIN32
@@ -464,18 +502,60 @@ int main(int argc, char* argv[])
         /* 单速率配置 */
         printf("Using single-rate configuration\n");
         slotCfg.rateCount = 1;
-        slotCfg.rateModes[0] = TK8710_RATE_MODE_8;
+        slotCfg.rateModes[0] = testMode;
         slotCfg.s0Cfg[0].da_m = 0;
-        slotCfg.s1Cfg[0].da_m = 5600;
-        slotCfg.s2Cfg[0].da_m = 5600;
-        slotCfg.s3Cfg[0].da_m = 5600;
+        /* 根据速率模式设置S1、S2、S3时隙的da_m参数 */
+        switch (slotCfg.rateModes[0]) {
+            case TK8710_RATE_MODE_5:
+                slotCfg.s1Cfg[0].da_m = 21492;    /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 21492;    /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 21492;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_6:
+                slotCfg.s1Cfg[0].da_m = 19728;    /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 19728;    /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 19728;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_7:
+                slotCfg.s1Cfg[0].da_m = 12000;    /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 12000;    /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 12000;    /* da3_m */
+                break;
+            case TK8710_RATE_MODE_8:
+                slotCfg.s1Cfg[0].da_m = 5600;     /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 5600;     /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 5600;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_9:
+                slotCfg.s1Cfg[0].da_m = 2800;     /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 2800;     /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 2800;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_10:
+                slotCfg.s1Cfg[0].da_m = 1400;     /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 1400;     /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 1400;     /* da3_m */
+                break;
+            case TK8710_RATE_MODE_11:
+            case TK8710_RATE_MODE_18:
+                slotCfg.s1Cfg[0].da_m = 800;      /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 800;      /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 800;      /* da3_m */
+                break;
+            default:
+                /* 默认值，保持原有设置 */
+                slotCfg.s1Cfg[0].da_m = 12000;    /* da1_m */
+                slotCfg.s2Cfg[0].da_m = 12000;    /* da2_m */
+                slotCfg.s3Cfg[0].da_m = 12000;    /* da3_m */
+                break;
+        }
         slotCfg.s0Cfg[0].byteLen = 0;
         slotCfg.s0Cfg[0].centerFreq = 503100000;
-        slotCfg.s1Cfg[0].byteLen = 26;
+        slotCfg.s1Cfg[0].byteLen = s1ByteLen;
         slotCfg.s1Cfg[0].centerFreq = 503100000;
-        slotCfg.s2Cfg[0].byteLen = 26;
+        slotCfg.s2Cfg[0].byteLen = s2ByteLen;
         slotCfg.s2Cfg[0].centerFreq = 503100000;
-        slotCfg.s3Cfg[0].byteLen = 26;
+        slotCfg.s3Cfg[0].byteLen = s3ByteLen;
         slotCfg.s3Cfg[0].centerFreq = 503100000;
     }
 

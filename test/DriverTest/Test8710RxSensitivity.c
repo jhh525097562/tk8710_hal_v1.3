@@ -813,7 +813,7 @@ int main(int argc, char* argv[])
     int ret;
     char input;
     int testMode = 6;  /* 默认模式6 */
-    
+    uint32_t testFreq = 509100000;
     /* 检查命令行参数 */
     if (argc > 1) {
         if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
@@ -836,7 +836,8 @@ int main(int argc, char* argv[])
             printf("Error: Invalid mode %d. Supported modes: 5,6,7,8,9,10,11,18\n", testMode);
             return 1;
         }
-        printf("Using test mode: %d\n", testMode);
+        testFreq = atoi(argv[2]);
+        printf("Using test mode: %d, freq: %lu\n", testMode,testFreq);
     }
     
 #ifdef _WIN32
@@ -886,6 +887,7 @@ int main(int argc, char* argv[])
         }
     };
     
+    rfConfig.Freq = testFreq;
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
     ChipConfig chipConfig = {
         .bcn_agc     = 32,
@@ -1010,13 +1012,13 @@ int main(int argc, char* argv[])
             return -1;
     }
     slotCfg.s0Cfg[0].byteLen = 0;
-    slotCfg.s0Cfg[0].centerFreq = 509100000;
+    slotCfg.s0Cfg[0].centerFreq = testFreq;
     slotCfg.s1Cfg[0].byteLen = 0;
-    slotCfg.s1Cfg[0].centerFreq = 509100000;
+    slotCfg.s1Cfg[0].centerFreq = testFreq;
     slotCfg.s2Cfg[0].byteLen = 0;
-    slotCfg.s2Cfg[0].centerFreq = 509100000;
+    slotCfg.s2Cfg[0].centerFreq = testFreq;
     slotCfg.s3Cfg[0].byteLen = 22;
-    slotCfg.s3Cfg[0].centerFreq = 509100000;
+    slotCfg.s3Cfg[0].centerFreq = testFreq;
     
     /* 调用 8710 config 配置时隙 */
     ret = TK8710SetConfig(TK8710_CFG_TYPE_SLOT_CFG, &slotCfg);

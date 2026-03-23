@@ -13,6 +13,12 @@
 #include <string.h>
 #include <stddef.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 /*============================================================================
  * 全局变量 (保存配置状态)
@@ -257,6 +263,7 @@ static int tk8710_acm_get_gain(void)
                 } else {
                     g_acm_again0[i1*2] = (GainStep*i);
                 }
+                TK8710_LOG_CONFIG_DEBUG("Antenna = %d,again0 = %d,SumSNRTx0_last = %d,MaxSNRTx0 = %d\n",i1,(GainStep*i),SumSNR_0[i1+8*0],SumSNR_1[i1+8*0]);
                 MaxSNR[i1+8*0] = SumSNR_1[i1+8*0];
             }
             /* dgain0 */
@@ -267,6 +274,7 @@ static int tk8710_acm_get_gain(void)
                 } else {
                     g_acm_dgain0[i1*2] = (GainStep*i);
                 }
+                TK8710_LOG_CONFIG_DEBUG("Antenna = %d,dgain0 = %d,SumSNRRx0_last = %d,MaxSNRRx0 = %d\n",i1,(GainStep*i),SumSNR_0[i1+8*1],SumSNR_1[i1+8*1]);
                 MaxSNR[i1+8*1] = SumSNR_1[i1+8*1];
             }
             /* again1 */
@@ -277,6 +285,7 @@ static int tk8710_acm_get_gain(void)
                 } else {
                     g_acm_again1[i1*2] = (GainStep*i);
                 }
+                TK8710_LOG_CONFIG_DEBUG("Antenna = %d,again1 = %d,SumSNRTx1_last = %d,MaxSNRTx1 = %d\n",i1,(GainStep*i),SumSNR_0[i1+8*2],SumSNR_1[i1+8*2]);
                 MaxSNR[i1+8*2] = SumSNR_1[i1+8*2];
             }
             /* dgain1 */
@@ -287,6 +296,7 @@ static int tk8710_acm_get_gain(void)
                 } else {
                     g_acm_dgain1[i1*2] = (GainStep*i);
                 }
+                TK8710_LOG_CONFIG_DEBUG("Antenna = %d,dgain1 = %d,SumSNRRx1_last = %d,MaxSNRRx1 = %d\n",i1,(GainStep*i),SumSNR_0[i1+8*3],SumSNR_1[i1+8*3]);
                 MaxSNR[i1+8*3] = SumSNR_1[i1+8*3];
             }
             
@@ -296,6 +306,7 @@ static int tk8710_acm_get_gain(void)
             SumSNR_0[i1+8*2] = SumSNR_1[i1+8*2];
             SumSNR_0[i1+8*3] = SumSNR_1[i1+8*3];
         }
+        TK8710_LOG_CONFIG_DEBUG("Antenna = %d,gain = %d,SumSNRTx0 = %d,SumSNRRx0 = %d,SumSNRTx1 = %d,SumSNRRx1 = %d\n",i1,(GainStep*i),SumSNR_1[i1+8*0],SumSNR_1[i1+8*1],SumSNR_1[i1+8*2],SumSNR_1[i1+8*3]);
     }
     
     /* 计算最终增益 (dgain和again的平均值) */
@@ -315,6 +326,7 @@ static int tk8710_acm_get_gain(void)
         g_acm_again0[i] = Tmp0;
         g_acm_dgain1[i] = Tmp1;
         g_acm_again1[i] = Tmp1;
+        TK8710_LOG_CONFIG_INFO("i = %d,Tmp0 = %d,Tmp1 = %d\n",i,Tmp0,Tmp1);
     }
     
     /* 步骤10: 增益更新 (写入acm_ctrl19和acm_ctrl17) */
@@ -435,6 +447,14 @@ static int tk8710_acm_get_snr(int* TmpSNR, uint8_t snrThreshold)
         }
     }
     
+    /* 打印SNR值 */
+    TK8710_LOG_CONFIG_INFO("=== ACM SNR值 ===\n");
+    for (i = 0; i < 8; i++) {
+        TK8710_LOG_CONFIG_INFO("天线%d: TX0_SNR=%d, RX0_SNR=%d, TX1_SNR=%d, RX1_SNR=%d\n", 
+                            i, SNR_tx0[i], SNR_rx0[i], SNR_tx1[i], SNR_rx1[i]);
+    }
+    TK8710_LOG_CONFIG_INFO("有效SNR数量: %d (门限: %d)\n", SNRNum, snrThreshold);
+    
     return SNRNum;
 }
 
@@ -550,6 +570,48 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
     
     return validCount;
 }
+
+
+/**
+ * @brief 获取ACM校准因子
+ * @param calFactors 输出校准因子结构体指针
+ * @return 0-成功, 1-失败
+ */
+int TK8710GetAcmCalibrationFactors(AcmCalibrationFactors* calFactors)
+{
+    int ret;
+    uint32_t regVal;
+    int i;
+    
+    if (calFactors == NULL) {
+        return TK8710_ERR_PARAM;
+    }
+    
+    /* 读取8个射频通道的I路和Q路校准因子 */
+    for (i = 0; i < TK8710_MAX_ANTENNAS; i++) {
+        /* 读取I路校准因子 */
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
+            ACM_BASE + offsetof(struct acm, acm_obv1) + (i * 8), &regVal);
+        if (ret != TK8710_OK) return ret;
+        calFactors->channels[i].i_factor = regVal;
+        
+        /* 读取Q路校准因子 */
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
+            ACM_BASE + offsetof(struct acm, acm_obv2) + (i * 8), &regVal);
+        if (ret != TK8710_OK) return ret;
+        calFactors->channels[i].q_factor = regVal;
+    }
+    
+    /* 打印校准因子 */
+    TK8710_LOG_CONFIG_INFO("=== ACM校准因子 ===\n");
+    for (i = 0; i < TK8710_MAX_ANTENNAS; i++) {
+        TK8710_LOG_CONFIG_INFO("通道%d: I路=0x%08X, Q路=0x%08X\n", 
+                            i, calFactors->channels[i].i_factor, calFactors->channels[i].q_factor);
+    }
+    
+    return TK8710_OK;
+}
+
 
 /*============================================================================
  * 全局配置访问函数
@@ -1049,6 +1111,7 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
             test_rf_freq_regs();
             
             TK8710_LOG_CONFIG_INFO("寄存器读写测试完成\n");
+            return TK8710_OK;
             break;
         }
         
@@ -1187,10 +1250,95 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
             return TK8710_OK;
         }
         case TK8710_DBG_TYPE_ACM_CAL_FACTOR:
-        case TK8710_DBG_TYPE_ACM_SNR:
-            /* TODO: 待实现 */
-            (void)inputParams;
+        {
+            AcmCalibrationFactors calFactors;
+            FILE* outputFile;
+            char filename[256];
+            
+            /* 获取ACM校准因子 */
+            int ret = TK8710GetAcmCalibrationFactors(&calFactors);
+            if (ret != TK8710_OK) {
+                TK8710_LOG_CONFIG_ERROR("获取ACM校准因子失败: ret=%d\n", ret);
+                return ret;
+            }
+            
+            /* 创建CaliFactor目录 */
+            #ifdef _WIN32
+                _mkdir("CaliFactor");
+            #else
+                mkdir("CaliFactor", 0755);
+            #endif
+            
+            /* 保存校准因子到文件 */
+            snprintf(filename, sizeof(filename), "CaliFactor/CaliFactor");
+            outputFile = fopen(filename, "wb");
+            if (outputFile == NULL) {
+                TK8710_LOG_CONFIG_ERROR("创建校准因子文件%s失败\n", filename);
+                return TK8710_ERR;
+            }
+            
+            /* 写入校准因子数据 */
+            size_t written = fwrite(&calFactors, sizeof(AcmCalibrationFactors), 1, outputFile);
+            fclose(outputFile);
+            
+            if (written == 1) {
+                TK8710_LOG_CONFIG_INFO("ACM校准因子保存完成，文件: %s\n", filename);
+            } else {
+                TK8710_LOG_CONFIG_ERROR("保存ACM校准因子失败\n");
+                return TK8710_ERR;
+            }
+            
             return TK8710_OK;
+        }
+        case TK8710_DBG_TYPE_ACM_SNR:
+        {
+            int TmpSNR[32];
+            uint8_t snrThreshold = 10; /* 默认SNR门限值 */
+            int validSnrCount;
+            
+            TK8710_LOG_CONFIG_INFO("获取ACM SNR值...\n");
+            validSnrCount = tk8710_acm_get_snr(TmpSNR, snrThreshold);
+            
+            if (validSnrCount >= 0) {
+                TK8710_LOG_CONFIG_INFO("ACM SNR获取完成，有效SNR数量: %d\n", validSnrCount);
+            } else {
+                TK8710_LOG_CONFIG_INFO("ACM SNR获取失败\n");
+                return TK8710_ERR;
+            }
+            
+            return TK8710_OK;
+        }
+        case TK8710_DBG_TYPE_ACM_AUTO_GAIN:
+        {
+            int ret;
+            TK8710_LOG_CONFIG_INFO("执行ACM增益自动获取...\n");
+            ret = tk8710_acm_get_gain();
+            if (ret == TK8710_OK) {
+                TK8710_LOG_CONFIG_INFO("ACM增益自动获取完成\n");
+            } else {
+                TK8710_LOG_CONFIG_INFO("ACM增益自动获取失败: ret=%d\n", ret);
+                return ret;
+            }
+            
+            return TK8710_OK;
+        }
+        case TK8710_DBG_TYPE_ACM_CALIBRATE:
+        {
+            int ret;
+            uint8_t calibCount = 5;  /* 默认校准次数 */
+            uint8_t snrThreshold = 10;  /* 默认SNR门限值 */
+            
+            TK8710_LOG_CONFIG_INFO("执行ACM校准 (校准次数: %d, SNR门限: %d)...\n", calibCount, snrThreshold);
+            ret = tk8710_acm_calibrate(calibCount, snrThreshold);
+            if (ret >= 0) {
+                TK8710_LOG_CONFIG_INFO("ACM校准完成，有效校准次数: %d\n", ret);
+            } else {
+                TK8710_LOG_CONFIG_INFO("ACM校准失败: ret=%d\n", ret);
+                return TK8710_ERR;
+            }
+            
+            return TK8710_OK;
+        }
             
         default:
             return TK8710_ERR;

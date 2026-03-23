@@ -297,10 +297,18 @@ int TK8710GetRateModeParams(uint8_t rateMode, RateModeParams* params);
 uint8_t TK8710GetWorkType(void);
 
 /**
- * @brief 获取下行发送模式
+ * @brief 获取当前下行发送模式
  * @return 0=自动发送, 1=指定信息发送
  */
 uint8_t TK8710GetTxAutoMode(void);
+
+/**
+ * @brief 获取ACM校准因子
+ * @param calFactors 输出校准因子结构体指针
+ * @return 0-成功, 1-失败
+ * @note 内部函数，不建议应用层直接调用
+ */
+int TK8710GetAcmCalibrationFactors(AcmCalibrationFactors* calFactors);
 
 /* ============================================================================
  * RF寄存器读写API (内部使用)

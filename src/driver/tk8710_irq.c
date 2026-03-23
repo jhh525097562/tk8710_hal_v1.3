@@ -63,6 +63,9 @@ typedef struct {
 static TK8710UserInfoBuffer g_userInfoRxBuffers[128] = {0}; /* 接收用户波束信息Buffer */
 static TK8710UserInfoBuffer g_userInfoTxBuffers[128] = {0}; /* 发送用户波束信息Buffer */
 
+/* ANoise获取计数器 */
+static uint32_t g_aNoiseGetCount = 0;
+
 /* 中断处理函数声明 */
 static void tk8710_handle_rx_bcn(void);
 static void tk8710_handle_brd_ud(void);
@@ -166,10 +169,17 @@ void TK8710_IRQHandler(void)
         return;
     }
     
-    /* 2. 清除中断状态 - 先清除再处理，避免中断丢失 */
+    /* 2. 如果是ACM校准中断，直接退出不做处理 */
+    if (irqStatus & (1 << TK8710_IRQ_ACM)) {
+        TK8710_LOG_IRQ_DEBUG("ACM calibration interrupt detected, skipping processing");
+        g_irqInProgress = 0;
+        return;
+    }
+    
+    /* 3. 清除中断状态 - 先清除再处理，避免中断丢失 */
     TK8710ClearIrqStatus(irqStatus);
     
-    /* 3. 处理每个中断 */
+    /* 4. 处理每个中断 */
     for (int i = 0; i < sizeof(g_irqHandlers)/sizeof(g_irqHandlers[0]); i++) {
         if (irqStatus & (1 << i) && g_irqHandlers[i]) {
             /* 增加中断计数器 */
@@ -852,6 +862,36 @@ static void tk8710_md_ud_get_user_info(void)
         return;
     }
     
+    /* 获取8根天线的ANoise信息 */
+    uint8_t aNoiseData[32];  /* 8根天线，每根4字节（32位） */
+    ret = TK8710SpiGetInfo(TK8710_GET_INFO_ANOISE, aNoiseData, sizeof(aNoiseData));
+    if (ret == TK8710_OK) {
+        /* 将ANoise数据转换为uint32_t数组 */
+        for (int i = 0; i < 8; i++) {
+            g_irqResult.ANoiseInfo[i] = (aNoiseData[i*4] << 24) | (aNoiseData[i*4 + 1] << 16) | 
+                                     (aNoiseData[i*4 + 2] << 8) | aNoiseData[i*4 + 3];
+        }
+        
+        /* 增加计数器 */
+        g_aNoiseGetCount++;
+        
+        /* 每10次打印一次ANoise值 */
+        if (g_aNoiseGetCount % 10 == 0) {
+            TK8710_LOG_IRQ_INFO("ANoise values (count=%lu): ANT0=%lu, ANT1=%lu, ANT2=%lu, ANT3=%lu, ANT4=%lu, ANT5=%lu, ANT6=%lu, ANT7=%lu", 
+                               g_aNoiseGetCount,
+                               g_irqResult.ANoiseInfo[0], g_irqResult.ANoiseInfo[1], 
+                               g_irqResult.ANoiseInfo[2], g_irqResult.ANoiseInfo[3],
+                               g_irqResult.ANoiseInfo[4], g_irqResult.ANoiseInfo[5], 
+                               g_irqResult.ANoiseInfo[6], g_irqResult.ANoiseInfo[7]);
+        }
+        
+        TK8710_LOG_IRQ_DEBUG("ANoise info retrieved successfully for 8 antennas");
+    } else {
+        TK8710_LOG_IRQ_ERROR("Failed to get ANoise info: %d", ret);
+        /* 获取失败时清零ANoise数据 */
+        memset(g_irqResult.ANoiseInfo, 0, sizeof(g_irqResult.ANoiseInfo));
+    }
+
     /* 标记数据有效 */
     g_irqResult.mdUserDataValid = 1;
     TK8710_LOG_IRQ_INFO("MD UD user info completed for %d users", maxUsers);
@@ -1020,7 +1060,7 @@ static void tk8710_md_data_process(void)
             g_irqResult.crcResults[i].dataValid = 0;
             g_irqResult.crcErrorCount++;
         }
-}
+    }
     
     TK8710_LOG_IRQ_DEBUG("CRC results: valid=%d, error=%d", 
                        g_irqResult.crcValidCount, g_irqResult.crcErrorCount);

@@ -820,8 +820,13 @@ void show_help(void)
     printf("  s/S - Show system status\n");
     printf("  i/I - Show interrupt statistics\n");
     printf("  c/C - Clear screen\n");
+    printf("  x/X - Start TK8710 chip (Master mode, continuous)\n");
     printf("  l/L - Load and send simulation data from files\n");
     printf("  d/D - Set capture data pending (execute once on next MD_DATA interrupt)\n");
+    printf("  f/F - Get ACM calibration factors and save to file\n");
+    printf("  n/N - Get ACM SNR values\n");
+    printf("  g/G - Execute ACM auto gain acquisition\n");
+    printf("  k/K - Execute ACM calibration\n");
     printf("  q/Q - Quit program\n");
     printf("\nTRM Commands (when TRM enabled):\n");
     printf("  t/T - Show TRM statistics\n");
@@ -898,7 +903,10 @@ int main(int argc, char* argv[])
     char input;
     int testMode = 6;  /* 默认模式6 */
     int classNum = 3;  /* 默认class序号 */
-    int caseNum = 11;  /* 默认case序号 */
+    int caseNum = 17;  /* 默认case序号 */
+    int s1ByteLen = 22;  /* 默认s1 byteLen */
+    int s2ByteLen = 22;  /* 默认s2 byteLen */
+    int s3ByteLen = 22;  /* 默认s3 byteLen */
     
     /* 设置全局测试模式 */
     g_testMode = testMode;
@@ -906,7 +914,7 @@ int main(int argc, char* argv[])
     /* 检查命令行参数 */
     if (argc > 1) {
         if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-            printf("Usage: %s [mode] [class] [case] [--help|-h]\n", argv[0]);
+            printf("Usage: %s [mode] [class] [case] [s1ByteLen] [s2ByteLen] [s3ByteLen] [--help|-h]\n", argv[0]);
             printf("  mode: Test mode (5,6,7,8,9,10,11,18), default: 6\n");
             printf("    Mode 5:  s0=40*256, s1=0, s2=0, s3=135072\n");
             printf("    Mode 6:  s0=46*256, s1=0, s2=0, s3=69536\n");
@@ -918,11 +926,14 @@ int main(int argc, char* argv[])
             printf("    Mode 18: s0=256, s1=0, s2=0, s3=6084\n");
             printf("  class: Simulation data class number (1,3,etc), default: 3\n");
             printf("  case:  Simulation data case number (11,17,etc), default: 11\n");
+            printf("  s1ByteLen: Slot1 byte length, default: 22\n");
+            printf("  s2ByteLen: Slot2 byte length, default: 22\n");
+            printf("  s3ByteLen: Slot3 byte length, default: 22\n");
             printf("  --help, -h: Show this help\n");
             printf("\nExamples:\n");
-            printf("  %s 6 3 11    # Use mode 6, class 3, case 11\n", argv[0]);
-            printf("  %s 6 1 17    # Use mode 6, class 1, case 17\n", argv[0]);
-            printf("  %s 6         # Use mode 6, default class 3, case 11\n", argv[0]);
+            printf("  %s 6 3 11           # Use mode 6, class 3, case 11, default byteLen\n", argv[0]);
+            printf("  %s 6 3 11 24 24 24  # Use mode 6, class 3, case 11, s1=24, s2=24, s3=24\n", argv[0]);
+            printf("  %s 6 1 17 20 30 25  # Use mode 6, class 1, case 17, s1=20, s2=30, s3=25\n", argv[0]);
             return 0;
         }
         
@@ -952,9 +963,38 @@ int main(int argc, char* argv[])
             }
         }
         
-        printf("Using test mode: %d, class: %d, case: %d\n", testMode, classNum, caseNum);
+        /* 解析s1ByteLen参数 */
+        if (argc > 4) {
+            s1ByteLen = atoi(argv[4]);
+            if (s1ByteLen <= 0 || s1ByteLen > 255) {
+                printf("Error: Invalid s1ByteLen %d. Must be positive integer <= 255\n", s1ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析s2ByteLen参数 */
+        if (argc > 5) {
+            s2ByteLen = atoi(argv[5]);
+            if (s2ByteLen <= 0 || s2ByteLen > 255) {
+                printf("Error: Invalid s2ByteLen %d. Must be positive integer <= 255\n", s2ByteLen);
+                return 1;
+            }
+        }
+        
+        /* 解析s3ByteLen参数 */
+        if (argc > 6) {
+            s3ByteLen = atoi(argv[6]);
+            if (s3ByteLen <= 0 || s3ByteLen > 255) {
+                printf("Error: Invalid s3ByteLen %d. Must be positive integer <= 255\n", s3ByteLen);
+                return 1;
+            }
+        }
+        
+        printf("Using test mode: %d, class: %d, case: %d, s1ByteLen: %d, s2ByteLen: %d, s3ByteLen: %d\n", 
+               testMode, classNum, caseNum, s1ByteLen, s2ByteLen, s3ByteLen);
     } else {
-        printf("Using default: mode %d, class %d, case %d\n", testMode, classNum, caseNum);
+        printf("Using default: mode %d, class %d, case %d, s1ByteLen: %d, s2ByteLen: %d, s3ByteLen: %d\n", 
+               testMode, classNum, caseNum, s1ByteLen, s2ByteLen, s3ByteLen);
     }
     
 #ifdef _WIN32
@@ -1062,7 +1102,7 @@ int main(int argc, char* argv[])
     slotCfg.rfSel = 0xFF;
     slotCfg.txBeamCtrlMode = 1;
     g_txBeamCtrlMode = (slotCfg.txBeamCtrlMode == 0);
-    slotCfg.txBcnAntEn = 0;//0x7f
+    slotCfg.txBcnAntEn = 0x7f;//0x7f
     slotCfg.rx_delay = 0;
     slotCfg.md_agc = 1024;
     slotCfg.brdFreq[0] = 20000.0;
@@ -1129,11 +1169,11 @@ int main(int argc, char* argv[])
     }
     slotCfg.s0Cfg[0].byteLen = 0;
     slotCfg.s0Cfg[0].centerFreq = 509100000;
-    slotCfg.s1Cfg[0].byteLen = 22;
+    slotCfg.s1Cfg[0].byteLen = s1ByteLen;
     slotCfg.s1Cfg[0].centerFreq = 509100000;
-    slotCfg.s2Cfg[0].byteLen = 22;
+    slotCfg.s2Cfg[0].byteLen = s2ByteLen;
     slotCfg.s2Cfg[0].centerFreq = 509100000;
-    slotCfg.s3Cfg[0].byteLen = 22;
+    slotCfg.s3Cfg[0].byteLen = s3ByteLen;
     slotCfg.s3Cfg[0].centerFreq = 509100000;
     
     /* 调用 8710 config 配置时隙 */
@@ -1151,10 +1191,10 @@ int main(int argc, char* argv[])
 
     /* 7. 启动TK8710 */
     // 启动TK8710芯片，使用Master模式和连续工作模式
-    ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
-    if (ret != TK8710_OK) {
-        return TK8710_HAL_ERROR_START;
-    }    
+    // ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+    // if (ret != TK8710_OK) {
+    //     return TK8710_HAL_ERROR_START;
+    // }    
 
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");
@@ -1200,6 +1240,17 @@ int main(int argc, char* argv[])
 #endif
                 break;
                 
+            case 'x':
+            case 'X':
+                printf("启动TK8710芯片...\n");
+                ret = TK8710Start(TK8710_MODE_MASTER, TK8710_WORK_MODE_CONTINUOUS);
+                if (ret == TK8710_OK) {
+                    printf("TK8710芯片启动成功 (Master模式, 连续工作)\n");
+                } else {
+                    printf("TK8710芯片启动失败: ret=%d\n", ret);
+                }
+                break;
+                
             case 'l':
             case 'L':
                 if (load_and_send_simulation_data(classNum, caseNum) != 0) {
@@ -1225,6 +1276,50 @@ int main(int argc, char* argv[])
                 }
                 g_captureDataPending = 1;
                 g_captureDataPendingNum = 0;
+                break;
+                
+            case 'f':
+            case 'F':
+                printf("获取ACM校准因子...\n");
+                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CAL_FACTOR, TK8710_DBG_OPT_GET, NULL, NULL);
+                if (ret == TK8710_OK) {
+                    printf("ACM校准因子获取完成\n");
+                } else {
+                    printf("ACM校准因子获取失败: ret=%d\n", ret);
+                }
+                break;
+                
+            case 'n':
+            case 'N':
+                printf("获取ACM SNR值...\n");
+                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_SNR, TK8710_DBG_OPT_GET, NULL, NULL);
+                if (ret == TK8710_OK) {
+                    printf("ACM SNR值获取完成\n");
+                } else {
+                    printf("ACM SNR值获取失败: ret=%d\n", ret);
+                }
+                break;
+                
+            case 'g':
+            case 'G':
+                printf("执行ACM增益自动获取...\n");
+                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_AUTO_GAIN, TK8710_DBG_OPT_GET, NULL, NULL);
+                if (ret == TK8710_OK) {
+                    printf("ACM增益自动获取完成\n");
+                } else {
+                    printf("ACM增益自动获取失败: ret=%d\n", ret);
+                }
+                break;
+                
+            case 'k':
+            case 'K':
+                printf("执行ACM校准...\n");
+                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, NULL, NULL);
+                if (ret == TK8710_OK) {
+                    printf("ACM校准完成\n");
+                } else {
+                    printf("ACM校准失败: ret=%d\n", ret);
+                }
                 break;
                 
             case 'q':
