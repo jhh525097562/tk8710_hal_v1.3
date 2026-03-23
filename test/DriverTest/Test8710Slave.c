@@ -72,6 +72,53 @@ static void signal_handler(int sig)
     return 0;
 }
 
+
+/* 从TxDC目录读取txadc配置的函数 */
+int LoadTxadcConfig(const char* filename, uint16_t txadc[8][2]) {
+    FILE* file;
+    char filepath[256];
+    char line[256];
+    int index = 0;
+    
+    /* 构建文件路径 */
+    snprintf(filepath, sizeof(filepath), "TxDC/%s", filename);
+    
+    file = fopen(filepath, "r");
+    if (file == NULL) {
+        printf("Warning: 无法打开文件 %s，使用默认配置\n", filepath);
+        return -1;
+    }
+    
+    printf("从文件 %s 读取txadc配置...\n", filepath);
+    
+    /* 逐行读取文件 */
+    while (fgets(line, sizeof(line), file) != NULL && index < 8) {
+        /* 跳过注释行和空行 */
+        if (line[0] == '/' || line[0] == '\n' || line[0] == '\r') {
+            continue;
+        }
+        
+        /* 解析两个十六进制数值 */
+        uint32_t val1, val2;
+        if (sscanf(line, "0x%x, 0x%x", &val1, &val2) == 2) {
+            txadc[index][0] = (uint16_t)val1;
+            txadc[index][1] = (uint16_t)val2;
+            printf("  [%d] 0x%04x, 0x%04x\n", index, txadc[index][0], txadc[index][1]);
+            index++;
+        }
+    }
+    
+    fclose(file);
+    
+    if (index == 8) {
+        printf("成功读取8组txadc配置\n");
+        return 0;
+    } else {
+        printf("警告: 只读取到%d组txadc配置，期望8组\n", index);
+        return -1;
+    }
+}
+
 /* 下行发送状态跟踪 */
 static volatile bool g_hasValidUsers = false;     /* 是否有有效用户 */
 static volatile bool g_txBeamCtrlMode = false;         /* 波束控制模式 */
@@ -1020,6 +1067,13 @@ int main(int argc, char* argv[])
         // }
     };
     
+    /* 尝试从TxDC目录加载txadc配置 */
+    if (LoadTxadcConfig("txadc.txt", rfConfig.txadc) != 0) {
+        printf("使用默认txadc配置\n");
+    } else {
+        printf("已加载文件中的txadc配置\n");
+    }
+
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
     ChipConfig chipConfig = {
         .bcn_agc     = 32,

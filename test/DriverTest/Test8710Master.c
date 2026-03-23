@@ -28,6 +28,7 @@
 #include <time.h>
 #include <sched.h>
 #include <sys/time.h>
+
 #include <errno.h>
 
 #ifdef _WIN32
@@ -70,6 +71,53 @@ static void signal_handler(int sig)
     
     printf("Process bound to CPU core %d\n", cpu_core);
     return 0;
+}
+
+
+/* 从TxDC目录读取txadc配置的函数 */
+int LoadTxadcConfig(const char* filename, uint16_t txadc[8][2]) {
+    FILE* file;
+    char filepath[256];
+    char line[256];
+    int index = 0;
+    
+    /* 构建文件路径 */
+    snprintf(filepath, sizeof(filepath), "TxDC/%s", filename);
+    
+    file = fopen(filepath, "r");
+    if (file == NULL) {
+        printf("Warning: 无法打开文件 %s，使用默认配置\n", filepath);
+        return -1;
+    }
+    
+    printf("从文件 %s 读取txadc配置...\n", filepath);
+    
+    /* 逐行读取文件 */
+    while (fgets(line, sizeof(line), file) != NULL && index < 8) {
+        /* 跳过注释行和空行 */
+        if (line[0] == '/' || line[0] == '\n' || line[0] == '\r') {
+            continue;
+        }
+        
+        /* 解析两个十六进制数值 */
+        uint32_t val1, val2;
+        if (sscanf(line, "0x%x, 0x%x", &val1, &val2) == 2) {
+            txadc[index][0] = (uint16_t)val1;
+            txadc[index][1] = (uint16_t)val2;
+            printf("  [%d] 0x%04x, 0x%04x\n", index, txadc[index][0], txadc[index][1]);
+            index++;
+        }
+    }
+    
+    fclose(file);
+    
+    if (index == 8) {
+        printf("成功读取8组txadc配置\n");
+        return 0;
+    } else {
+        printf("警告: 只读取到%d组txadc配置，期望8组\n", index);
+        return -1;
+    }
 }
 
 /* 下行发送状态跟踪 */
@@ -1038,11 +1086,18 @@ int main(int argc, char* argv[])
         //     {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
         //     {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
         // }
-        .txadc = {//2号板 Master
+        .txadc = {//2号板 Master (默认值，将被文件配置覆盖)
             {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
             {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
         }
     };
+    
+    /* 尝试从TxDC目录加载txadc配置 */
+    if (LoadTxadcConfig("txadc.txt", rfConfig.txadc) != 0) {
+        printf("使用默认txadc配置\n");
+    } else {
+        printf("已加载文件中的txadc配置\n");
+    }
     
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
     ChipConfig chipConfig = {
