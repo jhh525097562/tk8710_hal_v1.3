@@ -13,11 +13,14 @@
 #include <string.h>
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 #ifdef _WIN32
 #include <direct.h>
+#include <windows.h>
 #else
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/time.h>
 #endif
 
 /*============================================================================
@@ -129,16 +132,17 @@ static int tk8710_acm_get_gain(void)
     int ret;
     int i, j, i1, i2;
     int SumSNR_0[32], SumSNR_1[32], TmpSNR[32], MaxSNR[32];
+    int SNR_THE = 32;
     int GainStep = 4;
     uint32_t regVal;
     s_irq_ctrl0 irqCtrl0;
     
     /* 校准信号频点和相位配置数据 */
     uint16_t freqPose[16] = {0x7d,0x7e,0x7f,0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0};
-    uint16_t dphase[16] = {0xa6,0x1a4,0x1c6,0x3c4,0x32e,0x2a4,0xa4,0x3de,0x1ec,0x368,0x182,0x3ec,0xe,0x358,0x3c4,0};
+    uint16_t dphase[16] = {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0};
     uint16_t aphase[16] = {0xa6,0x1a4,0x1c6,0x3c4,0x32e,0x2a4,0xa4,0x3de,0x1ec,0x368,0x182,0x3ec,0xe,0x358,0x3c4,0};
     uint16_t dtone_en[8] = {0x2aab,0x4,0x10,0x40,0x100,0x400,0x1000,0x4000};
-    uint16_t atone_en[8] = {0x3,0,0,0,0,0,0,0};
+    uint16_t atone_en = 0x7fff;
     
     /* 初始化SNR数组 */
     memset((void*)SumSNR_0, 0, sizeof(SumSNR_0));
@@ -200,13 +204,10 @@ static int tk8710_acm_get_gain(void)
         if (ret != TK8710_OK) return ret;
     }
     
-    /* 步骤7: 设置ACM通道校准信号tone使能 (acm_ctrl41) - 同步骤5 */
-    for (i = 0; i < 4; i++) {
-        regVal = (atone_en[i*2] << 16) | atone_en[i*2+1];
-        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_ctrl41) + 0x4 * i, regVal);
-        if (ret != TK8710_OK) return ret;
-    }
+    /* 步骤7: 设置ACM通道校准信号tone使能 (acm_ctrl45) */
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
+        ACM_BASE + offsetof(struct acm, acm_ctrl45), atone_en);
+    if (ret != TK8710_OK) return ret;
     
     /* 步骤8: 设置ACM中断使能 (irq_ctrl0.acm_irq_mask = 0) */
     ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
@@ -239,7 +240,7 @@ static int tk8710_acm_get_gain(void)
             tk8710_acm_trig();
             
             /* 读取SNR */
-            tk8710_acm_get_snr(TmpSNR, 0);
+            tk8710_acm_get_snr(TmpSNR, SNR_THE);
             
             /* 累加SNR */
             for (i2 = 0; i2 < 8; i2++) {
@@ -374,10 +375,34 @@ static int tk8710_acm_get_snr(int* TmpSNR, uint8_t snrThreshold)
     int i;
     int SNRNum = 0;
     
-    /* 等待ACM中断 (bit9) */
+    /* 等待ACM中断 (bit9)，添加100ms超时机制 */
+#ifdef _WIN32
+    DWORD start_time = GetTickCount();
+    DWORD timeout = 100; /* 100ms超时 */
+#else
+    struct timeval start_time, current_time;
+    gettimeofday(&start_time, NULL);
+    long timeout_ms = 100; /* 100ms超时 */
+#endif
+
     TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
         MAC_BASE + offsetof(struct mac, irq_res), &irq_res.data);
     while ((irq_res.b.irq_type & (1 << TK8710_IRQ_ACM)) == 0) {
+#ifdef _WIN32
+        DWORD current_time = GetTickCount();
+        if ((current_time - start_time) >= timeout) {
+            TK8710_LOG_WARN(TK8710_LOG_MODULE_CONFIG, "ACM中断等待超时(100ms)，自动退出");
+            break;
+        }
+#else
+        gettimeofday(&current_time, NULL);
+        long elapsed_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 + 
+                         (current_time.tv_usec - start_time.tv_usec) / 1000;
+        if (elapsed_ms >= timeout_ms) {
+            TK8710_LOG_WARN(TK8710_LOG_MODULE_CONFIG, "ACM中断等待超时(100ms)，自动退出");
+            break;
+        }
+#endif
         TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
             MAC_BASE + offsetof(struct mac, irq_res), &irq_res.data);
     }
@@ -476,10 +501,10 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
     
     /* 校准信号频点和相位配置数据 (与tk8710_acm_get_gain相同) */
     uint16_t freqPose[16] = {0x7d,0x7e,0x7f,0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0};
-    uint16_t dphase[16] = {0xa6,0x1a4,0x1c6,0x3c4,0x32e,0x2a4,0xa4,0x3de,0x1ec,0x368,0x182,0x3ec,0xe,0x358,0x3c4,0};
+    uint16_t dphase[16] = {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0};
     uint16_t aphase[16] = {0xa6,0x1a4,0x1c6,0x3c4,0x32e,0x2a4,0xa4,0x3de,0x1ec,0x368,0x182,0x3ec,0xe,0x358,0x3c4,0};
     uint16_t dtone_en[8] = {0x2aab,0x4,0x10,0x40,0x100,0x400,0x1000,0x4000};
-    uint16_t atone_en[8] = {0x3,0,0,0,0,0,0,0};
+    uint16_t atone_en = 0x7fff;
     
     /* 步骤1: 关闭PA (mac.init_10, 值1<<3) */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
@@ -525,13 +550,10 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
         if (ret != TK8710_OK) return ret;
     }
     
-    /* 步骤7: 设置ACM通道校准信号tone使能 (acm_ctrl41) */
-    for (i = 0; i < 4; i++) {
-        regVal = (atone_en[i*2] << 16) | atone_en[i*2+1];
-        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_ctrl41) + 0x4 * i, regVal);
-        if (ret != TK8710_OK) return ret;
-    }
+    /* 步骤7: 设置ACM通道校准信号tone使能 (acm_ctrl45) */
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
+        ACM_BASE + offsetof(struct acm, acm_ctrl45), atone_en);
+    if (ret != TK8710_OK) return ret;
     
     /* 步骤8: 设置ACM中断使能 (irq_ctrl0.acm_irq_mask = 0) */
     ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
@@ -553,7 +575,11 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
         TmpSNRNum = tk8710_acm_get_snr(TmpSNR, snrThreshold);
         
         /* 步骤11: 判断满足SNR门限个数是否大于25 */
-        if (TmpSNRNum > 25) {
+        if (TmpSNRNum >= 25) {
+            /* 获取ACM校准因子 */
+            AcmCalibrationFactors calFactors;
+            ret = TK8710GetAcmCalibrationFactors(&calFactors);
+            if (ret != TK8710_OK) return ret;
             validCount++;
         }
     }
@@ -568,6 +594,17 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
         MAC_BASE + offsetof(struct mac, irq_ctrl0), irqCtrl0.data);
     if (ret != TK8710_OK) return ret;
     
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
+        MAC_BASE + offsetof(struct mac, init_10), (1 << 3));
+    if (ret != TK8710_OK) return ret;
+    
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x11100010);
+    if (ret != TK8710_OK) return ret;
+
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
+        MAC_BASE + offsetof(struct mac, init_10), (1 << 2));
+    if (ret != TK8710_OK) return ret;
+
     return validCount;
 }
 
@@ -586,27 +623,96 @@ int TK8710GetAcmCalibrationFactors(AcmCalibrationFactors* calFactors)
     if (calFactors == NULL) {
         return TK8710_ERR_PARAM;
     }
-    
+
     /* 读取8个射频通道的I路和Q路校准因子 */
-    for (i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        /* 读取I路校准因子 */
-        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_obv1) + (i * 8), &regVal);
-        if (ret != TK8710_OK) return ret;
-        calFactors->channels[i].i_factor = regVal;
-        
-        /* 读取Q路校准因子 */
-        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_obv2) + (i * 8), &regVal);
-        if (ret != TK8710_OK) return ret;
-        calFactors->channels[i].q_factor = regVal;
-    }
-    
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv1), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[0].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv2), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[0].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv3), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[1].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv4), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[1].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv5), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[2].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv6), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[2].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv7), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[3].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv8), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[3].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv9), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[4].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv10), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[4].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv11), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[5].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv12), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[5].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv13), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[6].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv14), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[6].q_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv15), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[7].i_factor = regVal;
+
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL,ACM_BASE + offsetof(struct acm, acm_obv16), &regVal);
+    if (ret != TK8710_OK) return ret;
+    calFactors->channels[7].q_factor = regVal;
     /* 打印校准因子 */
     TK8710_LOG_CONFIG_INFO("=== ACM校准因子 ===\n");
     for (i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        TK8710_LOG_CONFIG_INFO("通道%d: I路=0x%08X, Q路=0x%08X\n", 
-                            i, calFactors->channels[i].i_factor, calFactors->channels[i].q_factor);
+        /* 解析18位校准因子：1位符号 + 2位整数 + 15位小数 */
+        uint32_t i_factor = calFactors->channels[i].i_factor;
+        uint32_t q_factor = calFactors->channels[i].q_factor;
+        
+        /* 提取符号位（第17位） */
+        int i_sign = (i_factor >> 17) & 0x1 ? -1 : 1;
+        int q_sign = (q_factor >> 17) & 0x1 ? -1 : 1;
+        
+        /* 提取整数部分（第15-16位） */
+        int i_int = (i_factor >> 15) & 0x3;
+        int q_int = (q_factor >> 15) & 0x3;
+        
+        /* 提取小数部分（第0-14位） */
+        int i_frac = i_factor & 0x7FFF;
+        int q_frac = q_factor & 0x7FFF;
+        
+        /* 转换为浮点数 */
+        float i_float = i_sign * (i_int + i_frac / 32768.0f);
+        float q_float = q_sign * (q_int + q_frac / 32768.0f);
+        
+        TK8710_LOG_CONFIG_INFO("通道%d: I路=0x%08X (%.3f), Q路=0x%08X (%.3f)\n", 
+                            i, i_factor, i_float, q_factor, q_float);
     }
     
     return TK8710_OK;
@@ -1204,16 +1310,6 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                     captureBuffer[i * 2 + 1] = temp;              // 高字节移到后面
                 }
                 
-                // // 调试输出：显示前4个16bit数据的字节序转换
-                // if (antenna == 0) {
-                //     TK8710_LOG_CONFIG_INFO("字节序转换示例（天线1前4个数据）：\n");
-                //     for (uint32_t i = 0; i < 4 && i < captureLength; i++) {
-                //         uint16_t original = (captureBuffer[i * 2 + 1] << 8) | captureBuffer[i * 2];
-                //         TK8710_LOG_CONFIG_INFO("  数据%d: 原始字节[0x%02X,0x%02X] → 转换后0x%04X\n", 
-                //                             (int)(i+1), captureBuffer[i * 2 + 1], captureBuffer[i * 2], original);
-                //     }
-                // }
-                
                 // 生成文件名：AntennaData1到AntennaData8
                 snprintf(filename, sizeof(filename), "8710CaptureData/AntennaData%d.bin", antenna + 1);
                 
@@ -1326,7 +1422,7 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
         {
             int ret;
             uint8_t calibCount = 5;  /* 默认校准次数 */
-            uint8_t snrThreshold = 10;  /* 默认SNR门限值 */
+            uint8_t snrThreshold = 32;  /* 默认SNR门限值 */
             
             TK8710_LOG_CONFIG_INFO("执行ACM校准 (校准次数: %d, SNR门限: %d)...\n", calibCount, snrThreshold);
             ret = tk8710_acm_calibrate(calibCount, snrThreshold);

@@ -20,7 +20,7 @@ mkdir -p ${BUILD_DIR}
 
 # 编译选项
 CFLAGS="-Wall -Wextra -Wno-unused-parameter -O2 -DPLATFORM_RK3506"
-INCLUDES="-I./inc -I./inc/driver -I./inc/trm -I./port -I./port/rk3506"
+INCLUDES="-I./inc -I./inc/driver -I./inc/trm -I./port -I./port/rk3506 -I../../../核间通信/0323/0323/spi/inc -I../../../核间通信/0323/0323"
 
 echo ""
 echo "编译所有模块..."
@@ -118,6 +118,18 @@ else
     exit 1
 fi
 
+# 编译核间通信模块
+echo "编译核间通信模块..."
+arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+    -c src/tk8710_ipc_comm.c \
+    -o ${BUILD_DIR}/tk8710_ipc_comm.o
+if [ $? -eq 0 ]; then
+    echo "✅ tk8710_ipc_comm.c 编译成功"
+else
+    echo "❌ tk8710_ipc_comm.c 编译失败"
+    exit 1
+fi
+
 # 创建静态库
 echo ""
 echo "创建静态库..."
@@ -132,7 +144,8 @@ ar rcs ${BUILD_DIR}/libtk8710_hal_complete.a \
     ${BUILD_DIR}/trm_data.o \
     ${BUILD_DIR}/trm_log.o \
     ${BUILD_DIR}/trm_mac_parser.o \
-    ${BUILD_DIR}/8710_hal_api.o
+    ${BUILD_DIR}/8710_hal_api.o \
+    ${BUILD_DIR}/tk8710_ipc_comm.o
 
 if [ $? -eq 0 ]; then
     echo "✅ 静态库创建成功"
@@ -241,6 +254,39 @@ if [ -f "test/example/TestTRMmain.c" ]; then
     fi
 else
     echo "⚠️  TestTRMmain 源文件不存在"
+fi
+
+# 创建 TestTRMmain_IPC
+if [ -f "test/example/TestTRMmain_IPC.c" ]; then
+    # 先编译验证器模块
+    echo "编译验证器模块..."
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+        -c test/example/trm_tx_validator.c \
+        -o ${BUILD_DIR}/trm_tx_validator.o
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ trm_tx_validator.c 编译成功"
+    else
+        echo "❌ trm_tx_validator.c 编译失败"
+        exit 1
+    fi
+    
+    # 编译测试程序并链接验证器（核间通信模块已在静态库中）
+    arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+        test/example/TestTRMmain_IPC.c \
+        ${BUILD_DIR}/trm_tx_validator.o \
+        -L${BUILD_DIR} -ltk8710_hal_complete \
+        -L./lib -lipc_smp \
+        -lpthread -lgpiod \
+        -o ${BUILD_DIR}/TestTRMmain_IPC
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ TestTRMmain_IPC 创建成功"
+    else
+        echo "❌ TestTRMmain_IPC 创建失败"
+    fi
+else
+    echo "⚠️  TestTRMmain_IPC 源文件不存在"
 fi
 
 # 显示结果

@@ -93,7 +93,7 @@ int TRM_Init(const TRM_InitConfig* config)
         TRM_LOG_DEBUG("使用默认波束超时时间: %u ms", g_trmCtx.config.beamTimeoutMs);
     }
     if (g_trmCtx.config.maxFrameCount == 0) {
-        g_trmCtx.config.maxFrameCount = 100;  /* 默认最大帧数 */
+        g_trmCtx.config.maxFrameCount = 254;  /* 默认最大帧数 */
         TRM_LOG_DEBUG("使用默认最大帧数: %u", g_trmCtx.config.maxFrameCount);
     }
     
@@ -203,7 +203,7 @@ void TRM_SetMaxFrameCount(uint32_t maxCount)
 
 uint32_t TRM_GetSuperFramePosition(void)
 {
-    return g_trmCurrentFrame % g_trmMaxFrameCount;
+    return (g_trmCurrentFrame % g_trmMaxFrameCount) + 1;
 }
 
 int TRM_RegisterDriverCallbacks(void)

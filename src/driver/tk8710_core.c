@@ -162,14 +162,14 @@ int tk8710_rf_write(uint8_t rfSel, uint16_t addr, uint32_t data)
     s_spi_cfg2 spiCfg2;
     
     /* 1. 写mac->init_9 选择RF: (rf_sel << 8) + 0xff */
-    if (rfSel < 0xff) {
+    // if (rfSel < 0xff) {
         init9.data = ((uint32_t)rfSel << 8) | 0xff;
         ret = TK8710SpiWriteReg(MAC_BASE + offsetof(struct mac, init_9), &init9.data, 1);
         if (ret != 0) return TK8710_ERR;
-    }
+    // }
     
     /* 2. 写rx_fe->spi_cfg1: (0x1<<31)|(1<<15)|(addr<<8)|data */
-    spiCfg1.data = ((uint32_t)0x1 << 31) | ((uint32_t)1 << 15) | ((uint32_t)(addr & 0x7f) << 8) | (data & 0xff);
+    spiCfg1.data = ((uint32_t)0x1 << 31) | ((uint32_t)1 << 15) | ((uint32_t)(addr & 0xff) << 8) | (data & 0xff);
     ret = TK8710SpiWriteReg(RX_FE_BASE + offsetof(struct rx_top, spi_cfg1), &spiCfg1.data, 1);
     if (ret != 0) return TK8710_ERR;
     
@@ -197,7 +197,8 @@ int tk8710_rf_read(uint8_t rfSel, uint16_t addr, uint32_t* data)
     s_spi_res0 spiRes0;
     
     /* 1. 写mac->init_9 选择RF: (1 << (rf_sel + 8)) + 0xff */
-    init9.data = ((uint32_t)rfSel << 8) | 0xff;
+    // init9.data = ((uint32_t)rfSel << 8) | 0xff;
+    init9.data = (1 << (rfSel + 8)) + 0xff;
     ret = TK8710SpiWriteReg(MAC_BASE + offsetof(struct mac, init_9), &init9.data, 1);
     if (ret != 0) return TK8710_ERR;
     
@@ -253,7 +254,7 @@ int TK8710Init(const ChipConfig* initConfig)
         .log_file_dir = NULL
     };
     TK8710LogInit(&defaultLogConfig);
-    
+
     /* 初始化SPI接口 */
     SpiConfig spiConfigToUse;
     if (cfg->spiConfig != NULL) {
@@ -272,6 +273,7 @@ int TK8710Init(const ChipConfig* initConfig)
     }
     TK8710SpiInit(&spiConfigToUse);
     
+    usleep(20000);  /* 20ms等待RF完全打开和稳定 */
     /* SPI配置完成后复位芯片，确保复位操作能正常执行 */
     TK8710_LOG_CORE_INFO("Resetting TK8710 chip after SPI configuration...");
     int resetRet = TK8710Reset(2);  /* 复位状态机+寄存器 */
@@ -289,6 +291,23 @@ int TK8710Init(const ChipConfig* initConfig)
     
     TK8710_LOG_CORE_INFO("TK8710 initializing...");
 
+    // 读取并打印8700 FPGA版本
+    s_obv_8 obv_8;
+    TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, obv_8), &obv_8.data);
+    TK8710_LOG_INFO(TK8710_LOG_MODULE_CORE, "8710 FPGA Version : %08lX", (unsigned long)obv_8.b.version);
+
+    /* 如果配置了射频参数，则进行射频初始化 */
+    if (cfg->rfConfig != NULL) {
+        const ChiprfConfig* rfCfg = (const ChiprfConfig*)cfg->rfConfig;
+        TK8710_LOG_CORE_INFO("RF config provided, initializing RF (type=%d, freq=%u Hz)...", 
+                             rfCfg->rftype, rfCfg->Freq);
+        ret = TK8710RfConfig(rfCfg);
+        if (ret != TK8710_OK) {
+            TK8710_LOG_CORE_ERROR("RF initialization failed: %d", ret);
+            return ret;
+        }
+        TK8710_LOG_CORE_INFO("RF initialization completed");
+    }
     /* 注意：中断回调由TK8710IrqInit设置，这里不需要重复设置 */
 
     /* 配置 init_0: bcn_agc, interval, tx_freq_dly */
@@ -362,20 +381,6 @@ int TK8710Init(const ChipConfig* initConfig)
     /* 配置 init_17: 初始化为0 */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), 0);
     if (ret != TK8710_OK) return ret;
-    
-    /* 如果配置了射频参数，则进行射频初始化 */
-    if (cfg->rfConfig != NULL) {
-        const ChiprfConfig* rfCfg = (const ChiprfConfig*)cfg->rfConfig;
-        TK8710_LOG_CORE_INFO("RF config provided, initializing RF (type=%d, freq=%u Hz)...", 
-                             rfCfg->rftype, rfCfg->Freq);
-        ret = TK8710RfConfig(rfCfg);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("RF initialization failed: %d", ret);
-            return ret;
-        }
-        ret = TK8710RfConfig(rfCfg);
-        TK8710_LOG_CORE_INFO("RF initialization completed");
-    }
     
     TK8710_LOG_CORE_INFO("TK8710 initialized successfully");
     return TK8710_OK;
@@ -655,7 +660,8 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     /* 配置mac.init_11: rf_type (射频数字接口类型) */
     {
         s_init_11 init11;
-        init11.data = 0;
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_11), &init11.data);
+        if (ret != TK8710_OK) return ret;
         init11.b.rf_type = initrfConfig->rftype & 0x03;
         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_11), init11.data);
         if (ret != TK8710_OK) {
@@ -747,65 +753,45 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
         return ret;
     }
     TK8710_LOG_CORE_DEBUG("RF basic configuration completed");
+
+    usleep(20000);  /* 20ms等待RF完全打开和稳定 */
+
+    /* 6. RX频率配置 (24bit: MSB/MID/LSB) */
+    double freq_step;
+    uint32_t freq_reg;
     
-    /* 6. RX/TX频率配置 (24bit: MSB/MID/LSB) */
-    {
-        double freq_step;
-        uint32_t freq_reg;
-        
-        /* 根据射频类型选择频率步进 */
-        if (initrfConfig->rftype == TK8710_RF_TYPE_1257_32M) {
-            freq_step = RF_SX1257_FREQ_STEP;
-        } else {
-            freq_step = RF_SX1255_FREQ_STEP;
-        }
-        freq_reg = (uint32_t)((double)initrfConfig->Freq / freq_step);
-        
-        TK8710_LOG_CORE_INFO("Configuring frequency: %u Hz (step=%.2f, reg=0x%06X)", 
-                            initrfConfig->Freq, freq_step, freq_reg);
-        
-        /* RX频率 */
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_MSB >> 8, (freq_reg >> 16) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("RX frequency MSB write failed: %d", ret);
-            return ret;
-        }
-        
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_MID >> 8, (freq_reg >> 8) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("RX frequency MID write failed: %d", ret);
-            return ret;
-        }
-        
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_LSB >> 8, (freq_reg >> 0) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("RX frequency LSB write failed: %d", ret);
-            return ret;
-        }
-        
-        /* TX频率 */
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_MSB >> 8, (freq_reg >> 16) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("TX frequency MSB write failed: %d", ret);
-            return ret;
-        }
-        
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_MID >> 8, (freq_reg >> 8) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("TX frequency MID write failed: %d", ret);
-            return ret;
-        }
-        
-        ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_LSB >> 8, (freq_reg >> 0) & 0xFF);
-        if (ret != TK8710_OK) {
-            TK8710_LOG_CORE_ERROR("TX frequency LSB write failed: %d", ret);
-            return ret;
-        }
-        
-        TK8710_LOG_CORE_DEBUG("RX/TX frequency configuration completed");
+    /* 根据射频类型选择频率步进 */
+    if (initrfConfig->rftype == TK8710_RF_TYPE_1257_32M) {
+        freq_step = RF_SX1257_FREQ_STEP;
+    } else {
+        freq_step = RF_SX1255_FREQ_STEP;
+    }
+    freq_reg = (uint32_t)((double)initrfConfig->Freq / freq_step);
+    
+    TK8710_LOG_CORE_INFO("Configuring frequency: %u Hz (step=%.2f, reg=0x%06X)", 
+                        initrfConfig->Freq, freq_step, freq_reg);
+    
+    /* RX频率 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_MSB >> 8, (freq_reg >> 16) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("RX frequency MSB write failed: %d", ret);
+        return ret;
     }
     
-    /* 8. RX增益配置 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_MID >> 8, (freq_reg >> 8) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("RX frequency MID write failed: %d", ret);
+        return ret;
+    }
+    
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_RX_LSB >> 8, (freq_reg >> 0) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("RX frequency LSB write failed: %d", ret);
+        return ret;
+    }
+    TK8710_LOG_CORE_DEBUG("RX frequency configuration completed");
+    
+    /* 7. RX增益配置 */
     ret = tk8710_rf_write(rfSel, RF_CMD_RX_GAIN >> 8, initrfConfig->rxgain);
     if (ret != TK8710_OK) {
         TK8710_LOG_CORE_ERROR("RX gain configuration failed: %d", ret);
@@ -813,15 +799,7 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     }
     TK8710_LOG_CORE_DEBUG("RX gain set to: 0x%02X", initrfConfig->rxgain);
     
-    /* 9. TX增益配置 */
-    ret = tk8710_rf_write(rfSel, RF_CMD_TX_GAIN >> 8, initrfConfig->txgain);
-    if (ret != TK8710_OK) {
-        TK8710_LOG_CORE_ERROR("TX gain configuration failed: %d", ret);
-        return ret;
-    }
-    TK8710_LOG_CORE_DEBUG("TX gain set to: 0x%02X", initrfConfig->txgain);
-    
-    /* 10. 打开lna */
+    /* 8. 打开lna */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_10), 0);
     if (ret != TK8710_OK) {
         TK8710_LOG_CORE_ERROR("LNA enable failed: %d", ret);
@@ -829,6 +807,34 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     }
     TK8710_LOG_CORE_DEBUG("LNA enabled");
 
+    /* 9. TX频率 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_MSB >> 8, (freq_reg >> 16) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("TX frequency MSB write failed: %d", ret);
+        return ret;
+    }
+    
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_MID >> 8, (freq_reg >> 8) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("TX frequency MID write failed: %d", ret);
+        return ret;
+    }
+    
+    ret = tk8710_rf_write(rfSel, RF_CMD_FRF_TX_LSB >> 8, (freq_reg >> 0) & 0xFF);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("TX frequency LSB write failed: %d", ret);
+        return ret;
+    }
+    TK8710_LOG_CORE_DEBUG("TX frequency configuration completed");
+
+    /* 10. TX增益配置 */
+    ret = tk8710_rf_write(rfSel, RF_CMD_TX_GAIN >> 8, initrfConfig->txgain);
+    if (ret != TK8710_OK) {
+        TK8710_LOG_CORE_ERROR("TX gain configuration failed: %d", ret);
+        return ret;
+    }
+    TK8710_LOG_CORE_DEBUG("TX gain set to: 0x%02X", initrfConfig->txgain);
+    
     /* 11.  RF打开 */
     ret = tk8710_rf_write(rfSel, RF_CMD_CLOSE_F >> 8, RF_CMD_CLOSE_F & 0xFF);
     if (ret != TK8710_OK) {

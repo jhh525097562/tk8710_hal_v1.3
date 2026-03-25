@@ -903,6 +903,8 @@ ret = TK8710RfConfig(&rfConfig);
 | `TRM_SetTxData`           | 统一发送数据接口(广播/用户) | 应用层       | 数据发送   |
 | **波束获取**          |                             |              |            |
 | `TRM_GetBeamInfo`         | 获取用户波束信息            | 应用层       | 波束获取   |
+| **时隙计算**          |                             |              |            |
+| `TRM_CalcSlotConfig`      | TRM时隙计算器               | 应用层       | 时隙计算   |
 | **回调接口**          |                             |              |            |
 | `TRM_OnRxData`            | 接收数据回调函数类型        | 应用层       | 回调接口   |
 | `TRM_OnTxComplete`        | 发送完成回调函数类型        | 应用层       | 回调接口   |
@@ -919,6 +921,7 @@ ret = TK8710RfConfig(&rfConfig);
 - **初始化控制**: TRM系统初始化和基本控制功能
 - **数据发送**: 数据发送相关功能
 - **波束获取**: 波束信息获取功能
+- **时隙计算**: 时隙配置计算功能
 - **回调接口**: 应用层回调函数类型定义
 - **状态查询**: TRM状态查询功能
 - **回调管理**: Driver回调函数管理
@@ -1165,7 +1168,163 @@ typedef enum {
 - `TRM_ERR_NO_BEAM`: 未找到波束信息
 - 其他: 获取失败
 
-### 5. TRM上层回调接口
+### 4. 时隙计算
+
+TRM系统提供时隙计算器，用于根据速率模式和包块数计算最优的时隙配置，确保帧周期能够整除1秒，实现精确的时间同步。
+
+#### `TRM_CalcSlotConfig`
+
+```c
+int TRM_CalcSlotConfig(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* output);
+```
+
+**功能**: TRM时隙计算器，基于8710_HAL用户指南v1.0 7.2.4章节实现
+**参数**:
+
+- `input`: 时隙计算输入参数指针
+- `output`: 时隙计算输出结果指针
+
+**TRM_SlotCalcInput结构体定义**:
+
+```c
+typedef struct {
+    uint8_t  rateMode;       /**< 速率模式: 5-11, 18 */
+    uint8_t  ulBlockNum;     /**< 上行包块数 */
+    uint8_t  dlBlockNum;     /**< 下行包块数 */
+    uint8_t  superFrameNum;  /**< 超帧数 */
+} TRM_SlotCalcInput;
+```
+
+**TRM_SlotCalcOutput结构体定义**:
+
+```c
+typedef struct {
+    uint32_t bcnSlotLen;     /**< BCN时隙长度(us) */
+    uint32_t brdSlotLen;     /**< 广播时隙长度(us) */
+    uint32_t ulSlotLen;      /**< 上行时隙长度(us) */
+    uint32_t dlSlotLen;      /**< 下行时隙长度(us) */
+    uint32_t bcnGap;         /**< BCN间隔(us) */
+    uint32_t brdGap;         /**< 广播间隔(us) */
+    uint32_t ulGap;          /**< 上行间隔(us) */
+    uint32_t dlGap;          /**< 下行间隔(us)，用于调整帧周期 */
+    uint32_t framePeriod;    /**< 调整后帧周期(us) */
+    uint32_t frameCount;     /**< 帧数(framePeriod * frameCount = 1s的倍数) */
+} TRM_SlotCalcOutput;
+```
+
+**结构体成员详细说明**:
+
+**输入参数 (TRM_SlotCalcInput)**:
+- `rateMode`: 速率模式
+  - 支持的模式: 5, 6, 7, 8, 9, 10, 11, 18
+  - 各模式对应不同的系统带宽和用户数
+- `ulBlockNum`: 上行包块数
+  - 范围: 1-255
+  - 影响上行时隙长度
+- `dlBlockNum`: 下行包块数
+  - 范围: 1-255
+  - 影响下行时隙长度
+- `superFrameNum`: 超帧数
+  - 预留参数，当前版本未使用
+
+**输出结果 (TRM_SlotCalcOutput)**:
+- `bcnSlotLen`: BCN时隙长度(微秒)
+  - 基于速率模式的固定值
+- `brdSlotLen`: 广播时隙长度(微秒)
+  - 包含间隔、广播主体和间隔时间
+- `ulSlotLen`: 上行时隙长度(微秒)
+  - 包含间隔和上行数据时间
+- `dlSlotLen`: 下行时隙长度(微秒)
+  - 包含间隔、下行数据和间隔时间
+- `bcnGap`: BCN间隔(微秒)
+  - 当前固定为0
+- `brdGap`: 广播间隔(微秒)
+  - 当前固定为0
+- `ulGap`: 上行间隔(微秒)
+  - 当前固定为0
+- `dlGap`: 下行间隔(微秒)
+  - 用于调整帧周期，确保能整除1秒
+- `framePeriod`: 调整后帧周期(微秒)
+  - 优化后的完整帧时间长度
+- `frameCount`: 帧数
+  - 满足 framePeriod × frameCount = 1秒的倍数
+
+**返回值**:
+
+- `TRM_OK`: 计算成功
+- `TRM_ERR_PARAM`: 参数错误
+  - 速率模式不支持
+  - 包块数为0
+  - 输入/输出指针为NULL
+- 其他: 计算失败
+
+**计算原理**:
+
+1. **基础时隙长度**: 根据速率模式查表获取各时隙的基础长度
+2. **时隙长度计算**: 
+   - BCN时隙 = 固定值
+   - 广播时隙 = 1024us + 广播主体 + 广播间隔
+   - 上行时隙 = 1024us + 上行主体 × 上行包块数
+   - 下行时隙 = 1024us + 下行主体 × 下行包块数 + 下行间隔
+3. **帧周期优化**: 寻找最小的下行间隔，使调整后的帧周期能够整除1秒
+4. **帧数计算**: 计算满足1秒倍数关系所需的最小帧数
+
+**支持的速率模式**:
+
+| 模式 | 系统带宽 | 用户数 | BCN时隙(us) | 广播主体 | 上行主体 | 下行主体 |
+|------|----------|--------|-------------|----------|----------|----------|
+| 5    | 62.5KHz  | 128    | 69583       | 262144   | 393216   | 262144   |
+| 6    | 125KHz   | 128    | 36340       | 131072   | 196608   | 131072   |
+| 7    | 250KHz   | 128    | 19129       | 65536    | 98304    | 65536    |
+| 8    | 500KHz   | 128    | 10732       | 32768    | 49152    | 32768    |
+| 9    | 500KHz   | 64     | 6510        | 16384    | 24576    | 16384    |
+| 10   | 500KHz   | 32     | 6510        | 8192     | 12288    | 8192     |
+| 11   | 500KHz   | 16     | 6510        | 4096     | 6144     | 4096     |
+| 18   | 500KHz   | 16     | 6510        | 4096     | 6144     | 4096     |
+
+**使用示例**:
+
+```c
+// 计算速率模式8，上行2块，下行1块的时隙配置
+TRM_SlotCalcInput input = {
+    .rateMode = 8,
+    .ulBlockNum = 2,
+    .dlBlockNum = 1,
+    .superFrameNum = 1
+};
+
+TRM_SlotCalcOutput output;
+int ret = TRM_CalcSlotConfig(&input, &output);
+if (ret == TRM_OK) {
+    printf("时隙计算结果:\n");
+    printf("  帧周期: %u us, 帧数: %u\n", output.framePeriod, output.frameCount);
+    printf("  BCN时隙: %u us\n", output.bcnSlotLen);
+    printf("  广播时隙: %u us\n", output.brdSlotLen);
+    printf("  上行时隙: %u us\n", output.ulSlotLen);
+    printf("  下行时隙: %u us\n", output.dlSlotLen);
+    printf("  下行间隔: %u us\n", output.dlGap);
+    printf("  总时长: %u ms\n", 
+           output.framePeriod * output.frameCount / 1000);
+}
+```
+
+**最佳实践**:
+
+- **参数验证**: 调用前验证速率模式和包块数的有效性
+- **结果检查**: 检查返回值，确保计算成功
+- **时间精度**: 计算结果确保微秒级精度
+- **同步优化**: 优化后的帧周期确保精确的时间同步
+- **性能考虑**: 计算过程轻量，适合实时调用
+
+**注意事项**:
+
+- 上行和下行包块数必须大于0
+- 速率模式仅支持预定义的8种模式
+- 计算结果中的间隔值主要用于帧周期调整
+- 帧周期和帧数的乘积总是1秒的整数倍
+- 不同速率模式对应不同的系统带宽和最大用户数
+
+### 6. TRM上层回调接口
 
 TRM提供完整的上层回调接口，用于通知应用层各种事件，包括数据接收和发送完成。
 
@@ -1280,7 +1439,7 @@ typedef enum {
 - 相比单用户回调，批量回调减少了回调调用次数，提高性能
 - 上层应用可以根据队列状态进行流量控制
 
-### 6. 状态查询
+### 7. 状态查询
 
 TRM系统提供统一的状态查询接口，通过 `TRM_GetStats`函数可以获取完整的系统状态和统计信息，包括运行状态、发送/接收统计、波束信息等。
 
@@ -1345,7 +1504,7 @@ typedef enum {
 - `TRM_ERR_PARAM`: 参数错误
 - 其他: 获取失败
 
-### 7. 内部接口
+### 8. 内部接口
 
 #### `TRM_RegisterDriverCallbacks`
 
@@ -1368,7 +1527,7 @@ int TRM_RegisterDriverCallbacks(void);
 - 将TRM的回调适配函数注册到Driver的回调系统中
 - 确保TRM能够接收Driver层的中断和事件通知
 
-### 8. TRM日志系统
+### 9. TRM日志系统
 
 #### `TRM_LogConfig`
 
@@ -1400,7 +1559,7 @@ int TRM_LogConfig(TRMLogLevel level);
 - 默认使用标准输出作为日志输出
 - 可以通过 `TRM_LogSetCallback` 设置自定义输出回调
 
-### 9. TRM调试接口
+### 10. TRM调试接口
 
 #### `TRM_TxValidatorOnRxData`
 

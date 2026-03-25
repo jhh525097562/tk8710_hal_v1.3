@@ -3386,12 +3386,12 @@ struct acm
     volatile union      s_acm_obv16 acm_obv16;	//0x110
     volatile union      s_acm_obv17 acm_obv17;	//0x114
     volatile union      s_acm_obv18 acm_obv18;	//0x118
-    volatile union      s_acm_obv17 acm_obv19;	//0x11c
-    volatile union      s_acm_obv18 acm_obv20;	//0x120
-    volatile union      s_acm_obv17 acm_obv21;	//0x124
-    volatile union      s_acm_obv18 acm_obv22;	//0x128
-    volatile union      s_acm_obv17 acm_obv23;	//0x12c
-    volatile union      s_acm_obv18 acm_obv24;	//0x130
+    volatile union      s_acm_obv19 acm_obv19;	//0x11c
+    volatile union      s_acm_obv20 acm_obv20;	//0x120
+    volatile union      s_acm_obv21 acm_obv21;	//0x124
+    volatile union      s_acm_obv22 acm_obv22;	//0x128
+    volatile union      s_acm_obv23 acm_obv23;	//0x12c
+    volatile union      s_acm_obv24 acm_obv24;	//0x130
 };
 struct total
 {

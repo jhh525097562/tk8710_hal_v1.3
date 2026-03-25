@@ -722,7 +722,8 @@ int TRM_ProcessRxUserDataBatch(uint8_t* userIndices, uint8_t userCount, TK8710Cr
     /* 创建用户数据存储数组 */
     static TRM_RxUserData userStorage[128];  /* 静态存储用户数据数组 */
     TRM_RxDataList rxDataList;
-    rxDataList.frameNo = TRM_GetCurrentFrame();  /* 获取当前系统帧号 */
+    // rxDataList.frameNo = TRM_GetCurrentFrame();  /* 获取当前系统帧号 */
+    rxDataList.frameNo = TRM_GetSuperFramePosition();  /* 获取当前超帧帧号 */
     rxDataList.userCount = userCount;
     rxDataList.users = userStorage;  /* 指向用户数据数组 */
     
