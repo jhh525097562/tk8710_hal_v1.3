@@ -114,7 +114,7 @@ static void* IrqThreadFunc(void* arg)
         
         if (ret < 0) {
             /* 错误 */
-            perror("gpiod_line_event_wait");
+            printf("gpiod_line_event_wait");
             break;
         } else if (ret == 0) {
             /* 超时，继续等待 */
@@ -124,7 +124,7 @@ static void* IrqThreadFunc(void* arg)
         /* 读取事件 */
         ret = gpiod_line_event_read(g_irqLine, &event);
         if (ret < 0) {
-            perror("gpiod_line_event_read");
+            printf("gpiod_line_event_read");
             continue;
         }
         

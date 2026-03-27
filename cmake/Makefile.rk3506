@@ -30,7 +30,8 @@ DRIVER_SRC = src/driver/tk8710_core.c \
              src/driver/tk8710_config.c
 TRM_SRC = src/trm/trm_core.c \
           src/trm/trm_beam.c \
-          src/trm/trm_data.c
+          src/trm/trm_data.c \
+          src/trm/trm_slot.c
 PORT_SRC = port/rk3506/port_rk3506.c
 
 ALL_SRC = $(COMMON_SRC) $(DRIVER_SRC) $(TRM_SRC) $(PORT_SRC)
@@ -83,6 +84,9 @@ $(BUILD_DIR)/trm_beam.o: src/trm/trm_beam.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 $(BUILD_DIR)/trm_data.o: src/trm/trm_data.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+
+$(BUILD_DIR)/trm_slot.o: src/trm/trm_slot.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 # 生成静态库

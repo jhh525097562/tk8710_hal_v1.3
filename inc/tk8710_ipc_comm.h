@@ -34,6 +34,7 @@ int IpcSendUplinkData(IpcCommContext *ctx, const TRM_RxDataList* rxDataList);
 void IpcCommSetConfigHandler(ConfigHandler_t handler);
 int IpcCommIsConfigReceived(void);
 int IpcCommGetReceivedConfig(NsConfigDown_t* config);
+int IpcCommSendConfigRequest(IpcCommContext *ctx);
 
 #ifdef __cplusplus
 }

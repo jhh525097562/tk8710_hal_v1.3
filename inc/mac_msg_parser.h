@@ -21,7 +21,8 @@ typedef enum {
     MSG_TYPE_NS_CONFIG_DOWN, // NS配置下行
     MSG_TYPE_NS_DATA_DOWN,   // NS数据下行
     MSG_TYPE_GW_DATA_UP,     // 网关数据上行
-    MSG_TYPE_GW_ALIVE_UP     // 网关心跳上行 (预留)
+    MSG_TYPE_GW_ALIVE_UP,     // 网关心跳上行 (预留)
+    MSG_TYPE_CONFIG_FEQ      //配置请求
 } MacMsgType_e;
 
 // 基础消息结构体（用于类型推断和强制转换）
@@ -29,6 +30,11 @@ typedef struct {
     MacMsgType_e msg_type;   // 所有具体结构体的第一个成员必须是它！
 } MacMsgBase_t;
 
+// 配置请求结构体
+typedef struct {
+    MacMsgType_e msg_type;   // 所有具体结构体的第一个成员必须是它！
+    int req_data_type;       //1是请求配置，其他后续扩展
+} ConfigReq_t;
 // ================= 具体消息结构体 =================
 
 // 1. NS配置下行结构体

@@ -161,12 +161,12 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             TRM_RxUserData* user = &rxDataList->users[i];
             
             /* 生成应答数据 - 使用配置的数据长度 */
-            uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
-            uint16_t dataLen = g_validatorConfig.responseDataLength;
-            
+            uint8_t respData[512];  /* 增大缓冲区以支持更长的数据 */
+            // uint16_t dataLen = g_validatorConfig.responseDataLength;
+            uint16_t dataLen = user->dataLen;
             /* 限制最大长度 */
-            if (dataLen > 64) dataLen = 64;
-            if (dataLen == 0) dataLen = 12;  /* 默认长度 */
+            // if (dataLen > 64) dataLen = 64;
+            // if (dataLen == 0) dataLen = 12;  /* 默认长度 */
             
             GenerateTestData(respData, dataLen, user->userId, rxDataList->frameNo);
             
@@ -201,12 +201,12 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 TRM_RxUserData* user = &rxDataList->users[i];
                 
                 /* 生成应答数据 - 使用配置的数据长度 */
-                uint8_t respData[64];  /* 增大缓冲区以支持更长的数据 */
-                uint16_t dataLen = g_validatorConfig.responseDataLength;
-                
+                uint8_t respData[512];  /* 增大缓冲区以支持更长的数据 */
+                // uint16_t dataLen = g_validatorConfig.responseDataLength;
+                uint16_t dataLen = user->dataLen;
                 /* 限制最大长度 */
-                if (dataLen > 64) dataLen = 64;
-                if (dataLen == 0) dataLen = 12;  /* 默认长度 */
+                // if (dataLen > 64) dataLen = 64;
+                // if (dataLen == 0) dataLen = 12;  /* 默认长度 */
                 
                 GenerateTestData(respData, dataLen, user->userId, rxDataList->frameNo);
                 

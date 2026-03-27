@@ -228,40 +228,35 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
         // 转换NS速率索引到TK8710速率模式
         slotCfg.rateModes[i] = ConvertNsRateToTk8710Rate(config->rate_cfgs[i].rate);
         
-        // 根据速率模式设置da_m参数
-        uint8_t tk8710_rate = ConvertNsRateToTk8710Rate(config->rate_cfgs[i].rate);
-        switch (tk8710_rate) {
-            case TK8710_RATE_MODE_5:
-                slotCfg.s1Cfg[i].da_m = 21492;
-                slotCfg.s2Cfg[i].da_m = 21492;
-                slotCfg.s3Cfg[i].da_m = 21492;
-                break;
-            case TK8710_RATE_MODE_6:
-                slotCfg.s1Cfg[i].da_m = 19728;
-                slotCfg.s2Cfg[i].da_m = 19728;
-                slotCfg.s3Cfg[i].da_m = 19728;
-                break;
-            case TK8710_RATE_MODE_7:
-                slotCfg.s1Cfg[i].da_m = 12000;
-                slotCfg.s2Cfg[i].da_m = 12000;
-                slotCfg.s3Cfg[i].da_m = 12000;
-                break;
-            case TK8710_RATE_MODE_8:
-                slotCfg.s1Cfg[i].da_m = 5600;
-                slotCfg.s2Cfg[i].da_m = 5600;
-                slotCfg.s3Cfg[i].da_m = 5600;
-                break;
-            default:
-                slotCfg.s1Cfg[i].da_m = 12000;
-                slotCfg.s2Cfg[i].da_m = 12000;
-                slotCfg.s3Cfg[i].da_m = 12000;
-                break;
+        // 使用时隙计算函数计算gap参数
+        TRM_SlotCalcInput slotInput = {
+            .rateMode = slotCfg.rateModes[i],
+            .brdBlockNum = 2,  // 广播包块数
+            .ulBlockNum = config->rate_cfgs[i].uplink_pkt,     // 上行包块数
+            .dlBlockNum = config->rate_cfgs[i].downlink_pkt,   // 下行包块数
+            .superFrameNum = 1
+        };
+        
+        TRM_SlotCalcOutput slotOutput;
+        if (trm_calc_slot_config(&slotInput, &slotOutput) == 0) {
+            // 使用计算得到的gap作为da_m参数
+            slotCfg.s1Cfg[i].da_m = slotOutput.brdGap;
+            slotCfg.s2Cfg[i].da_m = slotOutput.ulGap;
+            slotCfg.s3Cfg[i].da_m = slotOutput.dlGap;
+            printf("✅ 速率模式%d计算得到gap参数: BRD=%u, UL=%u, DL=%u\n", 
+                   slotCfg.rateModes[i], slotOutput.brdGap, slotOutput.ulGap, slotOutput.dlGap);
+        } else {
+            printf("❌ 时隙计算失败，使用默认参数\n");
+            // 使用默认参数
+            slotCfg.s1Cfg[i].da_m = 12000;
+            slotCfg.s2Cfg[i].da_m = 12000;
+            slotCfg.s3Cfg[i].da_m = 12000;
         }
         
         // 配置时隙长度和频点
         slotCfg.s0Cfg[i].byteLen = 0;
         slotCfg.s0Cfg[i].centerFreq = config->freq;
-        slotCfg.s1Cfg[i].byteLen = 26;
+        slotCfg.s1Cfg[i].byteLen = 26 * 2;
         slotCfg.s1Cfg[i].centerFreq = config->freq;
         slotCfg.s2Cfg[i].byteLen = config->rate_cfgs[i].uplink_pkt * 26;
         slotCfg.s2Cfg[i].centerFreq = config->freq;
@@ -600,15 +595,26 @@ int main(int argc, char* argv[])
     /* 7. 等待配置消息 */
     printf("等待来自NS的配置消息...\n");
     
-    // 等待配置消息到达，最多等待10秒
-    int wait_count = 0;
-    while (!IpcCommIsConfigReceived() && wait_count < 100) {
-        usleep(100000); // 等待100ms
-        wait_count++;
+    // 每隔10秒发送一次配置请求，最多请求10次
+    int request_count = 0;
+    while (!IpcCommIsConfigReceived() && request_count < 10) {
+        // 发送配置请求
+        printf("📤 发送第%d次配置请求...\n", request_count + 1);
+        if (IpcCommSendConfigRequest(&g_ipc_ctx) != 0) {
+            printf("❌ 配置请求发送失败\n");
+        }
+        
+        // 等待10秒
+        printf("⏳ 等待10秒以接收配置...\n");
+        for (int i = 0; i < 100 && !IpcCommIsConfigReceived(); i++) {
+            usleep(100000); // 等待100ms
+        }
+        
+        request_count++;
     }
     
     if (!IpcCommIsConfigReceived()) {
-        printf("⚠️  未收到配置消息，使用默认配置继续\n");
+        printf("⚠️  已请求10次仍未收到配置消息，使用默认配置继续\n");
         // 使用默认配置进行时隙配置
             /* ========== 使用 HAL API 进行初始化 ========== */
         /* 1. 准备RF配置 */
@@ -664,7 +670,7 @@ int main(int argc, char* argv[])
         TK8710_HalInitConfig halConfig = {
             .tk8710Init = &chipConfig,
             .driverLogConfig = {
-                .logLevel = TK8710_LOG_WARN,  /* TK8710_LOG_INFO TK8710_LOG_ALL TK8710_LOG_NONE TK8710_LOG_WARN */
+                .logLevel = TK8710_LOG_INFO,  /* TK8710_LOG_INFO TK8710_LOG_ALL TK8710_LOG_NONE TK8710_LOG_WARN */
                 .moduleMask = 0xFFFFFFFF,
                 .enable_file_logging = 1
             },

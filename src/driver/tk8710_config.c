@@ -847,9 +847,30 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                 ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                     MAC_BASE + offsetof(struct mac, init_18), init18.data);
                 if (ret != TK8710_OK) return ret;
+                
+                /* 配置0x9810寄存器，根据速率模式设置不同的值 */
+                {
+                    uint32_t regValue;
+                    uint8_t mode = slotCfg->rateModes[0] & 0xF;
+                    
+                    if (mode <= TK8710_RATE_MODE_8) {
+                        regValue = 0x03381400;
+                    } else if (mode == TK8710_RATE_MODE_9) {
+                        regValue = 0x03201400;
+                    } else if (mode == TK8710_RATE_MODE_10) {
+                        regValue = 0x03081400;
+                    } else if (mode == TK8710_RATE_MODE_11 || mode == TK8710_RATE_MODE_18) {
+                        regValue = 0x02f01400;
+                    } else {
+                        regValue = 0x03381400; /* 默认值 */
+                    }
+                    
+                    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9810, regValue);
+                    if (ret != TK8710_OK) return ret;
+                    
+                    TK8710_LOG_CONFIG_INFO("Set register 0x9810 = 0x%08X for mode %d", regValue, mode);
+                }
             }
-            
-            /* 注：主从模式由TK8710Start配置，此处不更新 */
             
             /* 保存时隙配置到全局变量 (包含brdUserNum) */
             memcpy(&g_slotCfg, slotCfg, sizeof(slotCfg_t));

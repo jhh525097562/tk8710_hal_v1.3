@@ -881,6 +881,10 @@ int main(int argc, char* argv[])
         //     {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
         //     {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
         // }
+        // .txadc = {//D号板
+        //     {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
+        //     {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
+        // }
         .txadc = {//2号板
             {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
             {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
@@ -913,6 +917,14 @@ int main(int argc, char* argv[])
     };
     
     /* 3. 初始化默认日志系统（如果尚未初始化） */
+    
+    /* 5. 调用 8710 init 完成芯片、RF初始化 */
+    printf("Initializing 8710 (chip + RF)...\n");
+    ret = TK8710Init(&chipConfig);
+    if (ret != TK8710_OK) {
+        printf("8710 initialization failed: %d\n", ret);
+        return -1;
+    }
     TK8710LogConfig_t defaultLogConfig = {
         .level = TK8710_LOG_INFO,
         .module_mask = TK8710_LOG_MODULE_ALL,
@@ -923,14 +935,6 @@ int main(int argc, char* argv[])
         .log_file_dir = NULL
     };
     TK8710LogInit(&defaultLogConfig);
-    
-    /* 5. 调用 8710 init 完成芯片、RF初始化 */
-    printf("Initializing 8710 (chip + RF)...\n");
-    ret = TK8710Init(&chipConfig);
-    if (ret != TK8710_OK) {
-        printf("8710 initialization failed: %d\n", ret);
-        return -1;
-    }
 
     printf("HAL initialization completed (including RF)\n");
     

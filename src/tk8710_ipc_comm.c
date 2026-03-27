@@ -54,6 +54,30 @@ int IpcCommGetReceivedConfig(NsConfigDown_t* config) {
     memcpy(config, &g_received_config, sizeof(NsConfigDown_t));
     return 0;
 }
+
+// 发送配置请求
+int IpcCommSendConfigRequest(IpcCommContext *ctx) {
+    if (!ctx || !ctx->ch_gw_to_ns) {
+        printf("❌ IPC通道未初始化\n");
+        return -1;
+    }
+    
+    ConfigReq_t config_req = {
+        .msg_type = MSG_TYPE_CONFIG_FEQ,
+        .req_data_type = 1  // 1表示请求配置
+    };
+    
+    int rc = ipc_smp_send(ctx->ch_gw_to_ns, IPC_MSG_TYPE_SPI_TO_MQTT, 
+                          &config_req, sizeof(config_req), 0);
+    if (rc == IPC_SMP_OK) {
+        printf("📤 已发送配置请求消息\n");
+        ipc_smp_periodic_check(ctx->ch_gw_to_ns);
+        return 0;
+    } else {
+        printf("❌ 发送配置请求失败: %d\n", rc);
+        return -1;
+    }
+}
 // 打印消息详情
 static void PrintMessageDetail(const char *prefix, const ipc_smp_msg_hdr_t *hdr, const void *payload, uint32_t payload_len) {
     printf("[%s] 消息头: ver=%u type=%u len=%u seq=%u ts_ns=%llu flags=%u crc32=0x%08X\n",
@@ -184,9 +208,6 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                         printf("⚠️  未设置配置处理回调函数\n");
                     }
                     
-                    // TODO: 根据NS配置重新初始化HAL
-                    // 这里可以调用hal_reset()然后hal_init()重新配置
-                    // 或者调用hal_config()更新配置参数
                 }
                 break;
             }
@@ -205,8 +226,8 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                         35,                       // 发射功率
                         0,                        // 帧号
                         ns_data->rate,            // 目标速率模式
-                        // ns_data->tdd == 255 ? TK8710_DATA_TYPE_DED : TK8710_DATA_TYPE_BRD  // tdd=255->DED, tdd=0->BRD
-                        TK8710_DATA_TYPE_BRD // tdd=255->DED, tdd=0->BRD
+                        ns_data->tdd == 255 ? TK8710_DATA_TYPE_DED : TK8710_DATA_TYPE_BRD  // tdd=255->DED, tdd=0->BRD
+                        // TK8710_DATA_TYPE_BRD // tdd=255->DED, tdd=0->BRD
                     );
                     
                     if (halRet == TK8710_HAL_OK) {

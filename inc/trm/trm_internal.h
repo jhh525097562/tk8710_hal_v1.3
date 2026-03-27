@@ -53,24 +53,10 @@ typedef struct {
 /* 广播接收数据 */
 typedef struct {
     uint8_t  brdIndex;          /* 广播索引 */
-    uint8_t  dataLen;           /* 数据长度 */
+    uint16_t dataLen;           /* 数据长度 */
     uint16_t reserved;
     uint8_t* data;              /* 数据指针 */
 } TRM_RxBrdData;
-
-/* 时隙计算输入 */
-typedef struct {
-    uint32_t totalUsers;        /* 总用户数 */
-    uint8_t rateMode;           /* 速率模式 */
-    uint8_t slotConfig;         /* 时隙配置 */
-} TRM_SlotCalcInput;
-
-/* 时隙计算输出 */
-typedef struct {
-    uint8_t optimalSlots;       /* 最优时隙数 */
-    uint32_t maxThroughput;     /* 最大吞吐量 */
-    uint8_t recommendedConfig;  /* 推荐配置 */
-} TRM_SlotCalcOutput;
 
 /* TRM上下文 */
 typedef struct {
@@ -229,14 +215,6 @@ int TRM_ClearBroadcast(void);
  * @return TRM_OK成功
  */
 int TRM_GetBroadcastStatus(uint8_t* hasPayload, uint8_t* valid);
-
-/**
- * @brief 计算时隙配置 (内部函数)
- * @param input 输入参数
- * @param output 输出参数
- * @return TRM_OK成功，其他失败
- */
-int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* output);
 
 /**
  * @brief 打印时隙计算结果 (内部函数)

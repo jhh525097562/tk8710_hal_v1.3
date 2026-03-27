@@ -5,11 +5,15 @@
  */
 
 #include "trm.h"
-#include "trm_config.h"
-#include "tk8710_hal.h"
-#include "../../inc/driver/tk8710_log.h"
-#include <string.h>
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <limits.h>
+#include "trm_api.h"
+#include "trm_internal.h"
+#include "driver/tk8710_log.h"
 
 /*============================================================================
  * 时域资源管理内部数据结构
@@ -326,28 +330,6 @@ void trm_slot_print_status(void)
  * TRM时隙计算器 - 基于8710_HAL用户指南v1.0 7.2.4章节
  *============================================================================*/
 
-/** 时隙计算器输入参数 */
-typedef struct {
-    uint8_t  rateMode;       /**< 速率模式: 5-11, 18 */
-    uint8_t  ulBlockNum;     /**< 上行包块数 */
-    uint8_t  dlBlockNum;     /**< 下行包块数 */
-    uint8_t  superFrameNum;  /**< 超帧数 */
-} TRM_SlotCalcInput;
-
-/** 时隙计算器输出结果 */
-typedef struct {
-    uint32_t bcnSlotLen;     /**< BCN时隙长度(us) */
-    uint32_t brdSlotLen;     /**< 广播时隙长度(us) */
-    uint32_t ulSlotLen;      /**< 上行时隙长度(us) */
-    uint32_t dlSlotLen;      /**< 下行时隙长度(us) */
-    uint32_t bcnGap;         /**< BCN间隔(us) */
-    uint32_t brdGap;         /**< 广播间隔(us) */
-    uint32_t ulGap;          /**< 上行间隔(us) */
-    uint32_t dlGap;          /**< 下行间隔(us)，用于调整帧周期 */
-    uint32_t framePeriod;    /**< 调整后帧周期(us) */
-    uint32_t frameCount;     /**< 帧数(framePeriod * frameCount = 1s的倍数) */
-} TRM_SlotCalcOutput;
-
 /* 各模式基础时隙长度(us)，包块数=1时的值 */
 static const uint32_t g_bcnSlotLen[] = {
     [5] = 69583,  [6] = 36340,  [7] = 19129,  [8] = 10732,
@@ -355,28 +337,35 @@ static const uint32_t g_bcnSlotLen[] = {
 };
 
 static const uint32_t g_brdBaseBody[] = {
-    [5] = 262144, [6] = 131072, [7] = 65536,  [8] = 32768,
-    [9] = 16384,  [10] = 8192,  [11] = 4096,  [18] = 4096
+    [5] = 131072, [6] = 65536, [7] = 32768,  [8] = 16384,
+    [9] = 8192,  [10] = 4096, [11] = 2048,  [18] = 2048
 };
 
 static const uint32_t g_brdBaseGap[] = {
-    [5] = 13000,  [6] = 14000,  [7] = 7000,   [8] = 3600,
-    [9] = 1900,   [10] = 1200,  [11] = 800,   [18] = 800
+    // [5] = 13000,  [6] = 14000,  [7] = 7000,   [8] = 3600,
+    // [9] = 1900,   [10] = 1200,  [11] = 800,   [18] = 800
+    [5] = 21492,  [6] = 19728,  [7] = 12000,   [8] = 5600,
+    [9] = 2800,   [10] = 1400,  [11] = 800,   [18] = 800
 };
 
 static const uint32_t g_ulBaseBody[] = {
-    [5] = 393216, [6] = 196608, [7] = 98304,  [8] = 49152,
-    [9] = 24576,  [10] = 12288, [11] = 6144,  [18] = 6144
+    [5] = 131072, [6] = 65536, [7] = 32768,  [8] = 16384,
+    [9] = 8192,  [10] = 4096, [11] = 2048,  [18] = 2048
+};
+
+static const uint32_t g_ulBaseGap[] = {
+    [5] = 21492,  [6] = 19728,  [7] = 12000,   [8] = 5600,
+    [9] = 2800,   [10] = 1400,  [11] = 800,   [18] = 800
 };
 
 static const uint32_t g_dlBaseBody[] = {
-    [5] = 262144, [6] = 131072, [7] = 65536,  [8] = 32768,
-    [9] = 16384,  [10] = 8192,  [11] = 4096,  [18] = 4096
+    [5] = 131072, [6] = 65536, [7] = 32768,  [8] = 16384,
+    [9] = 8192,  [10] = 4096, [11] = 2048,  [18] = 2048
 };
 
 static const uint32_t g_dlBaseGap[] = {
-    [5] = 13000,  [6] = 14000,  [7] = 7000,   [8] = 3600,
-    [9] = 1900,   [10] = 1200,  [11] = 800,   [18] = 800
+    [5] = 21492,  [6] = 19728,  [7] = 12000,   [8] = 5600,
+    [9] = 2800,   [10] = 1400,  [11] = 800,   [18] = 800
 };
 
 #define INTERVAL_US     1024
@@ -429,78 +418,81 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
     
     /* 计算各时隙长度 */
     output->bcnSlotLen = g_bcnSlotLen[mode];
-    output->brdSlotLen = INTERVAL_US + g_brdBaseBody[mode] + g_brdBaseGap[mode];
-    output->ulSlotLen  = INTERVAL_US + g_ulBaseBody[mode] * input->ulBlockNum;
-    output->dlSlotLen  = INTERVAL_US + g_dlBaseBody[mode] * input->dlBlockNum + g_dlBaseGap[mode];
+    output->brdSlotLen = INTERVAL_US + g_brdBaseBody[mode] * (input->brdBlockNum * 2 + 1) + g_brdBaseGap[mode];
+    output->ulSlotLen  = INTERVAL_US + g_ulBaseBody[mode] * (input->ulBlockNum * 2 + 1) + g_ulBaseGap[mode];
+    output->dlSlotLen  = INTERVAL_US + g_dlBaseBody[mode] * (input->dlBlockNum * 2 + 1) + g_dlBaseGap[mode];
     
     /* 初始间隔 */
     output->bcnGap = 0;
-    output->brdGap = 0;
-    output->ulGap  = 0;
-    output->dlGap  = 0;
+    output->brdGap = g_brdBaseGap[mode];
+    output->ulGap  = g_ulBaseGap[mode];
+    output->dlGap  = g_dlBaseGap[mode];
     
     /* 计算原始帧周期 */
     uint32_t rawPeriod = output->bcnSlotLen + output->brdSlotLen + 
                          output->ulSlotLen + output->dlSlotLen;
     
-    TK8710_LOG_CORE_DEBUG("Raw frame period: %u us (BCN:%u + BRD:%u + UL:%u + DL:%u)", 
+    TK8710_LOG_CORE_INFO("Raw frame period: %u us (BCN:%u + BRD:%u + UL:%u + DL:%u)", 
                          rawPeriod, output->bcnSlotLen, output->brdSlotLen, 
                          output->ulSlotLen, output->dlSlotLen);
     
-    /* 寻找最小间隔使帧周期*N = 1s的倍数 */
-    uint32_t g = trm_gcd(rawPeriod, ONE_SECOND_US);
-    uint32_t targetPeriod = ONE_SECOND_US / trm_gcd(ONE_SECOND_US / g, ONE_SECOND_US);
-    
-    /* 找最小的N使得 rawPeriod <= targetPeriod * N 且 targetPeriod * N 是1s的倍数 */
+    /* 新算法：严格满足 framePeriod * frameCount = M秒 */
     uint32_t bestPeriod = 0;
     uint32_t bestCount = 0;
+    uint32_t minGap = UINT32_MAX;
     
-    for (uint32_t n = 1; n <= 100; n++) {
-        uint32_t candidate = (rawPeriod + n - 1) / n * n;  /* 向上取整到n的倍数 */
-        /* 检查candidate * k = 1000000 * m 是否成立 */
-        for (uint32_t k = 1; k <= 20; k++) {
-            uint64_t total = (uint64_t)candidate * k;
-            if (total >= ONE_SECOND_US && total % ONE_SECOND_US == 0) {
-                if (bestPeriod == 0 || candidate < bestPeriod) {
-                    bestPeriod = candidate;
-                    bestCount = k;
+    // 遍历所有可能的M和N组合，寻找最小间隔
+    for (uint32_t M = 1; M <= 30; M++) {
+        uint32_t totalUs = M * ONE_SECOND_US;
+        
+        // 寻找所有能整除totalUs的N
+        for (uint32_t N = 1; N <= 254; N++) {
+            if (totalUs % N != 0) continue; // N必须能整除totalUs
+            
+            uint32_t candidatePeriod = totalUs / N;
+            
+            // 只考虑candidatePeriod >= rawPeriod的情况
+            if (candidatePeriod >= rawPeriod) {
+                uint32_t gap = candidatePeriod - rawPeriod;
+                
+                // 优先选择间隔最小的解
+                if (gap < minGap) {
+                    minGap = gap;
+                    bestPeriod = candidatePeriod;
+                    bestCount = N;
+                    
+                    TK8710_LOG_CORE_INFO("Found better solution: M=%ds, N=%u, gap=%u us, period=%u us", 
+                                       M, N, gap, candidatePeriod);
+                    
+                    // 如果gap为0，这是最优解，直接退出
+                    if (gap == 0) {
+                        goto found_solution;
+                    }
                 }
-                break;
             }
         }
-        if (bestPeriod > 0 && bestPeriod <= rawPeriod + 100000) break;
     }
     
-    /* 简化算法：找最小间隔使帧周期能整除1s */
+found_solution:
     if (bestPeriod == 0) {
-        for (uint32_t gap = 0; gap < ONE_SECOND_US; gap += 1000) {
-            uint32_t period = rawPeriod + gap;
-            if (ONE_SECOND_US % period == 0) {
-                bestPeriod = period;
-                bestCount = ONE_SECOND_US / period;
-                break;
-            }
-            for (uint32_t k = 2; k <= 10; k++) {
-                if ((period * k) % ONE_SECOND_US == 0) {
-                    bestPeriod = period;
-                    bestCount = k;
-                    break;
-                }
-            }
-            if (bestPeriod > 0) break;
-        }
+        // 兜底：使用原始周期
+        bestPeriod = rawPeriod;
+        bestCount = 1;
+        TK8710_LOG_CORE_INFO("No solution found, using raw period");
     }
     
     /* 间隔加到下行时隙 */
-    output->dlGap = bestPeriod - rawPeriod;
+    minGap = 0;//终端暂时未使用时隙计算器时，先注释掉
+    output->dlGap = output->dlGap + minGap;
     output->framePeriod = bestPeriod;
     output->frameCount = bestCount;
-    
+    output->dlSlotLen = output->dlSlotLen + minGap;
     TK8710_LOG_CORE_INFO("Slot calculation completed:");
     TK8710_LOG_CORE_INFO("  Frame period: %u us, Frame count: %u (total %u ms)", 
                         output->framePeriod, output->frameCount,
                         output->framePeriod * output->frameCount / 1000);
-    TK8710_LOG_CORE_INFO("  Downlink gap: %u us", output->dlGap);
+    TK8710_LOG_CORE_INFO("  Gaps - BRD:%u, UL:%u, DL:%u us", 
+                        output->brdGap, output->ulGap, output->dlGap);
     TK8710_LOG_CORE_INFO("  Slot lengths - BCN:%u, BRD:%u, UL:%u, DL:%u us", 
                         output->bcnSlotLen, output->brdSlotLen, 
                         output->ulSlotLen, output->dlSlotLen);

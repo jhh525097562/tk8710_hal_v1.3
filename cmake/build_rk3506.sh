@@ -99,6 +99,17 @@ else
     exit 1
 fi
 
+arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -I./port \
+    -c src/trm/trm_slot.c \
+    -o ${BUILD_DIR}/trm_slot.o
+
+if [ $? -eq 0 ]; then
+    echo "✅ src/trm/trm_slot.c 编译成功"
+else
+    echo "❌ src/trm/trm_slot.c 编译失败"
+    exit 1
+fi
+
 # 尝试编译RK3506 port
 echo "编译RK3506 port..."
 arm-buildroot-linux-gnueabihf-gcc ${CFLAGS} ${INCLUDES} -c port/tk8710_rk3506.c -o ${BUILD_DIR}/tk8710_rk3506.o
@@ -144,6 +155,7 @@ ar rcs ${BUILD_DIR}/libtk8710_hal_complete.a \
     ${BUILD_DIR}/trm_data.o \
     ${BUILD_DIR}/trm_log.o \
     ${BUILD_DIR}/trm_mac_parser.o \
+    ${BUILD_DIR}/trm_slot.o \
     ${BUILD_DIR}/8710_hal_api.o \
     ${BUILD_DIR}/tk8710_ipc_comm.o
 

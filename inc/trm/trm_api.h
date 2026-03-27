@@ -80,7 +80,7 @@ typedef struct {
 /* 接收用户数据 */
 typedef struct {
     uint32_t userId;            /* 用户ID */
-    uint8_t  dataLen;           /* 数据长度 */
+    uint16_t dataLen;          /* 数据长度 */
     uint8_t  rateMode;          /* 接收速率模式 */
     int16_t  rssi;              /* 信号强度 */
     uint8_t  snr;               /* 信噪比 */
@@ -111,6 +111,29 @@ typedef struct {
     uint32_t    memFreeCount;      /* 内存释放次数 */
     uint32_t    txQueueRemaining;   /* 剩余发送队列数量 */
 } TRM_Stats;
+
+/* 时隙计算器输入参数 */
+typedef struct {
+    uint8_t  rateMode;       /**< 速率模式: 5-11, 18 */
+    uint8_t  brdBlockNum;    /**< slot1包块数（广播） */
+    uint8_t  ulBlockNum;     /**< 上行包块数 */
+    uint8_t  dlBlockNum;     /**< 下行包块数 */
+    uint8_t  superFrameNum;  /**< 超帧数 */
+} TRM_SlotCalcInput;
+
+/* 时隙计算器输出结果 */
+typedef struct {
+    uint32_t bcnSlotLen;     /**< BCN时隙长度(us) */
+    uint32_t brdSlotLen;     /**< 广播时隙长度(us) */
+    uint32_t ulSlotLen;      /**< 上行时隙长度(us) */
+    uint32_t dlSlotLen;      /**< 下行时隙长度(us) */
+    uint32_t bcnGap;         /**< BCN间隔(us) */
+    uint32_t brdGap;         /**< 广播间隔(us) */
+    uint32_t ulGap;          /**< 上行间隔(us) */
+    uint32_t dlGap;          /**< 下行间隔(us)，用于调整帧周期 */
+    uint32_t framePeriod;    /**< 调整后帧周期(us) */
+    uint32_t frameCount;     /**< 帧数(framePeriod * frameCount = 1s的倍数) */
+} TRM_SlotCalcOutput;
 
 /* =============================================================================
  * TRM上层回调接口类型定义
@@ -232,6 +255,19 @@ int TRM_GetStats(TRM_Stats* stats);
  * @return TRM_OK成功，其他失败
  */
 int TRM_LogConfig(TRMLogLevel level, uint8_t enable_file_logging);
+
+/* =============================================================================
+ * 时隙计算API
+ * ============================================================================= */
+
+/**
+ * @brief 计算时隙配置参数
+ * @param input 输入参数
+ * @param output 输出结果
+ * @return 0-成功, 非0-失败
+ * @note 基于8710_HAL用户指南v1.0 7.2.4章节实现
+ */
+int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* output);
 
 #ifdef __cplusplus
 }
