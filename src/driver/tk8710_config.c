@@ -172,11 +172,11 @@ static int tk8710_acm_get_gain(void)
         MAC_BASE + offsetof(struct mac, init_10), 0x1a);
     if (ret != TK8710_OK) return ret;
     
-    /* 步骤3: 设置校准信号频率 (acm_ctrl11) */
+    /* 步骤3: 设置校准信号频率 (acm_ctrl1) */
     for (i = 0; i < 8; i++) {
         regVal = (freqPose[i*2] << 16) | freqPose[i*2+1];
         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_ctrl11) + 0x4 * i, regVal);
+            ACM_BASE + offsetof(struct acm, acm_ctrl1) + 0x4 * i, regVal);
         if (ret != TK8710_OK) return ret;
     }
     
@@ -330,12 +330,12 @@ static int tk8710_acm_get_gain(void)
         TK8710_LOG_CONFIG_INFO("i = %d,Tmp0 = %d,Tmp1 = %d\n",i,Tmp0,Tmp1);
     }
     
-    /* 步骤10: 增益更新 (写入acm_ctrl19和acm_ctrl17) */
+    /* 步骤10: 增益更新 (写入acm_ctrl9和acm_ctrl17) */
     for (i = 0; i < 8; i++) {
         regVal = ((uint32_t)g_acm_dgain0[i*2] << 16) | g_acm_dgain0[i*2+1] |
                  ((uint32_t)g_acm_dgain1[i*2] << 24) | ((uint32_t)g_acm_dgain1[i*2+1] << 8);
         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_ctrl19) + 0x4 * i, regVal);
+            ACM_BASE + offsetof(struct acm, acm_ctrl9) + 0x4 * i, regVal);
         if (ret != TK8710_OK) return ret;
     }
     for (i = 0; i < 8; i++) {
@@ -518,11 +518,11 @@ static int tk8710_acm_calibrate(uint8_t calibCount, uint8_t snrThreshold)
         MAC_BASE + offsetof(struct mac, init_10), 0x1a);
     if (ret != TK8710_OK) return ret;
     
-    /* 步骤3: 设置校准信号频率 (acm_ctrl11) */
+    /* 步骤3: 设置校准信号频率 (acm_ctrl1) */
     for (i = 0; i < 8; i++) {
         regVal = (freqPose[i*2] << 16) | freqPose[i*2+1];
         ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL,
-            ACM_BASE + offsetof(struct acm, acm_ctrl11) + 0x4 * i, regVal);
+            ACM_BASE + offsetof(struct acm, acm_ctrl1) + 0x4 * i, regVal);
         if (ret != TK8710_OK) return ret;
     }
     
@@ -691,25 +691,20 @@ int TK8710GetAcmCalibrationFactors(AcmCalibrationFactors* calFactors)
     /* 打印校准因子 */
     TK8710_LOG_CONFIG_INFO("=== ACM校准因子 ===\n");
     for (i = 0; i < TK8710_MAX_ANTENNAS; i++) {
-        /* 解析18位校准因子：1位符号 + 2位整数 + 15位小数 */
-        uint32_t i_factor = calFactors->channels[i].i_factor;
-        uint32_t q_factor = calFactors->channels[i].q_factor;
+        /* 解析18位校准因子：使用补码转换 */
+        uint32_t i_factor = calFactors->channels[i].i_factor & 0x3FFFF;  // 18位掩码
+        uint32_t q_factor = calFactors->channels[i].q_factor & 0x3FFFF;  // 18位掩码
         
-        /* 提取符号位（第17位） */
-        int i_sign = (i_factor >> 17) & 0x1 ? -1 : 1;
-        int q_sign = (q_factor >> 17) & 0x1 ? -1 : 1;
+        /* 转换为浮点数 - 参考MATLAB实现 */
+        float i_float, q_float;
         
-        /* 提取整数部分（第15-16位） */
-        int i_int = (i_factor >> 15) & 0x3;
-        int q_int = (q_factor >> 15) & 0x3;
+        /* I路转换：18位补码转浮点 */
+        int32_t i_signed = (int32_t)(i_factor << 14) >> 14;  // 符号位扩展到32位
+        i_float = (float)i_signed / 32768.0f;
         
-        /* 提取小数部分（第0-14位） */
-        int i_frac = i_factor & 0x7FFF;
-        int q_frac = q_factor & 0x7FFF;
-        
-        /* 转换为浮点数 */
-        float i_float = i_sign * (i_int + i_frac / 32768.0f);
-        float q_float = q_sign * (q_int + q_frac / 32768.0f);
+        /* Q路转换：18位补码转浮点 */
+        int32_t q_signed = (int32_t)(q_factor << 14) >> 14;  // 符号位扩展到32位
+        q_float = (float)q_signed / 32768.0f;
         
         TK8710_LOG_CONFIG_INFO("通道%d: I路=0x%08X (%.3f), Q路=0x%08X (%.3f)\n", 
                             i, i_factor, i_float, q_factor, q_float);

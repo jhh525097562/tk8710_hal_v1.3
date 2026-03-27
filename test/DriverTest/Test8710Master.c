@@ -1258,6 +1258,8 @@ int main(int argc, char* argv[])
     printf("\nSystem initialization completed, starting runtime...\n");
     printf("Enter 'h' for help information\n\n");
     
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x980c, 0x000FF200);
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x10100010);
     /* 8. 主循环 - 等待中断并进行中断处理 */
     while (g_running) {
         printf("TK8710> ");
@@ -1399,8 +1401,8 @@ int main(int argc, char* argv[])
     printf("\n=== 最终中断处理时间统计报告 ===\n");
     TK8710PrintIrqTimeStats();
 
-    TK8710Reset(TK8710_RST_STATE_MACHINE);
-    
+    // TK8710Reset(TK8710_RST_STATE_MACHINE);
+    TK8710Reset(TK8710_RST_ALL);
     printf("Program ended\n");
     return 0;
 }

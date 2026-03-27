@@ -653,6 +653,9 @@ int TK8710SpiWriteReg(uint16_t addr, const uint32_t* data, uint8_t regCount)
         g_spiTxBuf[offset + 1] = (uint8_t)(regData >> 16);
         g_spiTxBuf[offset + 2] = (uint8_t)(regData >> 8);
         g_spiTxBuf[offset + 3] = (uint8_t)(regData & 0xFF);
+        
+        /* 打印寄存器写入信息 */
+        // printf("write addr = 0x%08X,data = 0x%08X\n", addr + i * 4, regData);
     }
     
     return TK8710SpiWrite(g_spiTxBuf, txLen);
