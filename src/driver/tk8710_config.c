@@ -710,6 +710,52 @@ int TK8710GetAcmCalibrationFactors(AcmCalibrationFactors* calFactors)
                             i, i_factor, i_float, q_factor, q_float);
     }
     
+    /* 保存校准因子到文件 - TXT格式 */
+    {
+        FILE* outputFile;
+        char filename[256];
+        time_t rawtime;
+        struct tm* timeinfo;
+        
+        /* 创建CaliFactor目录 */
+        #ifdef _WIN32
+            _mkdir("CaliFactor");
+        #else
+            mkdir("CaliFactor", 0755);
+        #endif
+        
+        /* 获取当前时间用于记录 */
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        
+        /* 使用固定文件名，以文本追加模式打开 */
+        snprintf(filename, sizeof(filename), "CaliFactor/CaliFactor.txt");
+        outputFile = fopen(filename, "a");  // "a"模式：追加文本写入
+        if (outputFile == NULL) {
+            TK8710_LOG_CONFIG_ERROR("打开校准因子文件%s失败\n", filename);
+            return TK8710_ERR;
+        }
+        
+        /* 写入时间戳 */
+        fprintf(outputFile, "\n=== %04d-%02d-%02d %02d:%02d:%02d ===\n",
+                timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday,
+                timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+        
+        /* 写入校准因子数据为文本格式 */
+        fprintf(outputFile, "ACM校准因子数据:\n");
+        for (int i = 0; i < TK8710_MAX_ANTENNAS; i++) {
+            /* 获取原始校准因子 */
+            uint32_t i_factor = calFactors->channels[i].i_factor & 0x3FFFF;  // 18位掩码
+            uint32_t q_factor = calFactors->channels[i].q_factor & 0x3FFFF;  // 18位掩码
+            
+            fprintf(outputFile, "通道[%d]: I_factor=0x%05X, Q_factor=0x%05X\n",
+                    i, i_factor, q_factor);
+        }
+        
+        fclose(outputFile);
+        TK8710_LOG_CONFIG_INFO("ACM校准因子TXT格式追加保存完成，文件: %s\n", filename);
+    }
+    
     return TK8710_OK;
 }
 
@@ -1373,32 +1419,6 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                 return ret;
             }
             
-            /* 创建CaliFactor目录 */
-            #ifdef _WIN32
-                _mkdir("CaliFactor");
-            #else
-                mkdir("CaliFactor", 0755);
-            #endif
-            
-            /* 保存校准因子到文件 */
-            snprintf(filename, sizeof(filename), "CaliFactor/CaliFactor");
-            outputFile = fopen(filename, "wb");
-            if (outputFile == NULL) {
-                TK8710_LOG_CONFIG_ERROR("创建校准因子文件%s失败\n", filename);
-                return TK8710_ERR;
-            }
-            
-            /* 写入校准因子数据 */
-            size_t written = fwrite(&calFactors, sizeof(AcmCalibrationFactors), 1, outputFile);
-            fclose(outputFile);
-            
-            if (written == 1) {
-                TK8710_LOG_CONFIG_INFO("ACM校准因子保存完成，文件: %s\n", filename);
-            } else {
-                TK8710_LOG_CONFIG_ERROR("保存ACM校准因子失败\n");
-                return TK8710_ERR;
-            }
-            
             return TK8710_OK;
         }
         case TK8710_DBG_TYPE_ACM_SNR:
@@ -1436,8 +1456,15 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
         case TK8710_DBG_TYPE_ACM_CALIBRATE:
         {
             int ret;
-            uint8_t calibCount = 5;  /* 默认校准次数 */
-            uint8_t snrThreshold = 32;  /* 默认SNR门限值 */
+            uint8_t calibCount = 5;   /* 默认校准次数 */
+            uint8_t snrThreshold = 32; /* 默认SNR门限值 */
+            
+            /* 从输入参数获取校准配置 */
+            if (inputParams != NULL) {
+                AcmCalibParams* params = (AcmCalibParams*)inputParams;
+                calibCount = params->calibCount;
+                snrThreshold = params->snrThreshold;
+            }
             
             TK8710_LOG_CONFIG_INFO("执行ACM校准 (校准次数: %d, SNR门限: %d)...\n", calibCount, snrThreshold);
             ret = tk8710_acm_calibrate(calibCount, snrThreshold);

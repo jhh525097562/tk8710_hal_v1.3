@@ -177,6 +177,12 @@ typedef enum {
     
 } TK8710DebugCtrlType;
 
+/* ACM校准参数结构体 */
+typedef struct {
+    uint8_t calibCount;    /* 校准次数 */
+    uint8_t snrThreshold;  /* SNR门限值 */
+} AcmCalibParams;
+
 /* 调试操作类型枚举 */
 typedef enum {
     TK8710_DBG_OPT_SET = 0,

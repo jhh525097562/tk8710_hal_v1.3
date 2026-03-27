@@ -1342,6 +1342,7 @@ int main(int argc, char* argv[])
             case 'f':
             case 'F':
                 printf("获取ACM校准因子...\n");
+                
                 ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CAL_FACTOR, TK8710_DBG_OPT_GET, NULL, NULL);
                 if (ret == TK8710_OK) {
                     printf("ACM校准因子获取完成\n");
@@ -1374,14 +1375,58 @@ int main(int argc, char* argv[])
                 
             case 'k':
             case 'K':
+            {
+                AcmCalibParams calibParams;
+                char input[100];
+                int c;
+                
                 printf("执行ACM校准...\n");
-                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, NULL, NULL);
+                
+                /* 清理输入缓冲区 */
+                while ((c = getchar()) != '\n' && c != EOF);
+                
+                /* 获取校准次数 */
+                printf("请输入校准次数 (默认5): \n");
+                fflush(stdout);  /* 确保提示信息立即显示 */
+                if (fgets(input, sizeof(input), stdin) != NULL) {
+                    /* 移除换行符 */
+                    input[strcspn(input, "\n")] = 0;
+                    if (strlen(input) > 0) {
+                        calibParams.calibCount = (uint8_t)atoi(input);
+                    } else {
+                        calibParams.calibCount = 5;  /* 默认值 */
+                    }
+                } else {
+                    calibParams.calibCount = 5;  /* 默认值 */
+                }
+                
+                /* 获取SNR门限值 */
+                printf("请输入SNR门限值 (默认32): \n");
+                fflush(stdout);  /* 确保提示信息立即显示 */
+                if (fgets(input, sizeof(input), stdin) != NULL) {
+                    /* 移除换行符 */
+                    input[strcspn(input, "\n")] = 0;
+                    if (strlen(input) > 0) {
+                        calibParams.snrThreshold = (uint8_t)atoi(input);
+                    } else {
+                        calibParams.snrThreshold = 32;  /* 默认值 */
+                    }
+                } else {
+                    calibParams.snrThreshold = 32;  /* 默认值 */
+                }
+                
+                printf("开始ACM校准 (校准次数: %d, SNR门限: %d)...\n", 
+                       calibParams.calibCount, calibParams.snrThreshold);
+                
+                ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, 
+                                    &calibParams, NULL);
                 if (ret == TK8710_OK) {
                     printf("ACM校准完成\n");
                 } else {
                     printf("ACM校准失败: ret=%d\n", ret);
                 }
                 break;
+            }
                 
             case 'q':
             case 'Q':
