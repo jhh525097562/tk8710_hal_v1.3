@@ -912,11 +912,10 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                     g_slotCfg.s3Cfg[0].timeLen;
                 
                 /* 打印每个slot的时间长度和帧总时间 */
-                TK8710_LOG_CONFIG_INFO("Slot time lengths - S0:%d, S1:%d, S2:%d, S3:%d (us)",
+                TK8710_LOG_CONFIG_WARN("Slot time lengths - S0:%d, S1:%d, S2:%d, S3:%d (us)",
                     g_slotCfg.s0Cfg[0].timeLen, g_slotCfg.s1Cfg[0].timeLen, 
                     g_slotCfg.s2Cfg[0].timeLen, g_slotCfg.s3Cfg[0].timeLen);
-                TK8710_LOG_CONFIG_INFO("Frame total time length: %d (us)", g_slotCfg.frameTimeLen);
-                    
+                TK8710_LOG_CONFIG_WARN("Frame total time length: %d (us)", g_slotCfg.frameTimeLen);              
             }
             
             return TK8710_OK;
