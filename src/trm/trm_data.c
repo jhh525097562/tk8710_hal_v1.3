@@ -19,6 +19,10 @@ extern void TK8710ExitCritical(void);
 extern uint64_t TK8710GetTimeUs(void);
 extern TrmContext* TRM_GetContext(void);
 
+/* 外部变量声明 */
+extern uint32_t g_trmCurrentFrame;
+extern uint32_t g_trmMaxFrameCount;
+
 /*==============================================================================
  * 私有定义
  *============================================================================*/
@@ -27,6 +31,7 @@ extern TrmContext* TRM_GetContext(void);
 #define TX_QUEUE_PRIORITY_COUNT 4 /* 优先级队列数量 (Pri=0最高, Pri=3最低) */
 #define TX_DATA_MAX_LEN 512       /* 最大发送数据长度 */
 #define BEAM_RELEASE_QUEUE_SIZE 2048  /* 波束RAM释放队列大小 */
+#define MAX_PENDING_USERS 128      /* 最大待发送用户数量 */
 
 
 /* 发送数据项 */
@@ -44,6 +49,20 @@ typedef struct {
     uint32_t frameNo;         /**< 目标发送帧号 */
     uint32_t systemFrameNo;   /**< 入队时的系统帧号 */
 } TxItem;
+
+/* 待发送用户信息 */
+typedef struct {
+    uint32_t userId;
+    uint8_t  data[TX_DATA_MAX_LEN];
+    uint16_t len;
+    uint8_t  beamType;
+    TRM_BeamInfo beam;
+    uint8_t  originalPower;  /* 原始功率 */
+    uint8_t  finalPower;     /* 最终设置的功率 */
+    uint8_t  priority;       /* 优先级 */
+    uint8_t  queueIndex;     /* 在原队列中的位置 */
+    uint8_t  queuePriority;  /* 队列优先级 */
+} PendingTxUser;
 
 /* 发送队列 */
 typedef struct {
@@ -92,8 +111,10 @@ static TrmBroadcastData g_broadcastData;  /* 广播数据存储 */
 
 /*==============================================================================
  * 私有函数前向声明
- *============================================================================*/
+============================================================================*/
 static uint32_t TRM_GetTotalQueueCount(void);
+static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t nextRateMode);
+static uint8_t TRM_SendCollectedUsers(PendingTxUser* pendingUsers, uint8_t userCount, TRM_TxUserResult* txResults, uint32_t* resultCount);
 
 /*==============================================================================
  * 公共接口实现
@@ -381,7 +402,7 @@ int TRM_SendData(uint32_t userId, const uint8_t* data, uint16_t len, uint8_t txP
     priority = g_trmCurrentFrame%4;
 
     /* 检查帧号有效性 - 帧号应该是循环的 */
-    uint32_t normalizedFrameNo = frameNo % g_trmMaxFrameCount;
+    uint32_t normalizedFrameNo = frameNo == 0xFF ? 0xFF : (frameNo % g_trmMaxFrameCount + 1);
     
     TK8710EnterCritical();
     
@@ -576,6 +597,216 @@ static uint8_t TRM_ProcessQueueItem(TxQueue* queue, TxItem* item, uint8_t isMult
     return shouldRemove;
 }
 
+/**
+ * @brief 收集所有待发送用户
+ * @param pendingUsers 输出：收集到的待发送用户数组
+ * @param maxUserCount 最大用户数量
+ * @param isMultiRate 是否为多速率模式
+ * @param nextRateMode 下一个速率模式
+ * @return 实际收集到的用户数量
+ */
+static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t nextRateMode)
+{
+    uint8_t collectedCount = 0;
+    
+    /* 按优先级顺序处理队列 (Pri=0最高优先级先处理) */
+    for (uint8_t pri = 0; pri < TX_QUEUE_PRIORITY_COUNT && collectedCount < maxUserCount; pri++) {
+        TxQueue* queue = &g_txQueues[pri];
+        uint16_t processedInQueue = 0;
+        uint16_t maxProcess = queue->count;  /* 记录初始数量，避免无限循环 */
+        
+        while (queue->count > 0 && collectedCount < maxUserCount && processedInQueue < maxProcess) {
+            TxItem* item = &queue->items[queue->head];
+            processedInQueue++;
+            
+            if (!item->valid) {
+                /* 无效项，直接出队 */
+                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
+                queue->count--;
+                continue;
+            }
+            
+            /* 使用与TRM_ProcessQueueItem相同的判断逻辑 */
+            uint8_t shouldSend = 0;
+            uint8_t shouldRemove = 0;
+            
+            TRM_LOG_DEBUG("TRM: Processing item - userId=0x%08X, frameNo=%u, targetRateMode=%u, systemFrameNo=%u", 
+                         item->userId, item->frameNo, item->targetRateMode, item->systemFrameNo);
+            
+            if (isMultiRate) {
+                /* 多速率模式：只检查目标速率模式是否匹配下一帧速率模式 */
+                if (item->targetRateMode == nextRateMode) {
+                    shouldSend = 1;
+                }
+                TRM_LOG_DEBUG("TRM: MultiRate mode - item->targetRateMode=%u, nextRateMode=%u, shouldSend=%u", 
+                             item->targetRateMode, nextRateMode, shouldSend);
+            } else {
+                /* 单速率模式：使用相对帧差判断 */
+                if (item->targetRateMode == 0) {
+                    uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
+                    uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
+                    uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
+                    
+                    TRM_LOG_DEBUG("TRM: SingleRate mode - currentSuperFramePos=%u, item->frameNo=%u, frameDiff=%u, systemFrameDiff=%u", 
+                                 currentSuperFramePos, item->frameNo, frameDiff, systemFrameDiff);
+                    
+                    if (item->frameNo == currentSuperFramePos || item->frameNo == 0xFF) {
+                        shouldSend = 1;
+                        TRM_LOG_DEBUG("TRM: Frame match - shouldSend=1 (frameNo=%u, currentPos=%u)", 
+                                     item->frameNo, currentSuperFramePos);
+                    } else if (frameDiff > g_trmMaxFrameCount / 2) {
+                        if (systemFrameDiff > g_trmMaxFrameCount) {
+                            /* 超时丢弃 */
+                            shouldRemove = 1;
+                            TRM_LOG_DEBUG("TRM: Timeout - shouldRemove=1");
+                        }
+                        /* 未来帧，跳过 */
+                        TRM_LOG_DEBUG("TRM: Future frame - skipping");
+                    } else {
+                        /* 过期帧，丢弃 */
+                        shouldRemove = 1;
+                        TRM_LOG_DEBUG("TRM: Expired frame - shouldRemove=1");
+                    }
+                } else {
+                    /* 单速率模式下指定了速率模式，丢弃 */
+                    shouldRemove = 1;
+                    TRM_LOG_DEBUG("TRM: Invalid rate mode for single rate - shouldRemove=1");
+                }
+            }
+            
+            /* 如果应该发送且用户ID有效，则收集用户信息 */
+            if (shouldSend && item->userId != 0) {
+                /* 获取波束信息 */
+                TRM_BeamInfo beam;
+                int beamRet = TRM_GetBeamInfo(item->userId, &beam);
+                
+                if (beamRet == TRM_OK) {
+                    /* 收集用户信息 */
+                    PendingTxUser* pendingUser = &pendingUsers[collectedCount];
+                    pendingUser->userId = item->userId;
+                    memcpy(pendingUser->data, item->data, item->len);
+                    pendingUser->len = item->len;
+                    pendingUser->beamType = item->beamType;
+                    pendingUser->beam = beam;
+                    pendingUser->originalPower = item->power;
+                    pendingUser->finalPower = item->power;  /* 暂时使用原始功率 */
+                    pendingUser->priority = item->priority;
+                    pendingUser->queueIndex = queue->head;
+                    pendingUser->queuePriority = pri;
+                    
+                    collectedCount++;
+                    shouldRemove = 1;  /* 标记为需要移除 */
+                }
+            }
+            
+            /* 移动到下一项或移除已处理的项 */
+            if (shouldSend) {
+                /* 发送的项目，标记为无效并移除 */
+                item->valid = 0;
+                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
+                queue->count--;
+            } else if (shouldRemove) {
+                /* 需要移除的项目（超时、过期等） */
+                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
+                queue->count--;
+            } else {
+                /* 未来帧等项目，暂时保留在队列中 */
+                /* 为了能够继续处理队列中的其他项目，我们需要临时移动head */
+                /* 但是这样会破坏FIFO顺序，所以我们需要重新入队这个项目 */
+                
+                /* 临时保存项目信息 */
+                TxItem tempItem = *item;
+                
+                /* 移除当前位置的项目 */
+                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
+                queue->count--;
+                
+                /* 重新入队到队列末尾 */
+                if (queue->count < TX_QUEUE_SIZE) {
+                    TxItem* tailItem = &queue->items[queue->tail];
+                    *tailItem = tempItem;
+                    queue->tail = (queue->tail + 1) % TX_QUEUE_SIZE;
+                    queue->count++;
+                    
+                    TRM_LOG_DEBUG("TRM: Future frame re-queued - userId=0x%08X, frameNo=%u", 
+                                 tempItem.userId, tempItem.frameNo);
+                }
+            }
+        }
+    }
+    
+    TRM_LOG_DEBUG("TRM: Collected %u pending users for sending", collectedCount);
+    return collectedCount;
+}
+
+/**
+ * @brief 发送收集到的用户（统一功率设置）
+ * @param pendingUsers 待发送用户数组
+ * @param userCount 用户数量
+ * @param txResults 输出：发送结果数组
+ * @param resultCount 输出：结果数量
+ * @return 实际发送的用户数量
+ */
+static uint8_t TRM_SendCollectedUsers(PendingTxUser* pendingUsers, uint8_t userCount, TRM_TxUserResult* txResults, uint32_t* resultCount)
+{
+    uint8_t sentCount = 0;
+    uint8_t txUserIndex = 0;
+    
+    /* 功率设置阶段：所有用户使用固定功率 */
+    uint8_t fixedPower = 35;  /* 固定功率值，可根据需要调整 */
+    
+    for (uint8_t i = 0; i < userCount; i++) {
+        PendingTxUser* user = &pendingUsers[i];
+        user->finalPower = fixedPower;  /* 统一设置固定功率 */
+    }
+    
+    /* 发送阶段：统一调用发送接口 */
+    for (uint8_t i = 0; i < userCount; i++) {
+        PendingTxUser* user = &pendingUsers[i];
+        
+        /* 调用发送接口 */
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, user->data, user->len, user->finalPower, user->beamType);
+        
+        if (ret == TK8710_OK) {
+            ret = TK8710SetTxUserInfo(txUserIndex, user->beam.freq, user->beam.ahData, user->beam.pilotPower);
+            
+            if (ret == TK8710_OK) {
+                /* 发送成功 */
+                sentCount++;
+                if (*resultCount < TX_QUEUE_SIZE) {
+                    txResults[*resultCount].userId = user->userId;
+                    txResults[*resultCount].result = TRM_TX_OK;
+                    (*resultCount)++;
+                }
+                TRM_ScheduleBeamRamRelease(user->userId, 4);
+                TRM_LOG_DEBUG("TRM: Successfully sent user[%u] with power=%u", user->userId, user->finalPower);
+            } else {
+                /* 设置用户信息失败 */
+                if (*resultCount < TX_QUEUE_SIZE) {
+                    txResults[*resultCount].userId = user->userId;
+                    txResults[*resultCount].result = TRM_TX_ERROR;
+                    (*resultCount)++;
+                }
+                TRM_LOG_WARN("TRM: Failed to set user info for user[%u]", user->userId);
+            }
+        } else {
+            /* 发送数据失败 */
+            if (*resultCount < TX_QUEUE_SIZE) {
+                txResults[*resultCount].userId = user->userId;
+                txResults[*resultCount].result = TRM_TX_ERROR;
+                (*resultCount)++;
+            }
+            TRM_LOG_WARN("TRM: Failed to send data for user[%u]", user->userId);
+        }
+        
+        txUserIndex++;
+        if (txUserIndex >= 128) txUserIndex = 0;
+    }
+    
+    TRM_LOG_INFO("TRM: Sent %u/%u users with fixed power=%u", sentCount, userCount, fixedPower);
+    return sentCount;
+}
+
 /* 内部函数 - 在发送时隙回调中调用 */
 int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* irqResult)
 {
@@ -606,39 +837,17 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     }
         
     TK8710EnterCritical();
-        
-    uint8_t txUserIndex = 0;
     
-    /* 按优先级顺序处理队列 (Pri=0最高优先级先处理) */
-    for (uint8_t pri = 0; pri < TX_QUEUE_PRIORITY_COUNT && sentCount < maxUserCount; pri++) {
-        TxQueue* queue = &g_txQueues[pri];
-        uint16_t processedInQueue = 0;
-        uint16_t maxProcess = queue->count;  /* 记录初始数量，避免无限循环 */
-        
-        while (queue->count > 0 && sentCount < maxUserCount && processedInQueue < maxProcess) {
-            TxItem* item = &queue->items[queue->head];
-            processedInQueue++;
-            
-            if (!item->valid) {
-                /* 无效项，直接出队 */
-                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
-                queue->count--;
-                continue;
-            }
-            
-            uint8_t shouldRemove = TRM_ProcessQueueItem(queue, item, isMultiRate, nextRateMode,
-                                                        &txUserIndex, txResults, &resultCount, &sentCount);
-            
-            if (shouldRemove) {
-                item->valid = 0;
-                queue->head = (queue->head + 1) % TX_QUEUE_SIZE;
-                queue->count--;
-            } else {
-                /* 跳过此项，移动到下一项（对于未来帧等情况） */
-                /* 注意：FIFO队列中跳过会导致问题，这里简化处理为继续下一个优先级 */
-                break;
-            }
-        }
+    /* 新的两阶段处理逻辑 */
+    PendingTxUser pendingUsers[MAX_PENDING_USERS];
+    uint8_t pendingUserCount = 0;
+    
+    /* 第一阶段：收集所有待发送用户 */
+    pendingUserCount = TRM_CollectPendingUsers(pendingUsers, maxUserCount, isMultiRate, nextRateMode);
+    
+    /* 第二阶段：统一功率设置并发送 */
+    if (pendingUserCount > 0) {
+        sentCount = TRM_SendCollectedUsers(pendingUsers, pendingUserCount, txResults, &resultCount);
     }
     
     TK8710ExitCritical();

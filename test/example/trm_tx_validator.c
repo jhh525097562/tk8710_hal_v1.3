@@ -219,7 +219,7 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 /* 计算应答用户ID和目标帧 */
                 uint32_t respUserId = GenerateResponseUserId(user->userId);
                 uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
-                
+                // uint32_t targetFrame = 0xFF;
                 /* 执行发送 - 使用帧号模式 */
                 ExecuteSend(respUserId, respData, dataLen, targetFrame, 0);
             }
