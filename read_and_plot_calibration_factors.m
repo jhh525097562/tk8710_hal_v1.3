@@ -29,7 +29,7 @@ function read_and_plot_calibration_factors()
     plot_calibration_scatter(calibration_data);
     
     % 显示统计信息
-    display_statistics(calibration_data);
+    calculate_iq_variance(calibration_data.i_float,calibration_data.q_float);
 end
 
 function calibration_data = parse_calibration_data(lines)
@@ -194,28 +194,154 @@ function plot_calibration_scatter(calibration_data)
     fprintf('I-Q散点图已保存为: calibration_iq_scatter_plot.png\n');
 end
 
-function display_statistics(calibration_data)
-    fprintf('\n=== 校准因子统计信息 ===\n');
-    fprintf('校准次数: %d\n', size(calibration_data.i_float, 1));
-    fprintf('通道数量: %d\n', size(calibration_data.i_float, 2));
+function calculate_iq_variance(i_data, q_data)
+    % 计算I路和Q路数据的方差（转换后）
+    % 参数：
+    %   i_data: I路数据矩阵
+    %   q_data: Q路数据矩阵
     
-    fprintf('\nI路校准因子统计:\n');
-    fprintf('通道\t均值\t\t标准差\t\t最小值\t\t最大值\n');
-    for ch = 1:8
-        data = calibration_data.i_float(:, ch);
-        fprintf('%d\t%.6f\t%.6f\t%.6f\t%.6f\n', ch-1, mean(data), std(data), min(data), max(data));
+    if isempty(i_data) || isempty(q_data)
+        fprintf('错误：输入数据为空\n');
+        return;
     end
     
-    fprintf('\nQ路校准因子统计:\n');
-    fprintf('通道\t均值\t\t标准差\t\t最小值\t\t最大值\n');
-    for ch = 1:8
-        data = calibration_data.q_float(:, ch);
-        fprintf('%d\t%.6f\t%.6f\t%.6f\t%.6f\n', ch-1, mean(data), std(data), min(data), max(data));
+    fprintf('\n=== I-Q数据方差分析 ===\n');
+    
+    % 获取数据维度
+    [num_blocks, num_antennas] = size(i_data);
+    fprintf('数据块数: %d\n', num_blocks);
+    fprintf('天线数: %d\n', num_antennas);
+    
+    % 初始化方差存储数组
+    i_variance = zeros(1, num_antennas);
+    q_variance = zeros(1, num_antennas);
+    i_mean = zeros(1, num_antennas);
+    q_mean = zeros(1, num_antennas);
+    i_std = zeros(1, num_antennas);
+    q_std = zeros(1, num_antennas);
+    
+    % 对每个天线计算方差
+    for ant = 1:num_antennas
+        % 提取非零数据
+        valid_i_indices = (i_data(:, ant) ~= 0);
+        valid_q_indices = (q_data(:, ant) ~= 0);
+        
+        if any(valid_i_indices)
+            % 转换I路数据
+            i_converted = i_data(valid_i_indices, ant);
+            
+            % 计算I路统计量
+            i_mean(ant) = mean(i_converted);
+            i_variance(ant) = var(i_converted);
+            i_std(ant) = std(i_converted);
+            
+            fprintf('\n天线%d I路数据:\n', ant);
+            fprintf('  有效数据点数: %d\n', length(i_converted));
+            fprintf('  均值: %.6f\n', i_mean(ant));
+            fprintf('  方差: %.6f\n', i_variance(ant));
+            fprintf('  标准差: %.6f\n', i_std(ant));
+            fprintf('  数据范围: [%.6f, %.6f]\n', min(i_converted), max(i_converted));
+        else
+            fprintf('\n天线%d I路数据: 无有效数据\n', ant);
+        end
+        
+        if any(valid_q_indices)
+            % 转换Q路数据
+            q_converted = q_data(valid_q_indices, ant);
+            
+            % 计算Q路统计量
+            q_mean(ant) = mean(q_converted);
+            q_variance(ant) = var(q_converted);
+            q_std(ant) = std(q_converted);
+            
+            fprintf('天线%d Q路数据:\n', ant);
+            fprintf('  有效数据点数: %d\n', length(q_converted));
+            fprintf('  均值: %.6f\n', q_mean(ant));
+            fprintf('  方差: %.6f\n', q_variance(ant));
+            fprintf('  标准差: %.6f\n', q_std(ant));
+            fprintf('  数据范围: [%.6f, %.6f]\n', min(q_converted), max(q_converted));
+        else
+            fprintf('天线%d Q路数据: 无有效数据\n', ant);
+        end
     end
     
-    fprintf('\n时间戳列表:\n');
-    for i = 1:length(calibration_data.timestamps)
-        fprintf('%d: %s\n', i, calibration_data.timestamps{i});
+    % 计算总体统计
+    all_i_converted = i_data(i_data ~= 0);
+    all_q_converted = q_data(q_data ~= 0);
+    
+    if ~isempty(all_i_converted)
+        fprintf('\n=== 总体I路统计 ===\n');
+        fprintf('总数据点数: %d\n', length(all_i_converted));
+        fprintf('总体均值: %.6f\n', mean(all_i_converted));
+        fprintf('总体方差: %.6f\n', var(all_i_converted));
+        fprintf('总体标准差: %.6f\n', std(all_i_converted));
+        fprintf('总体范围: [%.6f, %.6f]\n', min(all_i_converted), max(all_i_converted));
     end
+    
+    if ~isempty(all_q_converted)
+        fprintf('\n=== 总体Q路统计 ===\n');
+        fprintf('总数据点数: %d\n', length(all_q_converted));
+        fprintf('总体均值: %.6f\n', mean(all_q_converted));
+        fprintf('总体方差: %.6f\n', var(all_q_converted));
+        fprintf('总体标准差: %.6f\n', std(all_q_converted));
+        fprintf('总体范围: [%.6f, %.6f]\n', min(all_q_converted), max(all_q_converted));
+    end
+    
+    % 绘制方差对比图
+    plot_variance_comparison(i_variance, q_variance, i_mean, q_mean);
+    
+    % 返回统计结果
+    stats = struct();
+    stats.i_variance = i_variance;
+    stats.q_variance = q_variance;
+    stats.i_mean = i_mean;
+    stats.q_mean = q_mean;
+    stats.i_std = i_std;
+    stats.q_std = q_std;
+    stats.total_i_variance = var(all_i_converted);
+    stats.total_q_variance = var(all_q_converted);
+    
+    fprintf('\n方差分析完成！\n');
 end
 
+function plot_variance_comparison(i_variance, q_variance, i_mean, q_mean)
+    % 绘制方差对比图
+%     figure('Name', 'I-Q方差对比图', 'Position', [300, 300, 1000, 400]);
+    figure('Name', 'I-Q方差对比图'); 
+    % 子图1：方差对比
+    subplot(1, 2, 1);
+    x = 1:length(i_variance);
+    bar_width = 0.35;
+    
+    bar(x - bar_width/2, i_variance, bar_width, 'FaceColor', 'blue', 'DisplayName', 'I路方差');
+    hold on;
+    bar(x + bar_width/2, q_variance, bar_width, 'FaceColor', 'red', 'DisplayName', 'Q路方差');
+    
+    xlabel('天线编号', 'FontSize', 12);
+    ylabel('方差', 'FontSize', 12);
+    title('各天线I-Q方差对比', 'FontSize', 14, 'FontWeight', 'bold');
+    legend('Location', 'best');
+    grid on;
+    
+    % 设置x轴标签
+    set(gca, 'XTick', 1:length(i_variance));
+    set(gca, 'XTickLabel', arrayfun(@(x) sprintf('天线%d', x), 1:length(i_variance), 'UniformOutput', false));
+    
+    % 子图2：均值对比
+    subplot(1, 2, 2);
+    bar(x - bar_width/2, sqrt(i_mean.^2+q_mean.^2), bar_width, 'FaceColor', 'cyan', 'DisplayName', '均值');
+%     hold on;
+%     bar(x + bar_width/2, q_mean, bar_width, 'FaceColor', 'magenta', 'DisplayName', 'Q路均值');
+    
+    xlabel('天线编号', 'FontSize', 12);
+    ylabel('均值', 'FontSize', 12);
+    title('各天线均值幅度', 'FontSize', 14, 'FontWeight', 'bold');
+    legend('Location', 'best');
+    grid on;
+    
+    % 设置x轴标签
+    set(gca, 'XTick', 1:length(i_mean));
+    set(gca, 'XTickLabel', arrayfun(@(x) sprintf('天线%d', x), 1:length(i_mean), 'UniformOutput', false));
+    
+    hold off;
+end
