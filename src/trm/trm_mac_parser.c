@@ -26,8 +26,18 @@ int TRM_ParseMacMhdr(const uint8_t* data, uint16_t len, TrmMacMhdr* mhdr)
     /* 解析第二个字节 (QoS相关) */
     mhdr->qosPri = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_QOSPRI_SHIFT) & TRM_MHDR_QOSPRI_MASK;
     mhdr->qosTtl = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_QOSTTL_SHIFT) & TRM_MHDR_QOSTTL_MASK;
-    mhdr->hopNum = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPNUM_SHIFT) & TRM_MHDR_HOPNUM_MASK;
-    mhdr->hopCnt = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPCNT_SHIFT) & TRM_MHDR_HOPCNT_MASK;
+    
+    /* 根据网络模式解析HopNum和HopCnt字段 */
+    uint8_t nwkMode = (data[TRM_MHDR_BYTE3_OFFSET] >> TRM_MHDR_NWKMODE_SHIFT) & TRM_MHDR_NWKMODE_MASK;
+    if (nwkMode == TRM_MAC_NWKMODE_WAN) {
+        /* WAN模式：HopNum和HopCnt均为2bit */
+        mhdr->hopNum = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPNUM_SHIFT) & TRM_MHDR_HOPNUM_MASK_WAN;
+        mhdr->hopCnt = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPCNT_SHIFT) & TRM_MHDR_HOPCNT_MASK_WAN;
+    } else {
+        /* LAN模式：HopNum和HopCnt均为4bit */
+        mhdr->hopNum = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPNUM_SHIFT) & TRM_MHDR_HOPNUM_MASK_LAN;
+        mhdr->hopCnt = (data[TRM_MHDR_BYTE2_OFFSET] >> TRM_MHDR_HOPCNT_SHIFT) & TRM_MHDR_HOPCNT_MASK_LAN;
+    }
     
     /* 解析第三个字节 */
     mhdr->securityMode = (data[TRM_MHDR_BYTE3_OFFSET] >> TRM_MHDR_SECURITYMODE_SHIFT) & TRM_MHDR_SECURITYMODE_MASK;
@@ -49,36 +59,69 @@ int TRM_ExtractUserIdFromMacFrame(const uint8_t* data, uint16_t len, uint32_t* u
         return -1;
     }
     
-    /* 解析MHDR获取地址模式 */
+    /* 解析MHDR获取帧类型 */
     TrmMacMhdr mhdr;
     if (TRM_ParseMacMhdr(data, len, &mhdr) != 0) {
         return -1;
     }
     
-    /* FHDR从MHDR后开始，偏移3字节 */
-    uint8_t fhdrOffset = 3;
-    
-    if (mhdr.addrMode == 0) {
-        /* 短地址模式 (2字节) */
-        if (len >= fhdrOffset + 2) {
-            *userId = (data[fhdrOffset] << 8) | data[fhdrOffset + 1];
-            TRM_LOG_DEBUG("TRM: Extracted user ID from short address: 0x%04X", *userId);
-            return 0;
-        } else {
-            TRM_LOG_WARN("TRM: Data too short for short address extraction");
-            return -1;
-        }
-    } else {
-        /* 长地址模式 (4字节: NwkID + NwkAddr) */
-        if (len >= fhdrOffset + 4) {
-            *userId = (data[fhdrOffset] << 24) | (data[fhdrOffset + 1] << 16) | 
-                      (data[fhdrOffset + 2] << 8) | data[fhdrOffset + 3];
-            TRM_LOG_DEBUG("TRM: Extracted user ID from long address: 0x%08X", *userId);
-            return 0;
-        } else {
-            TRM_LOG_WARN("TRM: Data too short for long address extraction");
-            return -1;
-        }
+    /* 根据帧类型提取用户ID */
+    switch (mhdr.frameType) {
+        case TRM_MAC_FRAMETYPE_JOIN_ACCEPT:
+            /* Join Accept帧：使用Join Accept结构中DevEUI的后四字节作为userID */
+            if (len >= 3 + 4 + 8) {  /* MHDR(3) + JoinResult(1) + DevEUI(8) */
+                /* DevEUI是8字节，取后4字节（字节4-7）作为userID，小端模式处理 */
+                /* DevEUI字节4-7在内存中是小端序，需要转换为正确的32位值 */
+                *userId = (data[3 + 1 + 3] << 24) | (data[3 + 1 + 2] << 16) | 
+                          (data[3 + 1 + 1] << 8) | data[3 + 1 + 0];
+                TRM_LOG_DEBUG("TRM: Extracted user ID from Join Accept DevEUI: 0x%08X", *userId);
+                return 0;
+            } else {
+                TRM_LOG_WARN("TRM: Join Accept frame too short for DevEUI extraction");
+                return -1;
+            }
+            
+        case TRM_MAC_FRAMETYPE_JOIN_REQUEST:
+            /* Join Request帧：使用Join Request结构中DevEUI的后四字节作为userID */
+            if (len >= 3 + 4 + 8) {  /* MHDR(3) + Capacity(1) + DevEUI(8) */
+                /* DevEUI是8字节，取后4字节（字节4-7）作为userID，小端模式处理 */
+                /* DevEUI字节4-7在内存中是小端序，需要转换为正确的32位值 */
+                *userId = (data[3 + 1 + 3] << 24) | (data[3 + 1 + 2] << 16) | 
+                          (data[3 + 1 + 1] << 8) | data[3 + 1 + 0];
+                TRM_LOG_DEBUG("TRM: Extracted user ID from Join Request DevEUI: 0x%08X", *userId);
+                return 0;
+            } else {
+                TRM_LOG_WARN("TRM: Join Request frame too short for DevEUI extraction");
+                return -1;
+            }
+            
+        default:
+            /* 其他帧类型：提取FHDR中SrcADDR作为UserID */
+            /* FHDR从MHDR后开始，偏移3字节 */
+            uint8_t fhdrOffset = 3;
+            
+            if (mhdr.addrMode == 0) {
+                /* 短地址模式 (2字节) */
+                if (len >= fhdrOffset + 2) {
+                    *userId = (data[fhdrOffset] << 8) | data[fhdrOffset + 1];
+                    TRM_LOG_DEBUG("TRM: Extracted user ID from short address: 0x%04X", *userId);
+                    return 0;
+                } else {
+                    TRM_LOG_WARN("TRM: Data too short for short address extraction");
+                    return -1;
+                }
+            } else {
+                /* 长地址模式 (4字节: NwkID + NwkAddr) */
+                if (len >= fhdrOffset + 4) {
+                    *userId = (data[fhdrOffset + 3] << 24) | (data[fhdrOffset + 2] << 16) | 
+                              (data[fhdrOffset + 1] << 8) | data[fhdrOffset + 0];
+                    TRM_LOG_DEBUG("TRM: Extracted user ID from long address: 0x%08X", *userId);
+                    return 0;
+                } else {
+                    TRM_LOG_WARN("TRM: Data too short for long address extraction");
+                    return -1;
+                }
+            }
     }
 }
 
@@ -116,8 +159,9 @@ int TRM_BuildMacMhdr(const TrmMacMhdr* mhdr, uint8_t* data, uint16_t maxLen)
     /* 构建第二个字节 (QoS相关) */
     data[pos] = ((mhdr->qosPri & TRM_MHDR_QOSPRI_MASK) << TRM_MHDR_QOSPRI_SHIFT) |
                ((mhdr->qosTtl & TRM_MHDR_QOSTTL_MASK) << TRM_MHDR_QOSTTL_SHIFT) |
-               ((mhdr->hopNum & TRM_MHDR_HOPNUM_MASK) << TRM_MHDR_HOPNUM_SHIFT) |
-               ((mhdr->hopCnt & TRM_MHDR_HOPCNT_MASK) << TRM_MHDR_HOPCNT_SHIFT);
+               ((mhdr->hopNum & TRM_MHDR_HOPNUM_MASK_LAN) << TRM_MHDR_HOPNUM_SHIFT) |
+               ((mhdr->hopCnt & TRM_MHDR_HOPCNT_MASK_LAN) << TRM_MHDR_HOPCNT_SHIFT) |
+                TRM_MHDR_HOPCNT_MASK_WAN;
     pos++;
     
     /* 构建第三个字节 */
@@ -216,22 +260,38 @@ int TRM_ParseMacFrame(const uint8_t* data, uint16_t len, TrmMacFrame* frame)
         for (uint8_t i = 0; i < foptsLen; i++) {
             frame->payload.fhdr.fopts[i] = data[fhdrOffset + addrLen + 1 + i];
         }
+        /* 解析broadcastGroup字段 (WAN模式下的广播组标识) */
+        if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN && foptsLen > 0) {
+            /* 检查是否有足够的字节来解析broadcastGroup */
+            if (remainingLen >= addrLen + 1 + foptsLen + 1) {
+                /* broadcastGroup在FOpts的最后一个字节中 */
+                frame->payload.fhdr.broadcastGroup = data[fhdrOffset + addrLen + 1 + foptsLen];
+            }
+        }
     }
     
-    /* 解析功率控制字段 */
-    if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN && remainingLen >= addrLen + 1 + foptsLen) {
-        frame->payload.fhdr.txPowerIdx = data[fhdrOffset + addrLen + 1 + foptsLen];
+    /* 功率控制 */
+    if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN) {
+        /* WAN模式：TxPowerIdx字段存在 */
+        if (remainingLen >= addrLen + 1 + foptsLen + 1) {
+            frame->payload.fhdr.txPowerIdx = data[fhdrOffset + addrLen + 1 + foptsLen];
+        }
+    } else {
+        /* LAN模式：TxPowerIdx字段也存在，用于开环功控时填入发送功率 */
+        if (remainingLen >= addrLen + 1 + foptsLen + 1) {
+            frame->payload.fhdr.txPowerIdx = data[fhdrOffset + addrLen + 1 + foptsLen];
+        }
     }
     
     /* 解析FPort和负载 */
-    if (remainingLen >= addrLen + 1 + foptsLen + 1) {
-        frame->payload.fport = data[fhdrOffset + addrLen + 1 + foptsLen + 1];
+    if (remainingLen >= addrLen + 1 + foptsLen + 2) {
+        frame->payload.fport = data[fhdrOffset + addrLen + 1 + foptsLen + 2];
     }
     
     /* WAN模式有负载长度字段 */
-    if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN && remainingLen >= addrLen + 1 + foptsLen + 2) {
-        frame->payload.payloadLen = (data[fhdrOffset + addrLen + 1 + foptsLen + 1] << 8) | 
-                                    data[fhdrOffset + addrLen + 1 + foptsLen + 2];
+    if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN && remainingLen >= addrLen + 1 + foptsLen + 3) {
+        frame->payload.payloadLen = (data[fhdrOffset + addrLen + 1 + foptsLen + 2] << 8) | 
+                                    data[fhdrOffset + addrLen + 1 + foptsLen + 3];
     } else {
         frame->payload.payloadLen = 0;
     }
@@ -302,6 +362,7 @@ int TRM_BuildMacFrame(const TrmMacFrame* frame, uint8_t* data, uint16_t maxLen)
                ((frame->payload.fhdr.fctrl.foptsNum & 0x0F) << 3) |
                ((frame->payload.fhdr.fctrl.retranPkg & 0x01) << 2) |
                ((frame->payload.fhdr.fctrl.subPkg & 0x01) << 1) |
+               ((frame->payload.fhdr.fctrl.nack & 0x01) << 0) |
                ((frame->payload.fhdr.fctrl.rfu & 0x01));
     pos++;
     
@@ -348,8 +409,26 @@ int TRM_BuildMacFrame(const TrmMacFrame* frame, uint8_t* data, uint16_t maxLen)
         pos += foptsLen;
     }
     
+    /* 解析broadcastGroup字段 (WAN模式下的广播组标识) */
+    if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN && foptsLen > 0) {
+        /* 检查是否有足够的字节来解析broadcastGroup */
+        if (pos + 1 <= maxLen) {
+            /* broadcastGroup在FOpts的最后一个字节中 */
+            data[pos] = frame->payload.fhdr.broadcastGroup;
+            pos++;
+        }
+    }
+    
     /* 功率控制 */
     if (frame->mhdr.nwkMode == TRM_MAC_NWKMODE_WAN) {
+        if (pos + 1 > maxLen) {
+            TRM_LOG_ERROR("TRM: Buffer too small for TxPowerIdx");
+            return -1;
+        }
+        data[pos] = frame->payload.fhdr.txPowerIdx;
+        pos++;
+    } else {
+        /* LAN模式：TxPowerIdx字段也存在，用于开环功控时填入发送功率 */
         if (pos + 1 > maxLen) {
             TRM_LOG_ERROR("TRM: Buffer too small for TxPowerIdx");
             return -1;
@@ -407,3 +486,35 @@ int TRM_BuildMacFrame(const TrmMacFrame* frame, uint8_t* data, uint16_t maxLen)
     TRM_LOG_DEBUG("TRM: MAC frame built successfully - Total length=%d", pos);
     return pos;
 }
+
+/**
+ * @brief 在广播帧中配置TDD周期
+ * @param broadcastData 广播帧数据（直接修改）
+ * @param dataLen 数据长度
+ * @param tddPeriod 要配置的TDD周期值
+ * @return 成功返回0，失败返回负数
+ */
+int TRM_ConfigureTddPeriodInBroadcast(uint8_t* broadcastData, uint16_t dataLen, uint8_t tddPeriod)
+{
+    if (broadcastData == NULL || dataLen < 4) {
+        TRM_LOG_ERROR("TRM: Invalid parameters for TDD period configuration");
+        return -1;
+    }
+    
+    /* 检查最小广播帧长度：MHDR(3) + BroadcastGroup(13) + BrocastPayloadLen(1) */
+    if (dataLen < 17) {
+        TRM_LOG_ERROR("TRM: Broadcast frame too short for TDD configuration");
+        return -1;
+    }
+    
+    /* 配置TDD周期：在BroadcastGroup的第2字节（索引4）设置TDD周期 */
+    /* 广播帧结构：MHDR(0-2) + BroadcastGroup(3-15) + BrocastPayloadLen(16) + BrocastPayload(17-) */
+    /* BroadcastGroup的第2字节位置：3 + 1 = 4 */
+    broadcastData[4] = tddPeriod;
+    
+    TRM_LOG_DEBUG("TRM: TDD period configured in broadcast frame - TDD=%d, FrameLen=%d", 
+                  tddPeriod, dataLen);
+    
+    return 0;
+}
+

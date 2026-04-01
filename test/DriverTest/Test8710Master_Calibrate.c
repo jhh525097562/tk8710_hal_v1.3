@@ -1324,7 +1324,7 @@ int main(int argc, char* argv[])
     printf("Enter 'h' for help information\n\n");
     
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x980c, 0x000FF200);
-    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x10100010);
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x11100010);
     /* 8. 主循环 - 等待中断并进行中断处理 */
     while (g_running) {
         printf("TK8710> ");

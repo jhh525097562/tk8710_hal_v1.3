@@ -289,8 +289,11 @@ uint32_t TK8710GetIrqStatus(void)
 void TK8710ClearIrqStatus(uint32_t mask)
 {
     s_irq_ctrl1 irqCtrl1;
-    
-    irqCtrl1.data = 0;
+    int ret;
+    ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
+                    MAC_BASE + offsetof(struct mac, irq_ctrl1), 
+                    &irqCtrl1);
+    // irqCtrl1.data = 0;
     
     /* 根据mask设置对应的清除位 */
     if (mask & (1 << TK8710_IRQ_RX_BCN))   irqCtrl1.b.rxbcn_intr_clr = 1;
@@ -727,8 +730,6 @@ static void tk8710_handle_rx_bcn(void)
                            bcnObv1.b.bcn_q, bcnObv1.b.sync_on);
     }
     
-    /* 读取BCN计数器 */
-    /* TODO: 从obv_0读取counters_bcn_success和counters_bcn_total */
 }
 
 /**

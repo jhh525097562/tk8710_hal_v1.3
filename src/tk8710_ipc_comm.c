@@ -32,6 +32,48 @@
 static volatile int g_config_received = 0;
 static NsConfigDown_t g_received_config;
 
+/**
+ * @brief NS速率索引到TK8710速率模式转换函数
+ * @param ns_rate NS速率索引
+ * @return TK8710速率模式
+ */
+static uint8_t ConvertNsRateToTk8710Rate(uint8_t ns_rate) {
+    switch (ns_rate) {
+        case 0: return TK8710_RATE_MODE_5;
+        case 1: return TK8710_RATE_MODE_6;
+        case 2: return TK8710_RATE_MODE_7;
+        case 3: return TK8710_RATE_MODE_8;
+        case 4: return TK8710_RATE_MODE_9;
+        case 5: return TK8710_RATE_MODE_10;
+        case 6: return TK8710_RATE_MODE_11;
+        case 7: return TK8710_RATE_MODE_18;
+        default: 
+            printf("⚠️ 未知的NS速率索引: %d，使用默认速率7\n", ns_rate);
+            return TK8710_RATE_MODE_7;
+    }
+}
+
+/**
+ * @brief 根据配置的速率模式查找对应的TK8710速率
+ * @param rate_mode 配置的速率模式
+ * @param rate_cfgs 配置的速率配置结构体数组
+ * @param rate_count 速率模式数量
+ * @return TK8710速率模式
+ */
+static uint8_t FindTk8710RateByConfigRate(uint8_t rate_mode, const void* rate_cfgs, int rate_count) {
+    // if(rate_count<=1){
+    //     return ConvertNsRateToTk8710Rate(rate_modes);
+    // }
+    const NsConfigDown_t* config = (const NsConfigDown_t*)rate_cfgs;
+    for (int i = 0; i < rate_count; i++) {
+        if (config->rate_cfgs[i].rate == rate_mode) {
+            return i;
+        }
+    }
+    printf("⚠️ 未找到配置的速率模式: %d，使用默认速率7\n", rate_mode);
+    return TK8710_RATE_MODE_7;
+}
+
 // 配置处理回调函数类型
 typedef int (*ConfigHandler_t)(const NsConfigDown_t* config);
 static ConfigHandler_t g_config_handler = NULL;
@@ -78,6 +120,7 @@ int IpcCommSendConfigRequest(IpcCommContext *ctx) {
         return -1;
     }
 }
+
 // 打印消息详情
 static void PrintMessageDetail(const char *prefix, const ipc_smp_msg_hdr_t *hdr, const void *payload, uint32_t payload_len) {
     printf("[%s] 消息头: ver=%u type=%u len=%u seq=%u ts_ns=%llu flags=%u crc32=0x%08X\n",
@@ -224,8 +267,8 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                         ns_data->payload,         // 数据载荷
                         ns_data->payload_len,     // 数据长度
                         35,                       // 发射功率
-                        0,                        // 帧号
-                        ns_data->rate,            // 目标速率模式
+                        ns_data->tdd,             // 帧号
+                        FindTk8710RateByConfigRate(ns_data->rate, &g_received_config, g_received_config.rate_num),  // 根据配置的速率模式查找
                         ns_data->tdd == 255 ? TK8710_DATA_TYPE_DED : TK8710_DATA_TYPE_BRD  // tdd=255->DED, tdd=0->BRD
                         // TK8710_DATA_TYPE_BRD // tdd=255->DED, tdd=0->BRD
                     );
@@ -408,7 +451,23 @@ int IpcSendUplinkData(IpcCommContext *ctx, const TRM_RxDataList* rxDataList) {
         GwDataUp_t* gw_data = &batch_data.data_list[i];
         
         gw_data->tdd = rxDataList->frameNo;  // 可以根据实际情况设置
-        gw_data->rate = user->rateMode;
+        
+        /* 将TK8710速率模式转换为NS速率索引 */
+        switch (user->rateMode) {
+            case TK8710_RATE_MODE_5:  gw_data->rate = 0; break;
+            case TK8710_RATE_MODE_6:  gw_data->rate = 1; break;
+            case TK8710_RATE_MODE_7:  gw_data->rate = 2; break;
+            case TK8710_RATE_MODE_8:  gw_data->rate = 3; break;
+            case TK8710_RATE_MODE_9:  gw_data->rate = 4; break;
+            case TK8710_RATE_MODE_10: gw_data->rate = 5; break;
+            case TK8710_RATE_MODE_11: gw_data->rate = 6; break;
+            case TK8710_RATE_MODE_18: gw_data->rate = 7; break;
+            default: 
+                printf("⚠️ 未知的TK8710速率模式: %d，使用默认速率2\n", user->rateMode);
+                gw_data->rate = 2;  // 默认使用速率7
+                break;
+        }
+        
         gw_data->slot = 0;  // 示例时隙计算
         gw_data->rssi = user->rssi;
         gw_data->snr = user->snr;
@@ -432,7 +491,7 @@ int IpcSendUplinkData(IpcCommContext *ctx, const TRM_RxDataList* rxDataList) {
         
         ipc_smp_msg_hdr_t hdr;
         if (ipc_smp_get_last_hdr(ctx->ch_gw_to_ns, &hdr) == IPC_SMP_OK) {
-            PrintMessageDetail("TX: 网关->NS (批量)", &hdr, &batch_data, len);
+            // PrintMessageDetail("TX: 网关->NS (批量)", &hdr, &batch_data, len);
         }
         printf("✅ 批量发送 %d 个用户上行数据成功\n", batch_data.total_count);
     } else {

@@ -98,6 +98,223 @@ static void OnDriverTxSlot(TK8710IrqResult* irqResult);
 static void OnDriverSlotEnd(TK8710IrqResult* irqResult);
 static void OnDriverError(TK8710IrqResult* irqResult);
 
+
+/*============================================================================
+ * 函数名称: ConfigureRegistersFrom2Txt
+ * 功能描述: 按照2.txt文件中的寄存器配置顺序和值完成寄存器配置
+ * 返回值:   0 - 成功, 其他 - 失败
+ *============================================================================*/
+static int ConfigureRegistersFrom2Txt(void)
+{
+    int ret;
+    uint32_t addr, data;
+    
+    printf("开始按照2.txt配置寄存器...\n");
+    
+    /* 第一组寄存器配置 */
+    addr = 0x0000980C; data = 0x000FF200;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00009810; data = 0x03481400;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C030; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+
+    /* 8C8系列寄存器配置 */
+    addr = 0x000008C8; data = 0x0c901190;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000018C8; data = 0xfe300220;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000028C8; data = 0x021001a0;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000038C8; data = 0x0b7007b0;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+
+    addr = 0x000048C8; data = 0x03a30980;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000058C8; data = 0x07400990;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000068C8; data = 0x09300680;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x000078C8; data = 0x0DF00190;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    /* 030系列寄存器配置 */
+    addr = 0x00000030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00001030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00002030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00003030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00004030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00005030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00006030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x00007030; data = 0x01B33333;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    /* C030再次配置 */
+    addr = 0x0000C030; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C064; data = 0x00000001;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C060; data = 0x00000600;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C030; data = 0x00000004;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    /* 第二组寄存器配置 (跳过版本信息) */
+    addr = 0x00009810; data = 0x03081400;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C02C; data = 0x0001FFFF;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C000; data = 0x00A00000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C004; data = 0x10160000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C008; data = 0x00020020;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C00C; data = 0x00000400;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C010; data = 0x13000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C014; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C018; data = 0x00001FA0;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C01C; data = 0x10000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C054; data = 0x00001300;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C03C; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C040; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C044; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C048; data = 0x00000000;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    addr = 0x0000C078; data = 0x00000001;
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, addr, data);
+    if (ret != TK8710_OK) { printf("写入寄存器0x%08X失败: %d\n", addr, ret); return ret; }
+    printf("写入寄存器0x%08X = 0x%08X\n", addr, data);
+    
+    printf("所有寄存器配置完成！\n");
+    return TK8710_OK;
+}
+
 /*============================================================================
  * Driver回调函数实现
  *============================================================================*/
@@ -873,7 +1090,7 @@ int main(int argc, char* argv[])
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,
+        .rftype = TK8710_RF_TYPE_1255_32M,//TK8710_RF_TYPE_1255_32M
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,

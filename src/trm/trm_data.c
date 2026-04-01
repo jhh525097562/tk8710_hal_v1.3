@@ -260,11 +260,12 @@ int TRM_SetTxData(TK8710DownlinkType downlinkType, uint32_t userId_brdIndex, con
         return TRM_OK;
         
     } else if (downlinkType == TK8710_DOWNLINK_B) {
+        uint32_t userId;
+        TRM_ExtractUserIdFromMacFrame(data, len, &userId);
         /* 用户数据模式 - 缓存到发送队列 */
         TRM_LOG_DEBUG("TRM_SetTxData发送用户数据 - 用户ID=0x%08X, 长度=%d, 功率=%d, 帧号=%u, 速率模式=%d", 
-                      userId_brdIndex, len, txPower, frameNo, targetRateMode);
-        
-        return TRM_SendData(userId_brdIndex, data, len, txPower, frameNo, targetRateMode, BeamType);
+                      userId, len, txPower, frameNo, targetRateMode);
+        return TRM_SendData(userId, data, len, txPower, frameNo, targetRateMode, BeamType);
         
     } else {
         TRM_LOG_ERROR("TRM_SetTxData失败: 无效的下行类型 - downlinkType=%d", downlinkType);
@@ -284,7 +285,7 @@ int TRM_ManageBroadcast(void)
     
     uint32_t currentFrame = TRM_GetCurrentFrame();
     uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
-    
+    TRM_ConfigureTddPeriodInBroadcast(g_broadcastData.data, g_broadcastData.len, (uint8_t)currentSuperFramePos);
     /* 检查是否有上层设置的广播数据（包含payload） */
     if (g_broadcastData.valid && g_broadcastData.hasPayload) {
         /* 发送包含payload的广播数据 */
@@ -311,11 +312,13 @@ int TRM_ManageBroadcast(void)
         
     } else {
         /* 自主管理广播 - 使用测试数据 */
-        uint8_t testData[32];
+        uint8_t testData[64] = {0};
         
-        /* 生成测试广播数据 */
-        for (size_t i = 0; i < sizeof(testData); i++) {
-            testData[i] = (uint8_t)(brdCounter + i);
+        /* 从g_broadcastData.data复制前16个字节到testData */
+        if (g_broadcastData.len > 0 && g_broadcastData.data != NULL) {
+            uint16_t copyLen = (g_broadcastData.len > 16) ? 16 : g_broadcastData.len;
+            memcpy(testData, g_broadcastData.data, copyLen);
+            TRM_LOG_DEBUG("TRM自主广播 - 从广播数据复制了%d字节", copyLen);
         }
         
         /* 使用默认广播参数 */
@@ -326,7 +329,7 @@ int TRM_ManageBroadcast(void)
         TRM_LOG_DEBUG("TRM发送自主广播 - 索引=%d, 计数器=%d, 超帧位置=%u", 
                       brdIndex, brdCounter, currentSuperFramePos);
         
-        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, brdIndex, testData, sizeof(testData), txPower, beamType);
+        int ret = TK8710SetTxData(TK8710_DOWNLINK_A, brdIndex, testData, g_broadcastData.len, txPower, beamType);
         
         if (ret == TK8710_OK) {
             brdCounter++;
@@ -511,26 +514,15 @@ static uint8_t TRM_ProcessQueueItem(TxQueue* queue, TxItem* item, uint8_t isMult
         }
     } else {
         /* 单速率模式：使用相对帧差判断 */
-        if (item->targetRateMode == 0) {
-            uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
-            uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
-            uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
-            
-            if (item->frameNo == currentSuperFramePos || item->frameNo == 0xFF) {
-                shouldSend = 1;
-            } else if (frameDiff > g_trmMaxFrameCount / 2) {
-                if (systemFrameDiff > g_trmMaxFrameCount) {
-                    /* 超时丢弃 */
-                    if (*resultCount < TX_QUEUE_SIZE) {
-                        txResults[*resultCount].userId = item->userId;
-                        txResults[*resultCount].result = TRM_TX_TIMEOUT;
-                        (*resultCount)++;
-                    }
-                    shouldRemove = 1;
-                }
-                /* 未来帧，跳过 */
-            } else {
-                /* 过期帧，丢弃 */
+        uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
+        uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
+        uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
+        
+        if (item->frameNo == currentSuperFramePos || item->frameNo == 0xFF) {
+            shouldSend = 1;
+        } else if (frameDiff > g_trmMaxFrameCount / 2) {
+            if (systemFrameDiff > g_trmMaxFrameCount) {
+                /* 超时丢弃 */
                 if (*resultCount < TX_QUEUE_SIZE) {
                     txResults[*resultCount].userId = item->userId;
                     txResults[*resultCount].result = TRM_TX_TIMEOUT;
@@ -538,11 +530,12 @@ static uint8_t TRM_ProcessQueueItem(TxQueue* queue, TxItem* item, uint8_t isMult
                 }
                 shouldRemove = 1;
             }
+            /* 未来帧，跳过 */
         } else {
-            /* 单速率模式下指定了速率模式，丢弃 */
+            /* 过期帧，丢弃 */
             if (*resultCount < TX_QUEUE_SIZE) {
                 txResults[*resultCount].userId = item->userId;
-                txResults[*resultCount].result = TRM_TX_ERROR;
+                txResults[*resultCount].result = TRM_TX_TIMEOUT;
                 (*resultCount)++;
             }
             shouldRemove = 1;
@@ -642,7 +635,7 @@ static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxU
                              item->targetRateMode, nextRateMode, shouldSend);
             } else {
                 /* 单速率模式：使用相对帧差判断 */
-                if (item->targetRateMode == 0) {
+                // if (item->targetRateMode == 0) {
                     uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
                     uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
                     uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
@@ -667,11 +660,11 @@ static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxU
                         shouldRemove = 1;
                         TRM_LOG_DEBUG("TRM: Expired frame - shouldRemove=1");
                     }
-                } else {
-                    /* 单速率模式下指定了速率模式，丢弃 */
-                    shouldRemove = 1;
-                    TRM_LOG_DEBUG("TRM: Invalid rate mode for single rate - shouldRemove=1");
-                }
+                // } else {
+                //     /* 单速率模式下指定了速率模式，丢弃 */
+                //     shouldRemove = 1;
+                //     TRM_LOG_DEBUG("TRM: Invalid rate mode for single rate - shouldRemove=1");
+                // }
             }
             
             /* 如果应该发送且用户ID有效，则收集用户信息 */
@@ -862,6 +855,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
         if (ctx && ctx->config.callbacks.onTxComplete) {
             TRM_TxCompleteResult txResult;
             txResult.totalUsers = resultCount;
+            txResult.superFrameNo = TRM_GetSuperFramePosition();  /* 获取当前超帧号 */
             txResult.remainingQueue = totalRemaining;
             txResult.userCount = resultCount;
             txResult.users = txResults;

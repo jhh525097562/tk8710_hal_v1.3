@@ -154,6 +154,7 @@ typedef struct {
 /* 发送完成回调结果 */
 typedef struct {
     uint32_t totalUsers;           /* 发送用户总数 */
+    uint8_t  superFrameNo;         /* 当前超帧号 */
     uint32_t remainingQueue;        /* 剩余发送队列数量 */
     uint32_t userCount;             /* 结果数组中的用户数量 */
     const TRM_TxUserResult* users;  /* 用户结果数组指针 */

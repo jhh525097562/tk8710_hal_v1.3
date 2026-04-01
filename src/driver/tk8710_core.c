@@ -236,7 +236,7 @@ int TK8710Init(const ChipConfig* initConfig)
     s_init_4 init4;
     s_init_5 init5;
     s_init_9 init9;
-    s_init_11 init11;
+    // s_init_11 init11;
     s_init_18 init18;
     s_irq_ctrl0 irqCtrl0;
     s_irq_ctrl1 irqCtrl1;
@@ -302,6 +302,7 @@ int TK8710Init(const ChipConfig* initConfig)
         TK8710_LOG_CORE_INFO("RF config provided, initializing RF (type=%d, freq=%u Hz)...", 
                              rfCfg->rftype, rfCfg->Freq);
         ret = TK8710RfConfig(rfCfg);
+        ret = TK8710RfConfig(rfCfg);
         if (ret != TK8710_OK) {
             TK8710_LOG_CORE_ERROR("RF initialization failed: %d", ret);
             return ret;
@@ -344,11 +345,11 @@ int TK8710Init(const ChipConfig* initConfig)
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), init9.data);
     if (ret != TK8710_OK) return ret;
 
-    /* 配置 init_11: rf_type */
-    init11.data = 0;
-    init11.b.rf_type = cfg->rf_model & 0x03;
-    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_11), init11.data);
-    if (ret != TK8710_OK) return ret;
+    // /* 配置 init_11: rf_type */
+    // init11.data = 0;
+    // init11.b.rf_type = cfg->rf_model & 0x03;
+    // ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_11), init11.data);
+    // if (ret != TK8710_OK) return ret;
 
     /* init_18 配置已移至 TK8710SetConfig TK8710_CFG_TYPE_SLOT_CFG */
 
@@ -408,24 +409,15 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
     
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_5), init5.data);
     if (ret != TK8710_OK) return ret;
-    
-    // /* 配置寄存器0x9478为0x01110010 */
-    // ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x01110010);
+
+    // /* 配置寄存器0x9810为0x03481400 */
+    // ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9810, 0x03481400);
     // if (ret == TK8710_OK) {
-    //     TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9478 = 0x01110010");
+    //     TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9810 = 0x03481400");
     // } else {
-    //     TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9478: %d", ret);
+    //     TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9810: %d", ret);
     //     return ret;
     // }
-
-    /* 配置寄存器0x9810为0x03481400 */
-    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9810, 0x03481400);
-    if (ret == TK8710_OK) {
-        TK8710_LOG_DEBUG(TK8710_LOG_MODULE_CORE, "Set register 0x9810 = 0x03481400");
-    } else {
-        TK8710_LOG_ERROR(TK8710_LOG_MODULE_CORE, "Failed to set register 0x9810: %d", ret);
-        return ret;
-    }
 
     /* 配置寄存器0x980c为0x000FF200 */
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x980c, 0x000FF200);
@@ -858,7 +850,7 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     usleep(10000);  /* 10ms等待PA稳定 */
     
     /* 13. 配置rx_bcn.acm_ctrl30 (0x78) */
-    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, RX_BCN_BASE + 0x78, 0x1110018);
+    ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9478, 0x11100018);
     if (ret != TK8710_OK) {
         TK8710_LOG_CORE_ERROR("BCN ACM control configuration failed: %d", ret);
         return ret;

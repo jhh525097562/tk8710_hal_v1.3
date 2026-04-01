@@ -131,11 +131,11 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
     uint32_t minGap = UINT32_MAX;
     
     // 遍历所有可能的M和N组合，寻找最小间隔
-    for (uint32_t M = 1; M <= 30; M++) {
+    for (uint32_t M = 1; M <= 10; M++) {
         uint32_t totalUs = M * ONE_SECOND_US;
         
         // 寻找所有能整除totalUs的N
-        for (uint32_t N = 1; N <= 254; N++) {
+        for (uint32_t N = 1; N <= 64; N++) {
             if (totalUs % N != 0) continue; // N必须能整除totalUs
             
             uint32_t candidatePeriod = totalUs / N;
@@ -144,8 +144,9 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
             if (candidatePeriod >= rawPeriod) {
                 uint32_t gap = candidatePeriod - rawPeriod;
                 
-                // 优先选择间隔最小的解
-                if (gap < minGap) {
+                // 优先选择间隔最小的解，且N必须是superFrameNum的整数倍
+                if (gap < minGap && (N % input->superFrameNum == 0)) {
+                // if ((N % input->superFrameNum == 0)) {
                     minGap = gap;
                     bestPeriod = candidatePeriod;
                     bestCount = N;

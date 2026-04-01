@@ -43,6 +43,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     uint8_t ack       : 1;      /* 确认标识 (0=非确认,1=确认) */
     uint8_t foptsNum  : 4;      /* 扩展信息数量 (0-15) */
+    uint8_t nack      : 1;      /* NACK标识 (0=无NACK,1=有NACK) */
     uint8_t retranPkg : 1;      /* 重传域存在标识 */
     uint8_t subPkg    : 1;      /* 分包域存在标识 */
     uint8_t rfu       : 1;      /* 预留位 */
@@ -83,6 +84,8 @@ typedef struct {
     TrmMacRetransField retrans;     /* 重传域 (可选) */
     uint8_t  fopts[15];          /* 扩展域 (0-15字节) */
     uint8_t  txPowerIdx;         /* 发送功率索引 (闭环功控) */
+    uint8_t  nack;               /* NACK标识 (0=无NACK,1=有NACK) */
+    uint8_t  broadcastGroup;      /* 广播组标识 (WAN模式) */
 } TrmMacFhdr;
 
 /* MACPayload - MAC负载 (变长) */
@@ -104,6 +107,7 @@ typedef struct {
 /* Join Request帧结构 */
 typedef struct {
     uint8_t  capacity;           /* 设备能力 */
+    uint8_t  powerClass : 2;      /* 功率等级 (00=正常,01=+4dB,10=+8dB,11=+12dB) */
     uint8_t  devEui[8];          /* 设备唯一标识号 */
     uint16_t devNonce;           /* 入网随机数 */
 } TrmMacJoinRequest;
@@ -114,6 +118,9 @@ typedef struct {
     uint8_t  dlSettings;          /* 下行设置 */
     uint8_t  rxDelay;             /* 接收延迟 */
     uint8_t  cfList[16];          /* 通道频率列表 */
+    uint8_t  wrsbGroup;           /* 时隙资源块组，LAN：0-30，WAN：7 */
+    uint8_t  gwId[8];             /* 网关唯一标识号，仅LAN有 */
+    uint8_t  wakeUpCfg[8];         /* 低功耗设备携带，标识当前休眠唤醒配置信息，仅LAN有 */
 } TrmMacJoinAccept;
 
 /* =============================================================================
@@ -139,9 +146,11 @@ typedef struct {
 #define TRM_MHDR_QOSTTL_SHIFT       4     /* QosTTL位偏移 (bit 5:4) */
 #define TRM_MHDR_QOSTTL_MASK        0x30  /* QosTTL掩码 (2位) */
 #define TRM_MHDR_HOPNUM_SHIFT       2     /* HopNum位偏移 (bit 3:2) */
-#define TRM_MHDR_HOPNUM_MASK        0x0C  /* HopNum掩码 (2位) */
+#define TRM_MHDR_HOPNUM_MASK_LAN     0x0F  /* HopNum掩码 (4位) - LAN模式 */
+#define TRM_MHDR_HOPNUM_MASK_WAN     0x03  /* HopNum掩码 (2位) - WAN模式 */
 #define TRM_MHDR_HOPCNT_SHIFT       0     /* HopCnt位偏移 (bit 1:0) */
-#define TRM_MHDR_HOPCNT_MASK        0x03  /* HopCnt掩码 (2位) */
+#define TRM_MHDR_HOPCNT_MASK_LAN     0x0F  /* HopCnt掩码 (4位) - LAN模式 */
+#define TRM_MHDR_HOPCNT_MASK_WAN     0x03  /* HopCnt掩码 (2位) - WAN模式 */
 
 /* MHDR第三个字节字段定义 */
 #define TRM_MHDR_SECURITYMODE_SHIFT 5     /* SecurityMode位偏移 (bit 7:5) */
@@ -201,7 +210,7 @@ typedef struct {
  * @param mhdr 输出的MHDR结构体
  * @return 成功返回0，失败返回负数
  */
-int Trm_ParseMacMhdr(const uint8_t* data, uint16_t len, TrmMacMhdr* mhdr);
+int TRM_ParseMacMhdr(const uint8_t* data, uint16_t len, TrmMacMhdr* mhdr);
 
 /**
  * @brief 从MAC帧中提取用户ID
@@ -210,7 +219,7 @@ int Trm_ParseMacMhdr(const uint8_t* data, uint16_t len, TrmMacMhdr* mhdr);
  * @param userId 输出的用户ID
  * @return 成功返回0，失败返回负数
  */
-int Trm_ExtractUserIdFromMacFrame(const uint8_t* data, uint16_t len, uint32_t* userId);
+int TRM_ExtractUserIdFromMacFrame(const uint8_t* data, uint16_t len, uint32_t* userId);
 
 /**
  * @brief 获取MAC帧的QoS信息
@@ -220,7 +229,7 @@ int Trm_ExtractUserIdFromMacFrame(const uint8_t* data, uint16_t len, uint32_t* u
  * @param qosTtl 输出的QoS生存时间
  * @return 成功返回0，失败返回负数
  */
-int Trm_GetMacFrameQosInfo(const uint8_t* data, uint16_t len, uint8_t* qosPri, uint8_t* qosTtl);
+int TRM_GetMacFrameQosInfo(const uint8_t* data, uint16_t len, uint8_t* qosPri, uint8_t* qosTtl);
 
 /**
  * @brief 构建MAC帧头MHDR
@@ -229,7 +238,7 @@ int Trm_GetMacFrameQosInfo(const uint8_t* data, uint16_t len, uint8_t* qosPri, u
  * @param maxLen 缓冲区最大长度
  * @return 成功返回写入的字节数，失败返回负数
  */
-int Trm_BuildMacMhdr(const TrmMacMhdr* mhdr, uint8_t* data, uint16_t maxLen);
+int TRM_BuildMacMhdr(const TrmMacMhdr* mhdr, uint8_t* data, uint16_t maxLen);
 
 /**
  * @brief 检查MAC帧类型
@@ -238,7 +247,7 @@ int Trm_BuildMacMhdr(const TrmMacMhdr* mhdr, uint8_t* data, uint16_t maxLen);
  * @param frameType 输出的帧类型
  * @return 成功返回0，失败返回负数
  */
-int Trm_GetMacFrameType(const uint8_t* data, uint16_t len, uint8_t* frameType);
+int TRM_GetMacFrameType(const uint8_t* data, uint16_t len, uint8_t* frameType);
 
 /**
  * @brief 解析完整的MAC帧
@@ -247,7 +256,7 @@ int Trm_GetMacFrameType(const uint8_t* data, uint16_t len, uint8_t* frameType);
  * @param frame 输出的MAC帧结构体
  * @return 成功返回0，失败返回负数
  */
-int Trm_ParseMacFrame(const uint8_t* data, uint16_t len, TrmMacFrame* frame);
+int TRM_ParseMacFrame(const uint8_t* data, uint16_t len, TrmMacFrame* frame);
 
 /**
  * @brief 构建MAC帧
@@ -256,7 +265,16 @@ int Trm_ParseMacFrame(const uint8_t* data, uint16_t len, TrmMacFrame* frame);
  * @param maxLen 缓冲区最大长度
  * @return 成功返回构建的帧长度，失败返回负数
  */
-int Trm_BuildMacFrame(const TrmMacFrame* frame, uint8_t* data, uint16_t maxLen);
+int TRM_BuildMacFrame(const TrmMacFrame* frame, uint8_t* data, uint16_t maxLen);
+
+/**
+ * @brief 在广播帧中配置TDD周期
+ * @param broadcastData 广播帧数据（直接修改）
+ * @param dataLen 数据长度
+ * @param tddPeriod 要配置的TDD周期值
+ * @return 成功返回0，失败返回负数
+ */
+int TRM_ConfigureTddPeriodInBroadcast(uint8_t* broadcastData, uint16_t dataLen, uint8_t tddPeriod);
 
 #ifdef __cplusplus
 }

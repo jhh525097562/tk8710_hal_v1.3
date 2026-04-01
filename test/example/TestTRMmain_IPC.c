@@ -132,14 +132,14 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
         .Freq = 503100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,
-        // .txadc = {//C号板
-        //     {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
-        //     {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
-        // }
-        .txadc = {//2号板
-            {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
-            {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        .txadc = {//D号板
+            {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
+            {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
         }
+        // .txadc = {//2号板
+        //     {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
+        //     {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        // }
     };
     rfConfig.Freq = config->freq;
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
@@ -225,7 +225,7 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
     // 根据NS配置设置速率模式
     slotCfg.rateCount = config->rate_num;
     for (int i = 0; i < config->rate_num && i < MAX_RATE_CFGS; i++) {
-        // 转换NS速率索引到TK8710速率模式
+ 
         slotCfg.rateModes[i] = ConvertNsRateToTk8710Rate(config->rate_cfgs[i].rate);
         
         // 使用时隙计算函数计算gap参数
@@ -234,7 +234,7 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
             .brdBlockNum = 2,  // 广播包块数
             .ulBlockNum = config->rate_cfgs[i].uplink_pkt,     // 上行包块数
             .dlBlockNum = config->rate_cfgs[i].downlink_pkt,   // 下行包块数
-            .superFrameNum = 1
+            .superFrameNum = config->tdd_num
         };
         
         TRM_SlotCalcOutput slotOutput;
@@ -307,33 +307,33 @@ static void OnTrmRxData(const TRM_RxDataList* rxDataList)
     
     g_trmRxCount += rxDataList->userCount;
     
-    // for (uint8_t i = 0; i < rxDataList->userCount; i++) {
-    //     TRM_RxUserData* user = &rxDataList->users[i];
-    //     printf("  用户[%d]: ID=0x%08X, 长度=%d, RSSI=%d, SNR=%d, Freq=%d Hz\n", 
-    //            i, user->userId, user->dataLen, user->rssi, user->snr, user->freq/128);
+    for (uint8_t i = 0; i < rxDataList->userCount; i++) {
+        TRM_RxUserData* user = &rxDataList->users[i];
+        printf("  用户[%d]: ID=0x%08X, 长度=%d, RSSI=%d, SNR=%d, Freq=%d Hz\n", 
+               i, user->userId, user->dataLen, user->rssi, user->snr, user->freq/128);
         
-    //     /* 显示数据内容 */
-    //     if (user->data != NULL && user->dataLen > 0) {
-    //         printf("    数据: ");
-    //         for (int k = 0; k < user->dataLen && k < 8; k++) {
-    //             printf("%02X ", user->data[k]);
-    //         }
-    //         if (user->dataLen > 8) printf("...");
-    //         printf("\n");
-    //     }
-    // }
+        /* 显示数据内容 */
+        if (user->data != NULL && user->dataLen > 0) {
+            printf("    数据: ");
+            for (int k = 0; k < user->dataLen && k < 8; k++) {
+                printf("%02X ", user->data[k]);
+            }
+            if (user->dataLen > 8) printf("...");
+            printf("\n");
+        }
+    }
     
-    /* 调用发送验证器 */
-    int ret = TRM_TxValidatorOnRxData(rxDataList);
-    if (ret != TRM_OK) {
-        printf("  验证器处理失败: 错误码=%d\n", ret);
-    }
-    /* 显示验证统计信息 */
-    TRM_TxValidatorStats stats;
-    if (TRM_TxValidatorGetStats(&stats) == TRM_OK) {
-        printf("  发送统计: 总触发=%u, 成功=%u, 失败=%u, 接收总次数=%u\n", 
-               stats.totalTriggerCount, stats.successSendCount, stats.failedSendCount, g_trmRxCount);
-    }
+    // /* 调用发送验证器 */
+    // int ret = TRM_TxValidatorOnRxData(rxDataList);
+    // if (ret != TRM_OK) {
+    //     printf("  验证器处理失败: 错误码=%d\n", ret);
+    // }
+    // /* 显示验证统计信息 */
+    // TRM_TxValidatorStats stats;
+    // if (TRM_TxValidatorGetStats(&stats) == TRM_OK) {
+    //     printf("  发送统计: 总触发=%u, 成功=%u, 失败=%u, 接收总次数=%u\n", 
+    //            stats.totalTriggerCount, stats.successSendCount, stats.failedSendCount, g_trmRxCount);
+    // }
     
     /* 发送上行数据给NS（通过核间通信） */
     IpcSendUplinkData(&g_ipc_ctx, rxDataList);
@@ -351,7 +351,7 @@ static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult)
     if (!txResult) return;
     
     printf("=== TRM发送完成事件 ===\n");
-    printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
+    printf("发送用户总数: %u, 超帧号: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->superFrameNo, txResult->remainingQueue);
     g_trmSendCount += txResult->userCount;
     /* 打印每个用户的发送结果 */
     // const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
@@ -595,9 +595,9 @@ int main(int argc, char* argv[])
     /* 7. 等待配置消息 */
     printf("等待来自NS的配置消息...\n");
     
-    // 每隔10秒发送一次配置请求，最多请求10次
+    // 每隔10秒发送一次配置请求，最多请求3次
     int request_count = 0;
-    while (!IpcCommIsConfigReceived() && request_count < 10) {
+    while (!IpcCommIsConfigReceived() && request_count < 3) {
         // 发送配置请求
         printf("📤 发送第%d次配置请求...\n", request_count + 1);
         if (IpcCommSendConfigRequest(&g_ipc_ctx) != 0) {
@@ -716,7 +716,7 @@ int main(int argc, char* argv[])
         slotCfg.rateModes[0] = TK8710_RATE_MODE_8;
         slotCfg.s0Cfg[0].byteLen = 0;
         slotCfg.s0Cfg[0].centerFreq = 483800000;
-        slotCfg.s1Cfg[0].byteLen = 26;
+        slotCfg.s1Cfg[0].byteLen = 52;
         slotCfg.s1Cfg[0].centerFreq = 483800000;
         slotCfg.s2Cfg[0].byteLen = 26;
         slotCfg.s2Cfg[0].centerFreq = 483800000;

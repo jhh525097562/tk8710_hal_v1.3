@@ -823,7 +823,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
             macConfig0.data = 0;
             macConfig0.b.s0_cfg = 0;  /* BCN时隙 */
             macConfig0.b.s1_cfg = slotCfg->s1Cfg[0].byteLen & 0x3FF;  /* 使用第一个速率模式 */
-            macConfig0.b.mode = slotCfg->rateModes[0] & 0xF;  /* 使用第一个速率模式 */
+            macConfig0.b.mode = slotCfg->rateModes[0] & 0xFF;  /* 使用第一个速率模式 */
             ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 
                 MAC_BASE + offsetof(struct mac, mac_config_0), macConfig0.data);
             if (ret != TK8710_OK) return ret;
@@ -900,6 +900,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                         regValue = 0x03201400;
                     } else if (mode == TK8710_RATE_MODE_10) {
                         regValue = 0x03081400;
+                        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0x9814, 0x0e2d140a);
                     } else if (mode == TK8710_RATE_MODE_11 || mode == TK8710_RATE_MODE_18) {
                         regValue = 0x02f01400;
                     } else {
