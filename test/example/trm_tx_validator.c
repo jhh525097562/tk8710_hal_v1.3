@@ -37,18 +37,18 @@ static void GenerateTestData(uint8_t* buffer, uint16_t len, uint32_t userId, uin
     
     /* 使用用户ID和帧号生成伪随机数据 */
     uint32_t seed = userId ^ frameNo;
-    for (uint16_t i = 0; i < len; i++) {
+    for (uint16_t i = 12; i < len; i++) {
         seed = seed * 1103515245 + 12345;
         buffer[i] = (uint8_t)(seed >> 24);
     }
     
-    /* 添加标识头 */
-    if (len >= 4) {
-        buffer[0] = 0xAA;  /* 验证数据标识 */
-        buffer[1] = 0xBB;
-        buffer[2] = (uint8_t)(userId >> 24);
-        buffer[3] = (uint8_t)(frameNo & 0xFF);
-    }
+    // /* 添加标识头 */
+    // if (len >= 4) {
+    //     buffer[0] = 0xAA;  /* 验证数据标识 */
+    //     buffer[1] = 0xBB;
+    //     buffer[2] = (uint8_t)(userId >> 24);
+    //     buffer[3] = (uint8_t)(frameNo & 0xFF);
+    // }
 }
 
 /**
@@ -172,8 +172,8 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
             
             /* 如果接收到了数据，复制部分数据作为应答 */
             if (user->data != NULL && user->dataLen > 0) {
-                uint16_t copyLen = (user->dataLen > 8) ? 8 : user->dataLen;
-                memcpy(&respData[4], user->data, copyLen);
+                uint16_t copyLen = (user->dataLen > 12) ? 12 : user->dataLen;
+                memcpy(&respData[0], user->data, copyLen);
             }
             
             /* 计算应答用户ID和目标帧 */
@@ -212,8 +212,8 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 
                 /* 如果接收到了数据，复制部分数据作为应答 */
                 if (user->data != NULL && user->dataLen > 0) {
-                    uint16_t copyLen = (user->dataLen > 8) ? 8 : user->dataLen;
-                    memcpy(&respData[4], user->data, copyLen);
+                    uint16_t copyLen = (user->dataLen > 12) ? 12 : user->dataLen;
+                    memcpy(&respData[0], user->data, copyLen);
                 }
                 
                 /* 计算应答用户ID和目标帧 */
@@ -221,7 +221,7 @@ int TRM_TxValidatorOnRxData(const TRM_RxDataList* rxDataList)
                 uint32_t targetFrame = rxDataList->frameNo + g_validatorConfig.frameOffset;
                 // uint32_t targetFrame = 0xFF;
                 /* 执行发送 - 使用帧号模式 */
-                ExecuteSend(respUserId, respData, dataLen, targetFrame, 0);
+                ExecuteSend(respUserId, respData, dataLen, targetFrame, user->rateMode);
             }
         }
     }

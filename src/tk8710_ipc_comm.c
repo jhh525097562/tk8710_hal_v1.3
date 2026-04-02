@@ -53,26 +53,26 @@ static uint8_t ConvertNsRateToTk8710Rate(uint8_t ns_rate) {
     }
 }
 
-/**
- * @brief 根据配置的速率模式查找对应的TK8710速率
- * @param rate_mode 配置的速率模式
- * @param rate_cfgs 配置的速率配置结构体数组
- * @param rate_count 速率模式数量
- * @return TK8710速率模式
- */
-static uint8_t FindTk8710RateByConfigRate(uint8_t rate_mode, const void* rate_cfgs, int rate_count) {
-    // if(rate_count<=1){
-    //     return ConvertNsRateToTk8710Rate(rate_modes);
-    // }
-    const NsConfigDown_t* config = (const NsConfigDown_t*)rate_cfgs;
-    for (int i = 0; i < rate_count; i++) {
-        if (config->rate_cfgs[i].rate == rate_mode) {
-            return i;
-        }
-    }
-    printf("⚠️ 未找到配置的速率模式: %d，使用默认速率7\n", rate_mode);
-    return TK8710_RATE_MODE_7;
-}
+// /**
+//  * @brief 根据配置的速率模式查找对应的TK8710速率
+//  * @param rate_mode 配置的速率模式
+//  * @param rate_cfgs 配置的速率配置结构体数组
+//  * @param rate_count 速率模式数量
+//  * @return TK8710速率模式
+//  */
+// static uint8_t FindTk8710RateByConfigRate(uint8_t rate_mode, const void* rate_cfgs, int rate_count) {
+//     // if(rate_count<=1){
+//     //     return ConvertNsRateToTk8710Rate(rate_modes);
+//     // }
+//     const NsConfigDown_t* config = (const NsConfigDown_t*)rate_cfgs;
+//     for (int i = 0; i < rate_count; i++) {
+//         if (config->rate_cfgs[i].rate == rate_mode) {
+//             return i;
+//         }
+//     }
+//     printf("⚠️ 未找到配置的速率模式: %d，使用默认速率7\n", rate_mode);
+//     return TK8710_RATE_MODE_7;
+// }
 
 // 配置处理回调函数类型
 typedef int (*ConfigHandler_t)(const NsConfigDown_t* config);
@@ -233,14 +233,28 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                 // NS配置下行消息 - 用于hal_init配置
                 if (msg.len >= sizeof(NsConfigDown_t)) {
                     const NsConfigDown_t *config = (const NsConfigDown_t *)msg.payload;
-                    printf("收到NS配置消息，应用新配置...\n");
+                    
+                    // 检查是否是配置更新（对比频率或TDD帧数）
+                    int is_config_update = 0;
+                    if (g_config_received) {
+                        if (g_received_config.freq != config->freq ||
+                            g_received_config.tdd_num != config->tdd_num ||
+                            g_received_config.nwk_num != config->nwk_num ||
+                            g_received_config.rate_num != config->rate_num) {
+                            is_config_update = 1;
+                            printf("🔄 检测到NS配置更新! freq: %u -> %u, tdd_num: %d -> %d\n",
+                                   g_received_config.freq, config->freq,
+                                   g_received_config.tdd_num, config->tdd_num);
+                        }
+                    }
                     
                     // 保存配置并设置标志
                     memcpy(&g_received_config, config, sizeof(NsConfigDown_t));
                     g_config_received = 1;
                     
-                    // 调用配置处理回调函数
+                    // 每次收到配置都调用处理回调（支持首次配置和配置更新）
                     if (g_config_handler) {
+                        printf("📨 调用配置处理回调函数 (is_update=%d)...\n", is_config_update);
                         int ret = g_config_handler(config);
                         if (ret == 0) {
                             printf("✅ 配置处理成功\n");
@@ -268,7 +282,8 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                         ns_data->payload_len,     // 数据长度
                         35,                       // 发射功率
                         ns_data->tdd,             // 帧号
-                        FindTk8710RateByConfigRate(ns_data->rate, &g_received_config, g_received_config.rate_num),  // 根据配置的速率模式查找
+                        ConvertNsRateToTk8710Rate(ns_data->rate),
+                        // FindTk8710RateByConfigRate(ns_data->rate, &g_received_config, g_received_config.rate_num),  // 根据配置的速率模式查找
                         ns_data->tdd == 255 ? TK8710_DATA_TYPE_DED : TK8710_DATA_TYPE_BRD  // tdd=255->DED, tdd=0->BRD
                         // TK8710_DATA_TYPE_BRD // tdd=255->DED, tdd=0->BRD
                     );

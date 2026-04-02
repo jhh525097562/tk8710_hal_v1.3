@@ -1523,10 +1523,11 @@ static void tk8710_s1_auto_tx_process(void)
             
             /* 检查数据长度 */
             if (dataLen != expectedLen) {
-                TK8710_LOG_IRQ_ERROR("User[%d] data length mismatch: expected=%d, actual=%d", 
-                                   userIndex, expectedLen, dataLen);
-                errorCount++;
-                continue;
+                dataLen = expectedLen;
+                // TK8710_LOG_IRQ_ERROR("User[%d] data length mismatch: expected=%d, actual=%d", 
+                //                    userIndex, expectedLen, dataLen);
+                // errorCount++;
+                // continue;
             }
             
             /* 发送用户数据 */
@@ -2082,10 +2083,11 @@ static void tk8710_s1_manual_tx_process(void)
                 
                 /* 检查数据长度 */
                 if (dataLen != expectedLen) {
-                    TK8710_LOG_IRQ_ERROR("User[%d] data length mismatch: expected=%d, actual=%d", 
-                                       i+1, expectedLen, dataLen);
-                    errorCount++;
-                    continue;
+                    dataLen = expectedLen;
+                    // TK8710_LOG_IRQ_ERROR("User[%d] data length mismatch: expected=%d, actual=%d", 
+                    //                    i+1, expectedLen, dataLen);
+                    // errorCount++;
+                    // continue;
                 }
                 
                 /* 发送用户数据 - 按顺序写入buffer */

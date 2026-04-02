@@ -92,6 +92,9 @@ static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult);
 /* 配置处理函数声明 */
 static int HandleNsConfig(const NsConfigDown_t* config);
 
+/* HAL是否已初始化标志 */
+static int g_hal_initialized = 0;
+
 /* NS速率索引到TK8710速率模式转换函数 */
 static uint8_t ConvertNsRateToTk8710Rate(uint8_t ns_rate) {
     switch (ns_rate) {
@@ -123,7 +126,42 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
         return -1;
     }
     
-    printf("开始处理NS配置...\n");
+    printf("开始处理NS配置 (HAL已初始化=%d)...\n", g_hal_initialized);
+    
+    /* 如果HAL已初始化，需要先复位再重新配置 */
+    if (g_hal_initialized) {
+        printf("🔄 配置更新: 复位HAL并重新配置...\n");
+        
+        // /* 1. 复位HAL */
+        // TK8710_HalError halRet_reset = hal_reset();
+        // if (halRet_reset != TK8710_HAL_OK) {
+        //     printf("HAL复位失败: %d\n", halRet_reset);
+        //     return -1;
+        // }
+        int ret;
+        int trmRet;
+        
+        // 1. 清理TRM系统资源
+        trmRet = TRM_Deinit();
+        if (trmRet != TRM_OK) {
+            return TK8710_HAL_ERROR_RESET;
+        }
+
+        // 2. 复位TK8710芯片（复位状态机+寄存器）
+        ret = TK8710Reset(TK8710_RST_STATE_MACHINE);//TK8710_RST_STATE_MACHINE  TK8710_RST_ALL
+        ret = TK8710Reset(TK8710_RST_ALL);//TK8710_RST_STATE_MACHINE  TK8710_RST_ALL
+        if (ret != TK8710_OK) {
+            return TK8710_HAL_ERROR_RESET;
+        }
+
+        // TK8710GpioIrqEnable(0, 0);
+        
+        // TK8710Rk3506Cleanup();
+        printf("HAL复位完成\n");
+        
+        /* 短暂等待确保硬件稳定 */
+        usleep(100000);  // 100ms
+    }
     
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
@@ -136,10 +174,6 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
             {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
             {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
         }
-        // .txadc = {//2号板
-        //     {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
-        //     {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
-        // }
     };
     rfConfig.Freq = config->freq;
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
@@ -280,6 +314,9 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
         return -1;
     }
     printf("HAL started successfully (Master mode, Continuous work)\n");
+    
+    /* 标记HAL已初始化 */
+    g_hal_initialized = 1;
 
     return 0;
 }
@@ -350,8 +387,8 @@ static void OnTrmTxComplete(const TRM_TxCompleteResult* txResult)
 {
     if (!txResult) return;
     
-    printf("=== TRM发送完成事件 ===\n");
-    printf("发送用户总数: %u, 超帧号: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->superFrameNo, txResult->remainingQueue);
+    printf("=== TRM发送完成事件,(超帧号: %u) ===\n",txResult->superFrameNo);
+    printf("发送用户总数: %u, 剩余队列: %u\n", txResult->totalUsers, txResult->remainingQueue);
     g_trmSendCount += txResult->userCount;
     /* 打印每个用户的发送结果 */
     // const char* resultStr[] = {"OK", "NO_BEAM", "TIMEOUT", "ERROR"};
@@ -560,20 +597,20 @@ int main(int argc, char* argv[])
         printf("Force process all users: DISABLED\n");
     }
 
-    /* 8. 初始化发送验证器 */
-    TRM_TxValidatorConfig validatorConfig = {
-        .txPower = 35,
-        .frameOffset = 2,
-        .userIdBase = 0x30000000,
-        .enableAutoResponse = true,
-        .enablePeriodicTest = false,
-        .periodicIntervalFrames = 10,
-        .responseDataLength = 26
-    };
-    ret = TRM_TxValidatorInit(&validatorConfig);
-    if (ret != TRM_OK) {
-        printf("TX validator initialization failed: %d (non-fatal)\n", ret);
-    }
+    // /* 8. 初始化发送验证器 */
+    // TRM_TxValidatorConfig validatorConfig = {
+    //     .txPower = 35,
+    //     .frameOffset = 2,
+    //     .userIdBase = 0x30000000,
+    //     .enableAutoResponse = true,
+    //     .enablePeriodicTest = false,
+    //     .periodicIntervalFrames = 10,
+    //     .responseDataLength = 26
+    // };
+    // ret = TRM_TxValidatorInit(&validatorConfig);
+    // if (ret != TRM_OK) {
+    //     printf("TX validator initialization failed: %d (non-fatal)\n", ret);
+    // }
 
     /* 6. 启动核间通信 */
     printf("启动核间通信...\n");
@@ -840,7 +877,7 @@ int main(int argc, char* argv[])
     TK8710PrintIrqTimeStats();
 
     /* 清理发送验证器 */
-    TRM_TxValidatorDeinit();
+    // TRM_TxValidatorDeinit();
 
     /* 停止核间通信 */
     printf("停止核间通信...\n");

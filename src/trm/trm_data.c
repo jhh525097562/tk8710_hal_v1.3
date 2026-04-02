@@ -113,7 +113,7 @@ static TrmBroadcastData g_broadcastData;  /* 广播数据存储 */
  * 私有函数前向声明
 ============================================================================*/
 static uint32_t TRM_GetTotalQueueCount(void);
-static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t nextRateMode);
+static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t currentRateMode, uint8_t nextRateMode);
 static uint8_t TRM_SendCollectedUsers(PendingTxUser* pendingUsers, uint8_t userCount, TRM_TxUserResult* txResults, uint32_t* resultCount);
 
 /*==============================================================================
@@ -595,10 +595,11 @@ static uint8_t TRM_ProcessQueueItem(TxQueue* queue, TxItem* item, uint8_t isMult
  * @param pendingUsers 输出：收集到的待发送用户数组
  * @param maxUserCount 最大用户数量
  * @param isMultiRate 是否为多速率模式
+ * @param currentRateMode 当前速率模式
  * @param nextRateMode 下一个速率模式
  * @return 实际收集到的用户数量
  */
-static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t nextRateMode)
+static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxUserCount, uint8_t isMultiRate, uint8_t currentRateMode, uint8_t nextRateMode)
 {
     uint8_t collectedCount = 0;
     
@@ -635,7 +636,7 @@ static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxU
                              item->targetRateMode, nextRateMode, shouldSend);
             } else {
                 /* 单速率模式：使用相对帧差判断 */
-                // if (item->targetRateMode == 0) {
+                if (item->targetRateMode == currentRateMode) {
                     uint32_t currentSuperFramePos = TRM_GetSuperFramePosition();
                     uint32_t frameDiff = (currentSuperFramePos - item->frameNo + g_trmMaxFrameCount) % g_trmMaxFrameCount;
                     uint32_t systemFrameDiff = g_trmCurrentFrame - item->systemFrameNo;
@@ -660,11 +661,11 @@ static uint8_t TRM_CollectPendingUsers(PendingTxUser* pendingUsers, uint8_t maxU
                         shouldRemove = 1;
                         TRM_LOG_DEBUG("TRM: Expired frame - shouldRemove=1");
                     }
-                // } else {
-                //     /* 单速率模式下指定了速率模式，丢弃 */
-                //     shouldRemove = 1;
-                //     TRM_LOG_DEBUG("TRM: Invalid rate mode for single rate - shouldRemove=1");
-                // }
+                } else {
+                    /* 单速率模式下指定了速率模式，丢弃 */
+                    shouldRemove = 1;
+                    TRM_LOG_DEBUG("TRM: Invalid rate mode for single rate - shouldRemove=1");
+                }
             }
             
             /* 如果应该发送且用户ID有效，则收集用户信息 */
@@ -813,19 +814,24 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     /* 获取当前时隙配置以判断是否为多速率模式 */
     const slotCfg_t* slotCfg = TK8710GetSlotConfig();
     uint8_t isMultiRate = (slotCfg && slotCfg->rateCount > 1);
+    uint8_t currentRateMode = 0;
     uint8_t nextRateMode = 0;
         
     if (isMultiRate && irqResult) {
         uint8_t currentRateIndex = irqResult->currentRateIndex;
         if (currentRateIndex < slotCfg->rateCount) {
+            currentRateMode = slotCfg->rateModes[currentRateIndex];
             uint8_t nextRateIndex = (currentRateIndex + 1) % slotCfg->rateCount;
             nextRateMode = slotCfg->rateModes[nextRateIndex];
         } else {
+            currentRateMode = slotCfg->rateModes[0];
             nextRateMode = slotCfg->rateModes[0];
         }
     } else if (slotCfg && slotCfg->rateCount > 0) {
+        currentRateMode = slotCfg->rateModes[0];
         nextRateMode = slotCfg->rateModes[0];
     } else {
+        currentRateMode = TK8710_RATE_MODE_8;
         nextRateMode = TK8710_RATE_MODE_8;
     }
         
@@ -836,7 +842,7 @@ int TRM_ProcessTxSlot(uint8_t slotIndex, uint8_t maxUserCount, TK8710IrqResult* 
     uint8_t pendingUserCount = 0;
     
     /* 第一阶段：收集所有待发送用户 */
-    pendingUserCount = TRM_CollectPendingUsers(pendingUsers, maxUserCount, isMultiRate, nextRateMode);
+    pendingUserCount = TRM_CollectPendingUsers(pendingUsers, maxUserCount, isMultiRate, currentRateMode, nextRateMode);
     
     /* 第二阶段：统一功率设置并发送 */
     if (pendingUserCount > 0) {

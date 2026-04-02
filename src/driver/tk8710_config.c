@@ -892,7 +892,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params)
                 /* 配置0x9810寄存器，根据速率模式设置不同的值 */
                 {
                     uint32_t regValue;
-                    uint8_t mode = slotCfg->rateModes[0] & 0xF;
+                    uint8_t mode = slotCfg->rateModes[0] & 0xFF;
                     
                     if (mode <= TK8710_RATE_MODE_8) {
                         regValue = 0x03381400;
@@ -1070,7 +1070,7 @@ int TK8710GetConfig(TK8710ConfigType type, void* params)
             macConfig0.data = regVal;
             slotCfg->brdUserNum = TK8710GetBrdUserNum();  /* 从全局变量获取广播用户数 */
             slotCfg->s1Cfg[0].byteLen = macConfig0.b.s1_cfg;
-            slotCfg->rateModes[0] = macConfig0.b.mode & 0xF;
+            slotCfg->rateModes[0] = macConfig0.b.mode & 0xFF;
             
             /* 读取mac_config_1 (0x04): s2_cfg, s3_cfg, pl_crc_en */
             ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
