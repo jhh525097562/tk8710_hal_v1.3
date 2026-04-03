@@ -14,7 +14,7 @@ TK8710芯片硬件抽象层（Hardware Abstraction Layer），提供分层独立
 ├─────────────────────────────────────┤
 │       Driver层 (Driver Layer)        │  ← 底层API，硬件控制
 ├─────────────────────────────────────┤
-│         HAL层 (HAL Layer)           │  ← 平台适配，硬件抽象
+│         port层 (port Layer)           │  ← 平台适配，硬件抽象
 ├─────────────────────────────────────┤
 │        硬件层 (Hardware)             │  ← TK8710芯片
 └─────────────────────────────────────┘
@@ -398,12 +398,12 @@ int main(void) {
     while (running) {
         // TRM自动处理中断、数据收发、波束管理等
         sleep(1);
-    
+  
         // 可选：获取TRM运行状态
         if (TRM_IsRunning()) {
             printf("TRM is running\n");
         }
-    
+  
         // 可选：获取统计信息
         TRM_Stats stats;
         if (TRM_GetStats(&stats) == TRM_OK) {
@@ -421,8 +421,8 @@ int main(void) {
 
 **TRM API 主要函数：**
 
-| 函数                    | 说明          | 特性                   |
-| ----------------------- | ------------- | ---------------------- |
+| 函数                      | 说明          | 特性                   |
+| ------------------------- | ------------- | ---------------------- |
 | `TRM_Init()`            | 初始化TRM系统 | 配置波束、时隙、回调等 |
 | `TRM_Start()`           | 启动TRM系统   | 启动中断处理、数据收发 |
 | `TRM_Stop()`            | 停止TRM系统   | 停止所有处理           |
@@ -455,18 +455,18 @@ void OnDriverRxData(TK8710IrqResult* irqResult) {
             if (ret == TK8710_OK) {
                 // 处理数据
                 printf("User[%d] received %d bytes\n", i, dataLen);
-            
+          
                 // 获取信号质量信息
                 uint32_t rssi, freq;
                 uint8_t snr;
                 TK8710GetRxUserSignalQuality(i, &rssi, &snr, &freq);
-            
+          
                 // 获取用户波束信息
                 uint32_t userFreq;
                 uint32_t ahInfo[16];
                 uint64_t pilotPowerInfo;
                 TK8710GetRxUserInfo(i, &userFreq, ahInfo, &pilotPowerInfo);
-            
+          
                 // 释放数据缓冲区
                 TK8710ReleaseRxData(i);
             }
@@ -581,7 +581,7 @@ int main(void) {
     while (running) {
         // 应用层自定义处理逻辑
         sleep(1);
-    
+  
         // 可选：获取当前配置
         ChipConfig currentChipConfig;
         ret = TK8710GetConfig(TK8710_CONFIG_TYPE_CHIP, &currentChipConfig);
@@ -589,14 +589,14 @@ int main(void) {
             printf("当前芯片配置: 工作模式=%s\n", 
                    currentChipConfig.conti_mode ? "连续" : "单次");
         }
-    
+  
         // 可选：获取时隙配置
         const slotCfg_t* slotConfig = TK8710GetSlotCfg();
         if (slotConfig != NULL) {
             printf("时隙配置: 字节数=%u, 时间长度=%uus\n",
                    slotConfig->byteLen, slotConfig->timeLen);
         }
-    
+  
         // 可选：调试接口使用
         if (debug_mode) {
             // 中断时间统计
@@ -618,21 +618,21 @@ int main(void) {
 
 **Driver API 主要函数：**
 
-| 函数                                  | 说明             | 特性                 |
-| ------------------------------------- | ---------------- | -------------------- |
-| `TK8710Init()`                      | 初始化Driver     | SPI、中断、基础配置  |
-| `TK8710RfConfig()`                    | 初始化射频子系统 | 频率、增益、直流校准 |
-| `TK8710LogConfig()`              | 初始化日志系统  | 应用层、日志系统     |
-| `TK8710RegisterCallbacks()`         | 注册Driver回调   | 多回调架构           |
-| `TK8710Start()`                 | 启动芯片工作     | 主模式/从模式        |
-| `TK8710SetTxUserData()` | 设置下行数据    | 统一下行数据发送接口     |
-| `TK8710SetTxUserInfo()`             | 设置用户信息     | 频率、波束、功率     |
-| `TK8710GetRxUserData()`                 | 获取接收数据     | 用户数据读取         |
-| `TK8710GetRxUserSignalQuality()`             | 获取信号质量     | RSSI、SNR、频率      |
-| `TK8710SetConfig()`                 | 设置芯片配置     | 时隙、射频等配置     |
-| `TK8710GetConfig()`                 | 获取芯片配置     | 读取当前配置         |
-| `TK8710GetSlotCfg()`                | 获取时隙配置     | 时隙参数查询         |
-| `TK8710ResetChip()`                 | 芯片复位         | 状态机/寄存器复位    |
+| 函数                               | 说明             | 特性                 |
+| ---------------------------------- | ---------------- | -------------------- |
+| `TK8710Init()`                   | 初始化Driver     | SPI、中断、基础配置  |
+| `TK8710RfConfig()`               | 初始化射频子系统 | 频率、增益、直流校准 |
+| `TK8710LogConfig()`              | 初始化日志系统   | 应用层、日志系统     |
+| `TK8710RegisterCallbacks()`      | 注册Driver回调   | 多回调架构           |
+| `TK8710Start()`                  | 启动芯片工作     | 主模式/从模式        |
+| `TK8710SetTxUserData()`          | 设置下行数据     | 统一下行数据发送接口 |
+| `TK8710SetTxUserInfo()`          | 设置用户信息     | 频率、波束、功率     |
+| `TK8710GetRxUserData()`          | 获取接收数据     | 用户数据读取         |
+| `TK8710GetRxUserSignalQuality()` | 获取信号质量     | RSSI、SNR、频率      |
+| `TK8710SetConfig()`              | 设置芯片配置     | 时隙、射频等配置     |
+| `TK8710GetConfig()`              | 获取芯片配置     | 读取当前配置         |
+| `TK8710GetSlotCfg()`             | 获取时隙配置     | 时隙参数查询         |
+| `TK8710ResetChip()`              | 芯片复位         | 状态机/寄存器复位    |
 
 ### 调试接口使用
 
