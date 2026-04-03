@@ -201,16 +201,11 @@ void trm_print_slot_calc_result(const TRM_SlotCalcOutput* output)
         return;
     }
     
-    printf("\n=== TRM Slot Calculation Result ===\n");
-    printf("Frame Period: %u us\n", output->framePeriod);
-    printf("Frame Count: %u\n", output->frameCount);
-    printf("Total Duration: %u ms\n", output->framePeriod * output->frameCount / 1000);
-    printf("\nSlot Lengths:\n");
-    printf("  BCN Slot: %u us\n", output->bcnSlotLen);
-    printf("  Broadcast Slot: %u us\n", output->brdSlotLen);
-    printf("  Uplink Slot: %u us\n", output->ulSlotLen);
-    printf("  Downlink Slot: %u us\n", output->dlSlotLen);
-    printf("\nGaps:\n");
-    printf("  Downlink Gap: %u us\n", output->dlGap);
-    printf("=====================================\n\n");
+    TRM_LOG_DEBUG("=== TRM Slot Calculation Result ===");
+    TRM_LOG_DEBUG("Frame Period: %u us", output->framePeriod);
+    TRM_LOG_DEBUG("Frame Count: %u", output->frameCount);
+    TRM_LOG_DEBUG("Total Duration: %u ms", output->framePeriod * output->frameCount / 1000);
+    TRM_LOG_DEBUG("Slot Lengths: BCN=%u, Broadcast=%u, Uplink=%u, Downlink=%u us",
+                  output->bcnSlotLen, output->brdSlotLen, output->ulSlotLen, output->dlSlotLen);
+    TRM_LOG_DEBUG("Downlink Gap: %u us", output->dlGap);
 }

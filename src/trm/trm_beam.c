@@ -19,7 +19,7 @@ extern uint64_t TK8710GetTimeUs(void);
  * 私有定义
  *============================================================================*/
 
-#define BEAM_TABLE_SIZE     4096    /* 哈希表大�?*/
+#define BEAM_TABLE_SIZE     4096    /* 哈希表大小 */
 
 /* 波束条目 */
 typedef struct BeamEntry {
@@ -28,7 +28,7 @@ typedef struct BeamEntry {
     struct BeamEntry* next;
 } BeamEntry;
 
-/* 波束�?*/
+/* 波束表 */
 typedef struct {
     BeamEntry* table[BEAM_TABLE_SIZE];
     uint32_t count;
@@ -59,16 +59,16 @@ static BeamEntry* BeamFindEntry(uint32_t userId)
 {
     uint32_t index = BeamHashFunc(userId);
     TRM_LOG_DEBUG("TRM: BeamFindEntry - userId=0x%08X, index=%u", userId, index);
-    
+
     BeamEntry* entry = g_beamTable.table[index];
     TRM_LOG_DEBUG("TRM: Table entry at index %u is %p", index, entry);
-    
+
     /* 检查表项是否已初始化 */
     if (entry == NULL) {
         TRM_LOG_DEBUG("TRM: Table entry is NULL");
         return NULL;
     }
-    
+
     int count = 0;
     while (entry != NULL && count < 10) { /* 防止无限循环 */
         TRM_LOG_DEBUG("TRM: Checking entry %d - userId=0x%08X", count, entry->userId);
@@ -79,7 +79,7 @@ static BeamEntry* BeamFindEntry(uint32_t userId)
         entry = entry->next;
         count++;
     }
-    
+
     TRM_LOG_DEBUG("TRM: No matching entry found");
     return NULL;
 }
@@ -98,14 +98,14 @@ int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo)
         TRM_LOG_ERROR("TRM: TRM_SetBeamInfo - beamInfo is NULL");
         return TRM_ERR_PARAM;
     }
-    
+
     TRM_LOG_DEBUG("TRM: TRM_SetBeamInfo - userId=0x%08X, valid=%d", userId, beamInfo->valid);
-    
+
     TK8710EnterCritical();
-    
+
     /* 查找是否已存在 */
     BeamEntry* entry = BeamFindEntry(userId);
-    
+
     if (entry != NULL) {
         /* 更新 */
         TRM_LOG_DEBUG("TRM: Updating existing beam entry for user ID=0x%08X", userId);
@@ -119,7 +119,7 @@ int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo)
             TRM_LOG_ERROR("TRM: Beam table full, count=%u, maxUsers=%u", g_beamTable.count, g_beamTable.maxUsers);
             return TRM_ERR_NO_MEM;
         }
-        
+
         /* 新建 */
         TRM_LOG_DEBUG("TRM: Creating new beam entry for user ID=0x%08X", userId);
         entry = (BeamEntry*)malloc(sizeof(BeamEntry));
@@ -128,25 +128,25 @@ int TRM_SetBeamInfo(uint32_t userId, const TRM_BeamInfo* beamInfo)
             TRM_LOG_ERROR("TRM: Failed to allocate memory for beam entry");
             return TRM_ERR_NO_MEM;
         }
-        
+
         entry->userId = userId;
         memcpy(&entry->beamInfo, beamInfo, sizeof(TRM_BeamInfo));
         entry->beamInfo.userId = userId;
         entry->beamInfo.timestamp = (uint32_t)(TK8710GetTimeUs() / 1000);
         entry->beamInfo.valid = 1;
-        
+
         /* 插入哈希表 */
         uint32_t index = BeamHashFunc(userId);
         TRM_LOG_DEBUG("TRM: Inserting beam entry at index %u", index);
         entry->next = g_beamTable.table[index];
         g_beamTable.table[index] = entry;
         g_beamTable.count++;
-        
+
         TRM_LOG_DEBUG("TRM: Beam entry inserted, table count=%u", g_beamTable.count);
     }
-    
+
     TK8710ExitCritical();
-    
+
     TRM_LOG_DEBUG("TRM: TRM_SetBeamInfo completed successfully for user ID=0x%08X", userId);
     return TRM_OK;
 }
@@ -156,29 +156,29 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo)
     if (beamInfo == NULL) {
         return TRM_ERR_PARAM;
     }
-    
+
     /* 检查波束表是否已初始化 */
     if (g_beamTable.table == NULL) {
         TRM_LOG_ERROR("TRM: Beam table not initialized");
         return TRM_ERR_NOT_INIT;
     }
-    
+
     // TRM_LOG_DEBUG("TRM: Starting beam info query for user ID=0x%08X", userId);
-    
+
     /* 使用读写分离：只读操作不需要锁 */
     uint32_t index = BeamHashFunc(userId);
     // TRM_LOG_DEBUG("TRM: BeamFindEntry - userId=0x%08X, index=%u", userId, index);
-    
+
     /* 读取操作 - 不加锁，避免死锁 */
     BeamEntry* entry = g_beamTable.table[index];
     // TRM_LOG_DEBUG("TRM: Table entry at index %u is %p", index, entry);
-    
+
     /* 检查表项是否已初始化 */
     if (entry == NULL) {
         TRM_LOG_DEBUG("TRM: Table entry is NULL");
         return TRM_ERR_NO_BEAM;
     }
-    
+
     /* 简化遍历逻辑 */
     int count = 0;
     BeamEntry* current = entry;
@@ -186,25 +186,25 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo)
         // TRM_LOG_DEBUG("TRM: Checking entry %d - userId=0x%08X", count, current->userId);
         if (current->userId == userId) {
             // TRM_LOG_DEBUG("TRM: Found matching entry");
-            
+
             /* 检查有效性 */
             if (!current->beamInfo.valid) {
                 TRM_LOG_DEBUG("TRM: Beam entry exists but not valid");
                 return TRM_ERR_NO_BEAM;
             }
-            
+
             /* 检查超时 */
             uint32_t now = (uint32_t)(TK8710GetTimeUs() / 1000);
-            // TRM_LOG_DEBUG("TRM: Current time=%u, beam timestamp=%u, timeout=%u", 
+            // TRM_LOG_DEBUG("TRM: Current time=%u, beam timestamp=%u, timeout=%u",
                         //   now, current->beamInfo.timestamp, g_beamTable.timeoutMs);
-            
-            if (g_beamTable.timeoutMs > 0 && 
+
+            if (g_beamTable.timeoutMs > 0 &&
                 (now - current->beamInfo.timestamp) > g_beamTable.timeoutMs) {
                 /* 标记过期但不修改，避免并发问题 */
                 // TRM_LOG_DEBUG("TRM: Beam info expired for user ID=0x%08X", userId);
                 return TRM_ERR_NO_BEAM;
             }
-            
+
             /* 逐字段复制，避免memcpy问题 */
             beamInfo->userId = current->beamInfo.userId;
             beamInfo->freq = current->beamInfo.freq;
@@ -212,14 +212,14 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo)
             beamInfo->valid = current->beamInfo.valid;
             beamInfo->timestamp = current->beamInfo.timestamp;
             memcpy(beamInfo->ahData, current->beamInfo.ahData, sizeof(beamInfo->ahData));
-            
+
             // TRM_LOG_DEBUG("TRM: Found beam info for user ID=0x%08X", userId);
             return TRM_OK;
         }
         current = current->next;
         count++;
     }
-    
+
     TRM_LOG_DEBUG("TRM: No matching entry found");
     return TRM_ERR_NO_BEAM;
 }
@@ -227,9 +227,9 @@ int TRM_GetBeamInfo(uint32_t userId, TRM_BeamInfo* beamInfo)
 int TRM_ClearBeamInfo(uint32_t userId)
 {
     TK8710EnterCritical();
-    
+
     if (userId == 0xFFFFFFFF) {
-        /* 清除所�?*/
+        /* 清除所有*/
         for (uint32_t i = 0; i < BEAM_TABLE_SIZE; i++) {
             BeamEntry* entry = g_beamTable.table[i];
             while (entry != NULL) {
@@ -245,7 +245,7 @@ int TRM_ClearBeamInfo(uint32_t userId)
         uint32_t index = BeamHashFunc(userId);
         BeamEntry* entry = g_beamTable.table[index];
         BeamEntry* prev = NULL;
-        
+
         while (entry != NULL) {
             if (entry->userId == userId) {
                 if (prev == NULL) {
@@ -261,9 +261,9 @@ int TRM_ClearBeamInfo(uint32_t userId)
             entry = entry->next;
         }
     }
-    
+
     TK8710ExitCritical();
-    
+
     return TRM_OK;
 }
 
