@@ -131,9 +131,8 @@ void TK8710_IRQHandler(void)
     
     /* 检查重入保护 */
     if (g_irqInProgress) {
-        /* 读取中断状态 */
-        uint32_t irqStatus;
-        int ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
+        /* 读取中断状态 (复用外层变量) */
+        ret = TK8710ReadReg(TK8710_REG_TYPE_GLOBAL, 
                                 MAC_BASE + offsetof(struct mac, irq_res), 
                                 &irqStatus);
         if (ret != TK8710_OK) {

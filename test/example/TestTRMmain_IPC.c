@@ -205,7 +205,7 @@ static int HandleNsConfig(const NsConfigDown_t* config) {
     memset(&trmConfig, 0, sizeof(trmConfig));
     trmConfig.beamMode = TRM_BEAM_MODE_FULL_STORE;
     trmConfig.beamMaxUsers = 3000;
-    trmConfig.beamTimeoutMs = 10000;
+    trmConfig.beamTimeoutMs = 20000;
     trmConfig.callbacks.onRxData = OnTrmRxData;
     trmConfig.callbacks.onTxComplete = OnTrmTxComplete;
     trmConfig.maxFrameCount = config->tdd_num;
