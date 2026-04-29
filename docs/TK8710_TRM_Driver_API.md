@@ -151,14 +151,14 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig);
       uint8_t  txgain;        /* 射频发送增益 */
       TxAdcConfig txadc[TK8710_MAX_ANTENNAS]; /* 射频发送直流, 8天线×(i,q)×16bit */
   } ChiprfConfig;
-
+  
   typedef enum {
       TK8710_RF_TYPE_1255_1M  = 0,  /* SX1255 1MHz */
       TK8710_RF_TYPE_1255_32M = 1,  /* SX1255 32MHz */
       TK8710_RF_TYPE_1257_32M = 2,  /* SX1257 32MHz */
       TK8710_RF_TYPE_OTHER    = 3,  /* 其他类型 */
   } rfType_e;
-
+  
   typedef struct {
       int16_t i;              /* I路直流, 16bit */
       int16_t q;              /* Q路直流, 16bit */
@@ -206,7 +206,7 @@ int TK8710SetConfig(TK8710ConfigType type, const void* params);
     TK8710_CFG_TYPE_SLOT_CFG,         /* 时隙配置 */
     TK8710_CFG_TYPE_ADDTL,            /* 附加位配置 */
   } TK8710ConfigType;
-
+  
   ```
 
 #### `TK8710GetConfig`
@@ -1264,24 +1264,6 @@ typedef struct {
   - 输入/输出指针为NULL
 - 其他: 计算失败
 
-#### `trm_print_slot_calc_result`
-
-```c
-void trm_print_slot_calc_result(const TRM_SlotCalcOutput* output);
-```
-
-**功能**: 打印时隙计算结果
-**参数**:
-
-- `output`: 时隙计算输出结果指针
-
-**说明**:
-
-- 以调试格式打印详细的时隙计算结果
-- 包含帧周期、帧数、总时长和各时隙长度信息
-- 主要用于调试和验证时隙配置
-- 输出格式便于开发者查看和调试
-
 **计算原理**:
 
 时隙计算器采用最新优化算法，基于8710_HAL用户指南v1.0 7.2.4章节实现，确保在满足时间约束的前提下，最小化增加的间隔：
@@ -1355,6 +1337,116 @@ if (ret == 0) {
     printf("时隙计算失败: %d\n", ret);
 }
 ```
+
+**实际计算示例**:
+
+**示例1**: 速率模式6，无广播时隙，上行1个包块，下行1个包块
+
+```c
+// 输入参数
+TRM_SlotCalcInput input1 = {
+    .rateMode = 6,           // 速率模式6: 125KHz, 128用户
+    .brdBlockNum = 0,        // slot1下行（广播）包块数：0（无广播）
+    .ulBlockNum = 1,         // slot2上行包块数：1
+    .dlBlockNum = 1,         // slot3下行包块数：1
+    .superFrameNum = 1       // 超帧数：1
+};
+
+TRM_SlotCalcOutput output1;
+int ret1 = trm_calc_slot_config(&input1, &output1);
+
+// 输出结果
+if (ret1 == 0) {
+    printf("=== 示例1计算结果 ===\n");
+    printf("输入: rateMode=6, brdBlockNum=0, ulBlockNum=1, dlBlockNum=1\n");
+    printf("BCN时隙: %u us\n", output1.bcnSlotLen);        // 36340 us
+    printf("slot1下行（广播）时隙: %u us\n", output1.brdSlotLen);  // 1024 + 65536*(0*2+1) + 19728 = 86288 us
+    printf("slot2上行时隙: %u us\n", output1.ulSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
+    printf("slot3下行时隙: %u us\n", output1.dlSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
+    printf("帧周期: %u us\n", output1.framePeriod);         // 425760 us
+    printf("帧数: %u\n", output1.frameCount);               // 3
+    printf("总时长: %u ms\n", (output1.framePeriod * output1.frameCount) / 1000); // 1277 ms ≈ 1.277秒
+    printf("Gap参数: BRD=%u, UL=%u, DL=%u us\n", 
+           output1.brdGap, output1.ulGap, output1.dlGap);
+}
+```
+
+**预期输出**:
+```
+=== 示例1计算结果 ===
+输入: rateMode=6, brdBlockNum=0, ulBlockNum=1, dlBlockNum=1
+BCN时隙: 36340 us
+slot1下行（广播）时隙: 86288 us
+slot2上行时隙: 151816 us
+slot3下行时隙: 151816 us
+帧周期: 425760 us
+帧数: 3
+总时长: 1277 ms
+Gap参数: BRD=19728, UL=19728, DL=19728 us
+```
+
+**示例2**: 速率模式6，广播1个包块，上行1个包块，无下行时隙
+
+```c
+// 输入参数
+TRM_SlotCalcInput input2 = {
+    .rateMode = 6,           // 速率模式6: 125KHz, 128用户
+    .brdBlockNum = 1,        // slot1下行（广播）包块数：1
+    .ulBlockNum = 1,         // slot2上行包块数：1
+    .dlBlockNum = 0,         // slot3下行包块数：0（无下行）
+    .superFrameNum = 1       // 超帧数：1
+};
+
+TRM_SlotCalcOutput output2;
+int ret2 = trm_calc_slot_config(&input2, &output2);
+
+// 输出结果
+if (ret2 == 0) {
+    printf("=== 示例2计算结果 ===\n");
+    printf("输入: rateMode=6, brdBlockNum=1, ulBlockNum=1, dlBlockNum=0\n");
+    printf("BCN时隙: %u us\n", output2.bcnSlotLen);        // 36340 us
+    printf("slot1下行（广播）时隙: %u us\n", output2.brdSlotLen);  // 1024 + 65536*(1*2+1) + 19728 = 151816 us
+    printf("slot2上行时隙: %u us\n", output2.ulSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
+    printf("slot3下行时隙: %u us\n", output2.dlSlotLen);     // 1024 + 65536*(0*2+1) + 19728 = 86288 us
+    printf("帧周期: %u us\n", output2.framePeriod);         // 425760 us
+    printf("帧数: %u\n", output2.frameCount);               // 3
+    printf("总时长: %u ms\n", (output2.framePeriod * output2.frameCount) / 1000); // 1277 ms ≈ 1.277秒
+    printf("Gap参数: BRD=%u, UL=%u, DL=%u us\n", 
+           output2.brdGap, output2.ulGap, output2.dlGap);
+}
+```
+
+**预期输出**:
+```
+=== 示例2计算结果 ===
+输入: rateMode=6, brdBlockNum=1, ulBlockNum=1, dlBlockNum=0
+BCN时隙: 36340 us
+slot1下行（广播）时隙: 151816 us
+slot2上行时隙: 151816 us
+slot3下行时隙: 86288 us
+framePeriod: 425760 us
+frameCount: 3
+总时长: 1277 ms
+Gap参数: BRD=19728, UL=19728, DL=19728 us
+```
+
+**计算说明**:
+
+1. **时隙长度计算公式**:
+   - BCN时隙 = g_bcnSlotLen[6] = 36340 us
+   - 广播时隙 = 1024 + 65536 × (brdBlockNum × 2 + 1) + 19728
+   - 上行时隙 = 1024 + 65536 × (ulBlockNum × 2 + 1) + 19728  
+   - 下行时隙 = 1024 + 65536 × (dlBlockNum × 2 + 1) + 19728
+
+2. **帧周期优化**:
+   - 原始帧周期 = BCN + 广播 + 上行 + 下行 = 425760 us
+   - 算法找到最优解：framePeriod = 425760 us, frameCount = 3
+   - 总时长 = 425760 × 3 = 1277280 us ≈ 1.277秒
+   - 满足 framePeriod × frameCount = M × 1,000,000 us 的约束
+
+3. **间隔处理**:
+   - 当前实现中，终端暂时未使用时隙计算器的间隔调整功能
+   - dlGap = 0，其他间隔使用默认值
 
 ---
 
