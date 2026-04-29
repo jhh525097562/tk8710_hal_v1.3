@@ -31,7 +31,7 @@
 
 /* GPIO配置 - 使用libgpiod */
 #define TK8710_GPIO_CHIP_PATH       "/dev/gpiochip0"
-#define TK8710_IRQ_LINE_OFFSET      20      /* CAN0_RX = RM_IO20, 引脚29 */
+#define TK8710_IRQ_LINE_OFFSET      20      /* CAN0_RX = RM_IO20, 引脚29 ：3506开发板：20,3506网关板：18*/
 #define TK8710_CS_LINE_OFFSET       0       /* CS引脚偏移，根据实际硬件配置 */
 #define TK8710_RST_LINE_OFFSET      0       /* RST引脚偏移，根据实际硬件配置 */
 

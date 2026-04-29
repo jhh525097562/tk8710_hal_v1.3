@@ -146,17 +146,6 @@ static void PrintMessageDetail(const char *prefix, const ipc_smp_msg_hdr_t *hdr,
                     printf("  速率配置[%d]: rate=%d, uplink_pkt=%d, downlink_pkt=%d\n",
                            i, config->rate_cfgs[i].rate, config->rate_cfgs[i].uplink_pkt, config->rate_cfgs[i].downlink_pkt);
                 }
-                
-                // 保存配置并设置标志
-                memcpy(&g_received_config, config, sizeof(NsConfigDown_t));
-                g_config_received = 1;
-                
-                // 调用配置处理回调函数
-                if (g_config_handler) {
-                    printf("✅ 配置处理成功\n");
-                } else {
-                    printf("⚠️  未设置配置处理回调函数\n");
-                }
                 break;
             }
             case MSG_TYPE_NS_DATA_DOWN: {
@@ -236,17 +225,41 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                 if (msg.len >= sizeof(NsConfigDown_t)) {
                     const NsConfigDown_t *config = (const NsConfigDown_t *)msg.payload;
                     
-                    // 检查是否是配置更新（对比频率或TDD帧数）
+                    // 判断是否为首次配置或配置更新
+                    int is_first_config = 0;
                     int is_config_update = 0;
-                    if (g_config_received) {
+                    
+                    printf("🔍 配置状态检查: g_config_received=%d\n", g_config_received);
+                    
+                    if (!g_config_received) {
+                        // 首次配置
+                        is_first_config = 1;
+                        printf("📥 首次接收NS配置\n");
+                    } else {
+                        // 检查配置是否有更新（对比频率或TDD帧数等）
+                        int rate_cfgs_changed = 0;
+                        if (g_received_config.rate_num != config->rate_num) {
+                            rate_cfgs_changed = 1;
+                        } else {
+                            // 检查每个速率配置的速率模式、上行和下行包块数
+                            for (int i = 0; i < config->rate_num && i < MAX_RATE_CFGS; i++) {
+                                if (g_received_config.rate_cfgs[i].rate != config->rate_cfgs[i].rate ||
+                                    g_received_config.rate_cfgs[i].uplink_pkt != config->rate_cfgs[i].uplink_pkt ||
+                                    g_received_config.rate_cfgs[i].downlink_pkt != config->rate_cfgs[i].downlink_pkt) {
+                                    rate_cfgs_changed = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        
                         if (g_received_config.freq != config->freq ||
                             g_received_config.tdd_num != config->tdd_num ||
                             g_received_config.nwk_num != config->nwk_num ||
-                            g_received_config.rate_num != config->rate_num) {
+                            rate_cfgs_changed) {
                             is_config_update = 1;
-                            printf("🔄 检测到NS配置更新! freq: %u -> %u, tdd_num: %d -> %d\n",
+                            printf("🔄 检测到NS配置更新! freq: %u -> %u, tdd_num: %d -> %d, rate_cfgs_changed: %d\n",
                                    g_received_config.freq, config->freq,
-                                   g_received_config.tdd_num, config->tdd_num);
+                                   g_received_config.tdd_num, config->tdd_num, rate_cfgs_changed);
                         }
                     }
                     
@@ -254,14 +267,26 @@ static void ProcessIncomingMessages(IpcCommContext *ctx) {
                     memcpy(&g_received_config, config, sizeof(NsConfigDown_t));
                     g_config_received = 1;
                     
-                    // 每次收到配置都调用处理回调（支持首次配置和配置更新）
+                    // 配置处理：首次配置直接执行，后续配置只有更新时才执行
                     if (g_config_handler) {
-                        printf("📨 调用配置处理回调函数 (is_update=%d)...\n", is_config_update);
-                        int ret = g_config_handler(config);
-                        if (ret == 0) {
-                            printf("✅ 配置处理成功\n");
+                        if (is_first_config) {
+                            printf("📨 首次配置，调用配置处理回调函数...\n");
+                            int ret = g_config_handler(config);
+                            if (ret == 0) {
+                                printf("✅ 首次配置处理成功\n");
+                            } else {
+                                printf("❌ 首次配置处理失败: %d\n", ret);
+                            }
+                        } else if (is_config_update) {
+                            printf("🔄 配置更新，执行回调函数...\n");
+                            int ret = g_config_handler(config);
+                            if (ret == 0) {
+                                printf("✅ 配置更新处理成功\n");
+                            } else {
+                                printf("❌ 配置更新处理失败: %d\n", ret);
+                            }
                         } else {
-                            printf("❌ 配置处理失败: %d\n", ret);
+                            printf("ℹ️  配置无变化，跳过回调函数\n");
                         }
                     } else {
                         printf("⚠️  未设置配置处理回调函数\n");
@@ -363,6 +388,12 @@ int IpcCommInit(IpcCommContext *ctx) {
     ctx->running = 1;
 
     printf("=== 初始化核间通信 ===\n");
+    printf("🔍 初始化时配置状态: g_config_received=%d\n", g_config_received);
+    
+    // 强制重置配置状态，确保首次配置正确识别
+    g_config_received = 0;
+    memset(&g_received_config, 0, sizeof(g_received_config));
+    printf("🔄 已重置配置状态，确保首次配置识别\n");
 
     // 1. 初始化接收通道（NS -> 网关）
     ipc_smp_cfg_t rx_cfg = {0};

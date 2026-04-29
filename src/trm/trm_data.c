@@ -291,6 +291,9 @@ int TRM_ManageBroadcast(void)
     }else{
 
     }
+    if(g_trmMaxFrameCount==1){
+        currentSuperFramePos = 1;
+    }
     TRM_ConfigureTddPeriodInBroadcast(g_broadcastData.data, g_broadcastData.len, (uint8_t)currentSuperFramePos);
     /* 检查是否有上层设置的广播数据（包含payload） */
     if (g_broadcastData.valid && g_broadcastData.hasPayload) {
@@ -802,6 +805,14 @@ static uint8_t TRM_SendCollectedUsers(PendingTxUser* pendingUsers, uint8_t userC
         int ret = TK8710SetTxData(TK8710_DOWNLINK_B, txUserIndex, user->data, user->len, user->finalPower, user->beamType);
         
         if (ret == TK8710_OK) {
+            uint32_t* freqBytes = (uint32_t*)&user->beam.freq;
+            uint32_t freqRaw = ((uint32_t)((uint8_t*)freqBytes)[0] << 24) |
+                               ((uint32_t)((uint8_t*)freqBytes)[1] << 16) |
+                               ((uint32_t)((uint8_t*)freqBytes)[2] << 8) |
+                               ((uint32_t)((uint8_t*)freqBytes)[3]);
+            uint32_t freq26 = freqRaw & 0x03FFFFFF;  /* 取26位 */
+            int32_t freqValue = freq26 > (1<<25) ? (int32_t)(freq26 - (1<<26)) : (int32_t)freq26;
+            TRM_LOG_INFO("TRM: User ID[%u], freq = %d", user->userId, freqValue/128);
             ret = TK8710SetTxUserInfo(txUserIndex, user->beam.freq, user->beam.ahData, user->beam.pilotPower);
             
             if (ret == TK8710_OK) {

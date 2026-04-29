@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 /* 默认GPIO中断包装函数 */
 static void default_gpio_irq_handler(void* user)
@@ -227,7 +228,7 @@ int TK8710Init(const ChipConfig* initConfig)
     
     /* 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
-        .level = TK8710_LOG_WARN,
+        .level = TK8710_LOG_INFO,
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,
         .enable_timestamp = 1,
@@ -381,6 +382,57 @@ int TK8710Init(const ChipConfig* initConfig)
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), 0);
     if (ret != TK8710_OK) return ret;
     
+    AcmCalibParams calibParams;
+    calibParams.calibCount = 5;
+    calibParams.snrThreshold = 32;
+    
+    int calibRet;
+    int maxRetryCount = 3;
+    int retryCount = 0;
+    bool calibSuccess = false;
+    
+    /* 校准重试逻辑：如果有效校准次数小于目标校准次数，则重新校准 */
+    while (retryCount < maxRetryCount && !calibSuccess) {
+
+        ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_AUTO_GAIN, TK8710_DBG_OPT_GET, NULL, NULL);
+        if (ret == TK8710_OK) {
+            TK8710_LOG_CORE_INFO("ACM增益自动获取完成\n");
+        } else {
+            TK8710_LOG_CORE_INFO("ACM增益自动获取失败: ret=%d\n", ret);
+        }
+
+        TK8710_LOG_CORE_INFO("开始第%d次ACM校准 (目标校准次数: %d, SNR门限: %d)...\n", 
+                            retryCount + 1, calibParams.calibCount, calibParams.snrThreshold);
+        
+        ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, 
+                            &calibParams, &calibRet);
+        
+        if (ret == TK8710_OK) {
+            TK8710_LOG_CORE_INFO("第%d次校准完成，有效校准次数: %d\n", retryCount + 1, calibRet);
+            
+            /* 检查校准是否成功：有效校准次数是否达到目标校准次数 */
+            if (calibRet >= calibParams.calibCount) {
+                TK8710_LOG_CORE_INFO("ACM校准成功\n");
+                calibSuccess = true;
+            } else {
+                TK8710_LOG_CORE_INFO("ACM校准未达到目标次数，需要重新校准\n");
+                retryCount++;
+            }
+        } else {
+            TK8710_LOG_CORE_INFO("第%d次ACM校准失败: ret=%d\n", retryCount + 1, ret);
+            retryCount++;
+        }
+    }
+    
+    /* 检查最终校准结果 */
+    if (!calibSuccess) {
+        TK8710_LOG_CORE_INFO("ACM校准最终失败：已重试%d次，仍未达到目标校准次数\n", maxRetryCount);
+        return TK8710_ERR;
+    }
+        /* 初始化默认日志系统（如果尚未初始化） */
+    defaultLogConfig.level = TK8710_LOG_WARN;
+    TK8710LogInit(&defaultLogConfig);
+    
     TK8710_LOG_CORE_INFO("TK8710 initialized successfully");
     return TK8710_OK;
 }
@@ -474,7 +526,7 @@ int TK8710Start(uint8_t workType, uint8_t workMode)
                 if (slotCfg->s3Cfg[0].byteLen > 0) {
                     irqCtrl0.b.s3_irq_mask = 0;  /* S3中断使能 */
                 }
-                
+
                 ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, irq_ctrl0), irqCtrl0.data);
                 if (ret != TK8710_OK) return ret;
             }
@@ -900,7 +952,7 @@ int TK8710Reset(uint8_t rstType)
 {
     int ret;
     uint8_t resetConfig = 0;
-    TK8710GpioSet("gpiochip0", 9, 0);
+    TK8710GpioSet("gpiochip0", 9, 0);//3506开发板：9，3506网关板：13
     usleep(10000);  /* 10ms等待复位完成 */
     TK8710GpioSet("gpiochip0", 9, 1);
     /* 根据复位类型设置复位配置 */

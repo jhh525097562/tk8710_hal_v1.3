@@ -1183,8 +1183,6 @@ int TK8710Ctrl(TK8710CtrlType type, const void* params)
 int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                     const void* inputParams, void* outputParams)
 {
-    (void)outputParams;
-    
     switch (ctrlType) {
         case TK8710_DBG_TYPE_TX_TONE:
         {
@@ -1284,15 +1282,15 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                 }
                 int ret;
                 
-                // TK8710GpioSet("gpiochip0", 9, 1);
+                TK8710GpioSet("gpiochip0", 9, 1);
                 /* Write efuse data */
-                ret = TK8710EfuseWrite(0, spi_data_in, 5);
+                ret = TK8710EfuseWrite(0, spi_data_in, 64);
                 if (ret == TK8710_OK) {
                     TK8710_LOG_CONFIG_INFO("Efuse write success\n");
                 } else {
                     TK8710_LOG_CONFIG_ERROR("Efuse write failed: %d\n", ret);
                 }
-                // TK8710GpioSet("gpiochip0", 9, 0);
+                TK8710GpioSet("gpiochip0", 9, 0);
                 /* Read efuse data */
                 ret = TK8710EfuseRead(0, spi_data_out, 64);
                 if (ret == TK8710_OK) {
@@ -1494,9 +1492,10 @@ int TK8710DebugCtrl(TK8710DebugCtrlType ctrlType, CtrlOptType optType,
                 calibCount = params->calibCount;
                 snrThreshold = params->snrThreshold;
             }
-            
+            int* SuccessNum = (int*)outputParams;
             TK8710_LOG_CONFIG_INFO("执行ACM校准 (校准次数: %d, SNR门限: %d)...\n", calibCount, snrThreshold);
             ret = tk8710_acm_calibrate(calibCount, snrThreshold);
+            *SuccessNum = ret;
             if (ret >= 0) {
                 TK8710_LOG_CONFIG_INFO("ACM校准完成，有效校准次数: %d\n", ret);
             } else {

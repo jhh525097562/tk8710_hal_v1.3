@@ -584,18 +584,18 @@ int main(int argc, char* argv[])
     signal(SIGTERM, signal_handler);
 #endif
     
-    /* 11. 配置测试选项 */
-    printf("Configure test options:\n");
-    printf("Enable force process all users for testing? (y/n): ");
-    char testChoice;
-    scanf(" %c", &testChoice);
-    if (testChoice == 'y' || testChoice == 'Y') {
-        TK8710SetForceProcessAllUsers(1);
-        printf("Force process all users: ENABLED\n");
-    } else {
-        TK8710SetForceProcessAllUsers(0);
-        printf("Force process all users: DISABLED\n");
-    }
+    // /* 11. 配置测试选项 */
+    // printf("Configure test options:\n");
+    // printf("Enable force process all users for testing? (y/n): ");
+    // char testChoice;
+    // scanf(" %c", &testChoice);
+    // if (testChoice == 'y' || testChoice == 'Y') {
+    //     TK8710SetForceProcessAllUsers(1);
+    //     printf("Force process all users: ENABLED\n");
+    // } else {
+    //     TK8710SetForceProcessAllUsers(0);
+    //     printf("Force process all users: DISABLED\n");
+    // }
 
     // /* 8. 初始化发送验证器 */
     // TRM_TxValidatorConfig validatorConfig = {
