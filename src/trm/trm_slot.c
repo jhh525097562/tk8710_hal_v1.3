@@ -94,10 +94,10 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
         TRM_LOG_ERROR("Invalid rate mode: %d (supported: 5-11, 18)", mode);
         return -1;
     }
-    
-    if (input->ulBlockNum == 0 || input->dlBlockNum == 0) {
-        TRM_LOG_ERROR("Invalid block numbers: ul=%d, dl=%d (must be > 0)", 
-                     input->ulBlockNum, input->dlBlockNum);
+  /* 参数检查 - 允许包块数为0 */
+    if (input->ulBlockNum > 16 || input->dlBlockNum > 16 || input->brdBlockNum > 16) {
+        TRM_LOG_ERROR("Invalid block numbers: brd=%d, ul=%d, dl=%d (must be <= 10)", 
+                     input->brdBlockNum, input->ulBlockNum, input->dlBlockNum);
         return -1;
     }
     
@@ -106,15 +106,32 @@ int trm_calc_slot_config(const TRM_SlotCalcInput* input, TRM_SlotCalcOutput* out
     
     /* 计算各时隙长度 */
     output->bcnSlotLen = g_bcnSlotLen[mode];
-    output->brdSlotLen = INTERVAL_US + g_brdBaseBody[mode] * (input->brdBlockNum * 2 + 1) + g_brdBaseGap[mode];
-    output->ulSlotLen  = INTERVAL_US + g_ulBaseBody[mode] * (input->ulBlockNum * 2 + 1) + g_ulBaseGap[mode];
-    output->dlSlotLen  = INTERVAL_US + g_dlBaseBody[mode] * (input->dlBlockNum * 2 + 1) + g_dlBaseGap[mode];
-    
     /* 初始间隔 */
     output->bcnGap = 0;
     output->brdGap = g_brdBaseGap[mode];
     output->ulGap  = g_ulBaseGap[mode];
     output->dlGap  = g_dlBaseGap[mode];
+    /* 如果包块数为0，对应时隙长度为0 */
+    if (input->brdBlockNum == 0) {
+        output->brdSlotLen = 0;
+        output->brdGap = 0;
+    } else {
+        output->brdSlotLen = INTERVAL_US + g_brdBaseBody[mode] * (input->brdBlockNum * 2 + 1) + g_brdBaseGap[mode];
+    }
+    
+    if (input->ulBlockNum == 0) {
+        output->ulSlotLen = 0;
+        output->ulGap = 0;
+    } else {
+        output->ulSlotLen = INTERVAL_US + g_ulBaseBody[mode] * (input->ulBlockNum * 2 + 1) + g_ulBaseGap[mode];
+    }
+    
+    if (input->dlBlockNum == 0) {
+        output->dlSlotLen = 0;
+        output->dlGap = 0;
+    } else {
+        output->dlSlotLen = INTERVAL_US + g_dlBaseBody[mode] * (input->dlBlockNum * 2 + 1) + g_dlBaseGap[mode];
+    }
     
     /* 计算原始帧周期 */
     uint32_t rawPeriod = output->bcnSlotLen + output->brdSlotLen + 

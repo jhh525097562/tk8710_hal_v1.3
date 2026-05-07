@@ -214,9 +214,9 @@ int tk8710_rf_read(uint8_t rfSel, uint16_t addr, uint32_t* data)
 int TK8710Init(const ChipConfig* initConfig)
 {
     
-    TK8710GpioSet("gpiochip0", 9, 0);
+    TK8710GpioSet("gpiochip0", 13, 0);
     usleep(10000);  /* 10ms等待复位完成 */
-    TK8710GpioSet("gpiochip0", 9, 1);
+    TK8710GpioSet("gpiochip0", 13, 1);
     int ret;
     s_init_0 init0;
     s_init_5 init5;
@@ -228,7 +228,7 @@ int TK8710Init(const ChipConfig* initConfig)
     
     /* 初始化默认日志系统（如果尚未初始化） */
     TK8710LogConfig_t defaultLogConfig = {
-        .level = TK8710_LOG_INFO,
+        .level = TK8710_LOG_WARN,
         .module_mask = TK8710_LOG_MODULE_ALL,
         .callback = NULL,
         .enable_timestamp = 1,
@@ -382,56 +382,56 @@ int TK8710Init(const ChipConfig* initConfig)
     ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_17), 0);
     if (ret != TK8710_OK) return ret;
     
-    AcmCalibParams calibParams;
-    calibParams.calibCount = 5;
-    calibParams.snrThreshold = 32;
+    // AcmCalibParams calibParams;
+    // calibParams.calibCount = 5;
+    // calibParams.snrThreshold = 32;
     
-    int calibRet;
-    int maxRetryCount = 3;
-    int retryCount = 0;
-    bool calibSuccess = false;
+    // int calibRet;
+    // int maxRetryCount = 3;
+    // int retryCount = 0;
+    // bool calibSuccess = false;
     
-    /* 校准重试逻辑：如果有效校准次数小于目标校准次数，则重新校准 */
-    while (retryCount < maxRetryCount && !calibSuccess) {
+    // /* 校准重试逻辑：如果有效校准次数小于目标校准次数，则重新校准 */
+    // while (retryCount < maxRetryCount && !calibSuccess) {
 
-        ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_AUTO_GAIN, TK8710_DBG_OPT_GET, NULL, NULL);
-        if (ret == TK8710_OK) {
-            TK8710_LOG_CORE_INFO("ACM增益自动获取完成\n");
-        } else {
-            TK8710_LOG_CORE_INFO("ACM增益自动获取失败: ret=%d\n", ret);
-        }
+    //     ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_AUTO_GAIN, TK8710_DBG_OPT_GET, NULL, NULL);
+    //     if (ret == TK8710_OK) {
+    //         TK8710_LOG_CORE_INFO("ACM增益自动获取完成\n");
+    //     } else {
+    //         TK8710_LOG_CORE_INFO("ACM增益自动获取失败: ret=%d\n", ret);
+    //     }
 
-        TK8710_LOG_CORE_INFO("开始第%d次ACM校准 (目标校准次数: %d, SNR门限: %d)...\n", 
-                            retryCount + 1, calibParams.calibCount, calibParams.snrThreshold);
+    //     TK8710_LOG_CORE_INFO("开始第%d次ACM校准 (目标校准次数: %d, SNR门限: %d)...\n", 
+    //                         retryCount + 1, calibParams.calibCount, calibParams.snrThreshold);
         
-        ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, 
-                            &calibParams, &calibRet);
+    //     ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, 
+    //                         &calibParams, &calibRet);
         
-        if (ret == TK8710_OK) {
-            TK8710_LOG_CORE_INFO("第%d次校准完成，有效校准次数: %d\n", retryCount + 1, calibRet);
+    //     if (ret == TK8710_OK) {
+    //         TK8710_LOG_CORE_INFO("第%d次校准完成，有效校准次数: %d\n", retryCount + 1, calibRet);
             
-            /* 检查校准是否成功：有效校准次数是否达到目标校准次数 */
-            if (calibRet >= calibParams.calibCount) {
-                TK8710_LOG_CORE_INFO("ACM校准成功\n");
-                calibSuccess = true;
-            } else {
-                TK8710_LOG_CORE_INFO("ACM校准未达到目标次数，需要重新校准\n");
-                retryCount++;
-            }
-        } else {
-            TK8710_LOG_CORE_INFO("第%d次ACM校准失败: ret=%d\n", retryCount + 1, ret);
-            retryCount++;
-        }
-    }
+    //         /* 检查校准是否成功：有效校准次数是否达到目标校准次数 */
+    //         if (calibRet >= calibParams.calibCount) {
+    //             TK8710_LOG_CORE_INFO("ACM校准成功\n");
+    //             calibSuccess = true;
+    //         } else {
+    //             TK8710_LOG_CORE_INFO("ACM校准未达到目标次数，需要重新校准\n");
+    //             retryCount++;
+    //         }
+    //     } else {
+    //         TK8710_LOG_CORE_INFO("第%d次ACM校准失败: ret=%d\n", retryCount + 1, ret);
+    //         retryCount++;
+    //     }
+    // }
     
-    /* 检查最终校准结果 */
-    if (!calibSuccess) {
-        TK8710_LOG_CORE_INFO("ACM校准最终失败：已重试%d次，仍未达到目标校准次数\n", maxRetryCount);
-        return TK8710_ERR;
-    }
-        /* 初始化默认日志系统（如果尚未初始化） */
-    defaultLogConfig.level = TK8710_LOG_WARN;
-    TK8710LogInit(&defaultLogConfig);
+    // /* 检查最终校准结果 */
+    // if (!calibSuccess) {
+    //     TK8710_LOG_CORE_INFO("ACM校准最终失败：已重试%d次，仍未达到目标校准次数\n", maxRetryCount);
+    //     return TK8710_ERR;
+    // }
+    //     /* 初始化默认日志系统（如果尚未初始化） */
+    // defaultLogConfig.level = TK8710_LOG_WARN;
+    // TK8710LogInit(&defaultLogConfig);
     
     TK8710_LOG_CORE_INFO("TK8710 initialized successfully");
     return TK8710_OK;
@@ -768,7 +768,16 @@ int TK8710RfConfig(const ChiprfConfig* initrfConfig)
     usleep(10000);  /* 10ms等待复位完成 */
 
     /* 2. 采样率配置 (Sampling Rate) */
-    ret = tk8710_rf_write(rfSel, RF_CMD_RX_FILTER >> 8, RF_CMD_RX_FILTER & 0xFF);
+    uint16_t rx_filter_cmd;
+    if (initrfConfig->rftype == TK8710_RF_TYPE_1255_1M) {
+        rx_filter_cmd = RF_CMD_RX_FILTER_1M;
+        TK8710_LOG_CORE_DEBUG("Using 1M RX filter configuration");
+    } else {
+        rx_filter_cmd = RF_CMD_RX_FILTER;
+        TK8710_LOG_CORE_DEBUG("Using 32M RX filter configuration");
+    }
+    
+    ret = tk8710_rf_write(rfSel, rx_filter_cmd >> 8, rx_filter_cmd & 0xFF);
     if (ret != TK8710_OK) {
         TK8710_LOG_CORE_ERROR("RX filter configuration failed: %d", ret);
         return ret;
@@ -952,9 +961,9 @@ int TK8710Reset(uint8_t rstType)
 {
     int ret;
     uint8_t resetConfig = 0;
-    TK8710GpioSet("gpiochip0", 9, 0);//3506开发板：9，3506网关板：13
+    TK8710GpioSet("gpiochip0", 13, 0);//3506开发板：9，3506网关板：13
     usleep(10000);  /* 10ms等待复位完成 */
-    TK8710GpioSet("gpiochip0", 9, 1);
+    TK8710GpioSet("gpiochip0", 13, 1);
     /* 根据复位类型设置复位配置 */
     switch (rstType) {
         case TK8710_RST_STATE_MACHINE:

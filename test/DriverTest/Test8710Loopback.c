@@ -712,7 +712,7 @@ static int __attribute__((unused)) perform_full_initialization(void)
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig __attribute__((unused)) rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,
+        .rftype = TK8710_RF_TYPE_1255_1M,
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,

@@ -926,6 +926,7 @@ int main(int argc, char* argv[])
     int testMode = 6;  /* 默认模式6 */
     int classNum = 3;  /* 默认class序号 */
     int caseNum = 11;  /* 默认case序号 */
+    uint32_t testFreq = 509100000;
     
     /* 检查命令行参数 */
     if (argc > 1) {
@@ -956,27 +957,8 @@ int main(int argc, char* argv[])
             return 1;
         }
         
-        /* 解析class参数 */
-        if (argc > 2) {
-            classNum = atoi(argv[2]);
-            if (classNum <= 0) {
-                printf("Error: Invalid class number %d. Must be positive integer\n", classNum);
-                return 1;
-            }
-        }
-        
-        /* 解析case参数 */
-        if (argc > 3) {
-            caseNum = atoi(argv[3]);
-            if (caseNum <= 0) {
-                printf("Error: Invalid case number %d. Must be positive integer\n", caseNum);
-                return 1;
-            }
-        }
-        
-        printf("Using test mode: %d, class: %d, case: %d\n", testMode, classNum, caseNum);
-    } else {
-        printf("Using default: mode %d, class %d, case %d\n", testMode, classNum, caseNum);
+        testFreq = atoi(argv[2]);
+        printf("Using test mode: %d, freq: %u\n", testMode, testFreq);
     }
     
 #ifdef _WIN32
@@ -1012,7 +994,7 @@ int main(int argc, char* argv[])
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,
+        .rftype = TK8710_RF_TYPE_1255_1M,//TK8710_RF_TYPE_1255_32M
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2e,
@@ -1020,20 +1002,24 @@ int main(int argc, char* argv[])
         //     {0x0bc0, 0x04a0}, {0x0a50, 0x0780}, {0x0750, 0x0820}, {0x0bc3, 0x0940},
         //     {0x0e83, 0x05e0}, {0xfbff, 0x0850}, {0x0880, 0x0500}, {0x02a0, 0x06ff}
         // }
-        .txadc = {//2号板
-            {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
-            {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
-        }
+        // .txadc = {//2号板
+        //     {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
+        //     {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        // }
         // .txadc = {//D号板
         //     {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
         //     {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
         // }
-        // .txadc = {//710：板
-        //     {0x0300, 0x0250}, {0x0450, 0x0590}, {0x0350, 0x0490}, {0x0b70, 0x07b0},
+        // .txadc = {//710：板（slave）
+        //     {0x0300, 0x0250}, {0x0450, 0x0590}, {0x0350, 0x0490}, {0x0450, 0x02c0},
         //     {0x02a0, 0x0390}, {0x01a0, 0x0220}, {0x0240, 0x0250}, {0x0250, 0x0680}
         // }
+        .txadc = {//703：板（master）
+            {0x0450, 0x04a0}, {0x0500, 0x0500}, {0x0490, 0x0350}, {0x0490, 0x0420},
+            {0x0300, 0x0250}, {0x05c0, 0x0450}, {0x0200, 0x0250}, {0x0330, 0x0390}
+        }
     };
-    
+    rfConfig.Freq = testFreq;
     /* 2. 准备芯片配置 (与原 init_tk8710_chip 配置一致) */
     ChipConfig chipConfig = {
         .bcn_agc     = 32,

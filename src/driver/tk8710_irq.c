@@ -601,7 +601,22 @@ static int tk8710_configure_multi_rate(uint8_t rateIndex)
     s_init_2 init2;
     s_init_3 init3;
     s_init_4 init4;
+    s_init_9 init9;
     int ret;
+    
+    if(rateIndex % slotCfg->rateCount==0){
+        init9.data = 0;
+        init9.b.ant_en = slotCfg->antEn;
+        init9.b.rf_sel = slotCfg->rfSel;
+        init9.b.tx_bcn_ant_en = slotCfg->txBcnAntEn;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), init9.data);
+    }else{
+        init9.data = 0;
+        init9.b.ant_en = slotCfg->antEn;
+        init9.b.rf_sel = slotCfg->rfSel;
+        init9.b.tx_bcn_ant_en = 0;
+        ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, MAC_BASE + offsetof(struct mac, init_9), init9.data);
+    }
     
     if (slotCfg == NULL || rateIndex >= slotCfg->rateCount) {
         TK8710_LOG_IRQ_ERROR("Invalid parameters for multi-rate config");

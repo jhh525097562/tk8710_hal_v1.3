@@ -1264,7 +1264,7 @@ typedef struct {
   - 输入/输出指针为NULL
 - 其他: 计算失败
 
-**计算原理**:
+##### **计算原理**
 
 时隙计算器采用最新优化算法，基于8710_HAL用户指南v1.0 7.2.4章节实现，确保在满足时间约束的前提下，最小化增加的间隔：
 
@@ -1305,148 +1305,85 @@ typedef struct {
 | 11   | 500KHz   | 16     | 6510        | 2048              | 2048          | 2048          | 800             | 800           | 800           |
 | 18   | 500KHz   | 16     | 6510        | 2048              | 2048          | 2048          | 800             | 800           | 800           |
 
-**使用示例**:
+**实际计算示例**
 
-```c
-// 计算速率模式8，slot1下行（广播）2个包块，slot2上行2个包块，slot3下行1个包块的时隙配置
-TRM_SlotCalcInput input = {
-    .rateMode = 8,
-    .brdBlockNum = 2,
-    .ulBlockNum = 2,
-    .dlBlockNum = 1,
-    .superFrameNum = 1
-};
-
-TRM_SlotCalcOutput output;
-int ret = trm_calc_slot_config(&input, &output);
-if (ret == 0) {
-    printf("时隙计算结果:\n");
-    printf("  帧周期: %u us, 帧数: %u (总时长 %u ms)\n", 
-           output.framePeriod, output.frameCount,
-           (output.framePeriod * output.frameCount) / 1000);
-    printf("  BCN时隙: %u us\n", output.bcnSlotLen);
-    printf("  slot1下行（广播）时隙: %u us\n", output.brdSlotLen);
-    printf("  slot2上行时隙: %u us\n", output.ulSlotLen);
-    printf("  slot3下行时隙: %u us\n", output.dlSlotLen);
-    printf("  Gap参数: BRD=%u, UL=%u, DL=%u us\n", 
-           output.brdGap, output.ulGap, output.dlGap);
-  
-    // 使用计算结果配置时隙
-    // output.brdGap, output.ulGap, output.dlGap 可用于设置 da_m 参数
-} else {
-    printf("时隙计算失败: %d\n", ret);
-}
-```
-
-**实际计算示例**:
-
-**示例1**: 速率模式6，无广播时隙，上行1个包块，下行1个包块
+##### **示例1**: 速率模式6，无广播时隙，上行1个包块，下行1个包块
 
 ```c
 // 输入参数
 TRM_SlotCalcInput input1 = {
     .rateMode = 6,           // 速率模式6: 125KHz, 128用户
-    .brdBlockNum = 0,        // slot1下行（广播）包块数：0（无广播）
+    .brdBlockNum = 0,        // slot1下行A（广播）包块数：0（无广播）
     .ulBlockNum = 1,         // slot2上行包块数：1
-    .dlBlockNum = 1,         // slot3下行包块数：1
+    .dlBlockNum = 1,         // slot3下行B包块数：1
     .superFrameNum = 1       // 超帧数：1
 };
-
-TRM_SlotCalcOutput output1;
-int ret1 = trm_calc_slot_config(&input1, &output1);
-
-// 输出结果
-if (ret1 == 0) {
-    printf("=== 示例1计算结果 ===\n");
-    printf("输入: rateMode=6, brdBlockNum=0, ulBlockNum=1, dlBlockNum=1\n");
-    printf("BCN时隙: %u us\n", output1.bcnSlotLen);        // 36340 us
-    printf("slot1下行（广播）时隙: %u us\n", output1.brdSlotLen);  // 1024 + 65536*(0*2+1) + 19728 = 86288 us
-    printf("slot2上行时隙: %u us\n", output1.ulSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
-    printf("slot3下行时隙: %u us\n", output1.dlSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
-    printf("帧周期: %u us\n", output1.framePeriod);         // 425760 us
-    printf("帧数: %u\n", output1.frameCount);               // 3
-    printf("总时长: %u ms\n", (output1.framePeriod * output1.frameCount) / 1000); // 1277 ms ≈ 1.277秒
-    printf("Gap参数: BRD=%u, UL=%u, DL=%u us\n", 
-           output1.brdGap, output1.ulGap, output1.dlGap);
-}
 ```
 
-**预期输出**:
+**输出**:
+
 ```
-=== 示例1计算结果 ===
-输入: rateMode=6, brdBlockNum=0, ulBlockNum=1, dlBlockNum=1
-BCN时隙: 36340 us
-slot1下行（广播）时隙: 86288 us
-slot2上行时隙: 151816 us
-slot3下行时隙: 151816 us
-帧周期: 425760 us
-帧数: 3
-总时长: 1277 ms
-Gap参数: BRD=19728, UL=19728, DL=19728 us
+Calculating slot config: mode=6, ulBlocks=1, dlBlocks=1
+Raw frame period: 471060 us (BCN:36340 + BRD:0 + UL:217360 + DL:217360)
+Found better solution: M=5s, N=10, gap=28940 us, period=500000 us
+Slot calculation completed:
+Frame period: 500000 us, Frame count: 10 (total 5000 ms)
+Gaps - BRD:0, UL:19728, DL:48668 us
+Slot lengths - BCN:36340, BRD:0, UL:217360, DL:246300 us
+✅ 速率模式6计算得到gap参数: BRD=0, UL=19728, DL=48668
 ```
 
-**示例2**: 速率模式6，广播1个包块，上行1个包块，无下行时隙
+##### **示例2**: 速率模式6，广播1个包块，上行1个包块，无下行时隙
 
 ```c
 // 输入参数
 TRM_SlotCalcInput input2 = {
     .rateMode = 6,           // 速率模式6: 125KHz, 128用户
-    .brdBlockNum = 1,        // slot1下行（广播）包块数：1
+    .brdBlockNum = 1,        // slot1下行A（广播）包块数：1
     .ulBlockNum = 1,         // slot2上行包块数：1
-    .dlBlockNum = 0,         // slot3下行包块数：0（无下行）
+    .dlBlockNum = 0,         // slot3下行B包块数：0（无下行）
     .superFrameNum = 1       // 超帧数：1
 };
-
-TRM_SlotCalcOutput output2;
-int ret2 = trm_calc_slot_config(&input2, &output2);
-
-// 输出结果
-if (ret2 == 0) {
-    printf("=== 示例2计算结果 ===\n");
-    printf("输入: rateMode=6, brdBlockNum=1, ulBlockNum=1, dlBlockNum=0\n");
-    printf("BCN时隙: %u us\n", output2.bcnSlotLen);        // 36340 us
-    printf("slot1下行（广播）时隙: %u us\n", output2.brdSlotLen);  // 1024 + 65536*(1*2+1) + 19728 = 151816 us
-    printf("slot2上行时隙: %u us\n", output2.ulSlotLen);     // 1024 + 65536*(1*2+1) + 19728 = 151816 us
-    printf("slot3下行时隙: %u us\n", output2.dlSlotLen);     // 1024 + 65536*(0*2+1) + 19728 = 86288 us
-    printf("帧周期: %u us\n", output2.framePeriod);         // 425760 us
-    printf("帧数: %u\n", output2.frameCount);               // 3
-    printf("总时长: %u ms\n", (output2.framePeriod * output2.frameCount) / 1000); // 1277 ms ≈ 1.277秒
-    printf("Gap参数: BRD=%u, UL=%u, DL=%u us\n", 
-           output2.brdGap, output2.ulGap, output2.dlGap);
-}
 ```
 
-**预期输出**:
+**输出**:
+
 ```
-=== 示例2计算结果 ===
-输入: rateMode=6, brdBlockNum=1, ulBlockNum=1, dlBlockNum=0
-BCN时隙: 36340 us
-slot1下行（广播）时隙: 151816 us
-slot2上行时隙: 151816 us
-slot3下行时隙: 86288 us
-framePeriod: 425760 us
-frameCount: 3
-总时长: 1277 ms
-Gap参数: BRD=19728, UL=19728, DL=19728 us
+Calculating slot config: mode=6, ulBlocks=1, dlBlocks=0
+Raw frame period: 471060 us (BCN:36340 + BRD:217360 + UL:217360 + DL:0)
+Found better solution: M=5s, N=10, gap=28940 us, period=500000 us
+Slot calculation completed:
+Frame period: 500000 us, Frame count: 10 (total 5000 ms)
+Gaps - BRD:19728, UL:19728, DL:28940 us
+Slot lengths - BCN:36340, BRD:217360, UL:217360, DL:28940 us
+✅ 速率模式6计算得到gap参数: BRD=19728, UL=19728, DL=28940
 ```
 
-**计算说明**:
+##### **示例3**: 速率模式6，广播1个包块，上行1个包块，下行1个包块
 
-1. **时隙长度计算公式**:
-   - BCN时隙 = g_bcnSlotLen[6] = 36340 us
-   - 广播时隙 = 1024 + 65536 × (brdBlockNum × 2 + 1) + 19728
-   - 上行时隙 = 1024 + 65536 × (ulBlockNum × 2 + 1) + 19728  
-   - 下行时隙 = 1024 + 65536 × (dlBlockNum × 2 + 1) + 19728
+```c
+// 输入参数
+TRM_SlotCalcInput input2 = {
+    .rateMode = 6,           // 速率模式6: 125KHz, 128用户
+    .brdBlockNum = 1,        // slot1下行A（广播）包块数：1
+    .ulBlockNum = 1,         // slot2上行包块数：1
+    .dlBlockNum = 1,         // slot3下行B包块数：1
+    .superFrameNum = 1       // 超帧数：1
+};
+```
 
-2. **帧周期优化**:
-   - 原始帧周期 = BCN + 广播 + 上行 + 下行 = 425760 us
-   - 算法找到最优解：framePeriod = 425760 us, frameCount = 3
-   - 总时长 = 425760 × 3 = 1277280 us ≈ 1.277秒
-   - 满足 framePeriod × frameCount = M × 1,000,000 us 的约束
+**输出**:
 
-3. **间隔处理**:
-   - 当前实现中，终端暂时未使用时隙计算器的间隔调整功能
-   - dlGap = 0，其他间隔使用默认值
+```
+Calculating slot config: mode=6, ulBlocks=1, dlBlocks=1
+Raw frame period: 688420 us (BCN:36340 + BRD:217360 + UL:217360 + DL:217360)
+Found better solution: M=7s, N=10, gap=11580 us, period=700000 us
+Slot calculation completed:
+Frame period: 700000 us, Frame count: 10 (total 7000 ms)
+Gaps - BRD:19728, UL:19728, DL:31308 us
+Slot lengths - BCN:36340, BRD:217360, UL:217360, DL:228940 us
+✅ 速率模式6计算得到gap参数: BRD=19728, UL=19728, DL=31308
+```
 
 ---
 

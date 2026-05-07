@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
         /* 解析s1ByteLen参数 */
         if (argc > 2) {
             s1ByteLen = atoi(argv[2]);
-            if (s1ByteLen <= 0 || s1ByteLen > 255) {
+            if (s1ByteLen < 0 || s1ByteLen > 255) {
                 printf("Error: Invalid s1ByteLen %d. Must be positive integer <= 255\n", s1ByteLen);
                 return 1;
             }
@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
         /* 解析s2ByteLen参数 */
         if (argc > 3) {
             s2ByteLen = atoi(argv[3]);
-            if (s2ByteLen <= 0 || s2ByteLen > 255) {
+            if (s2ByteLen < 0 || s2ByteLen > 255) {
                 printf("Error: Invalid s2ByteLen %d. Must be positive integer <= 255\n", s2ByteLen);
                 return 1;
             }
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
         /* 解析s3ByteLen参数 */
         if (argc > 4) {
             s3ByteLen = atoi(argv[4]);
-            if (s3ByteLen <= 0 || s3ByteLen > 255) {
+            if (s3ByteLen < 0 || s3ByteLen > 255) {
                 printf("Error: Invalid s3ByteLen %d. Must be positive integer <= 255\n", s3ByteLen);
                 return 1;
             }
@@ -350,7 +350,7 @@ int main(int argc, char* argv[])
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,
+        .rftype = TK8710_RF_TYPE_1255_1M,
         .Freq = 503100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,
@@ -557,7 +557,20 @@ int main(int argc, char* argv[])
         slotCfg.s3Cfg[0].byteLen = s3ByteLen;
         slotCfg.s3Cfg[0].centerFreq = 503100000;
     }
-
+        // 使用时隙计算函数计算gap参数
+        TRM_SlotCalcInput slotInput = {
+            .rateMode = slotCfg.rateModes[0],
+            .brdBlockNum = slotCfg.s1Cfg[0].byteLen / 26,  // 广播包块数
+            .ulBlockNum = slotCfg.s2Cfg[0].byteLen / 26,     // 上行包块数
+            .dlBlockNum = slotCfg.s3Cfg[0].byteLen / 26,   // 下行包块数
+            .superFrameNum = 10
+        };
+        
+    TRM_SlotCalcOutput slotOutput;
+    if (trm_calc_slot_config(&slotInput, &slotOutput) == 0) {
+        printf("✅ 速率模式%d计算得到gap参数: BRD=%u, UL=%u, DL=%u\n", 
+                slotCfg.rateModes[0], slotOutput.brdGap, slotOutput.ulGap, slotOutput.dlGap);
+    }
     /* 调用 TK8710HalCfg 配置时隙 */
     halRet = TK8710HalCfg(&slotCfg);
     if (halRet != TK8710_HAL_OK) {

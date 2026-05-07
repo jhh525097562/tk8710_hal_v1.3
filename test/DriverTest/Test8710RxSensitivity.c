@@ -873,7 +873,7 @@ int main(int argc, char* argv[])
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,//TK8710_RF_TYPE_1255_32M
+        .rftype = TK8710_RF_TYPE_1255_1M,//TK8710_RF_TYPE_1255_32M
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,
@@ -1109,7 +1109,27 @@ int main(int argc, char* argv[])
                 system("clear");
 #endif
                 break;
+                            
+            case '1':
+                printf("配置为单天线接收模式...\n");
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc02c, 0x00010101);
+                if (ret == TK8710_OK) {
+                    printf("单天线接收模式配置成功 (0xc02c = 0x00010101)\n");
+                } else {
+                    printf("单天线接收模式配置失败: ret=%d\n", ret);
+                }
+                break;
                 
+            case '2':
+                printf("配置为多天线接收模式...\n");
+                ret = TK8710WriteReg(TK8710_REG_TYPE_GLOBAL, 0xc02c, 0x0001ffff);
+                if (ret == TK8710_OK) {
+                    printf("多天线接收模式配置成功 (0xc02c = 0x0001ffff)\n");
+                } else {
+                    printf("多天线接收模式配置失败: ret=%d\n", ret);
+                }
+                break;   
+
             case 'l':
             case 'L':
                 if (load_and_send_simulation_data() != 0) {

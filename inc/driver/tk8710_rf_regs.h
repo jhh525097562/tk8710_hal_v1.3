@@ -43,6 +43,7 @@
 
 /* RX滤波器命令 */
 #define RF_CMD_RX_FILTER        0x9200  /* 15 2C(125KHz), 12 1C(500KHz), 11 14(1MHz) for 32M */
+#define RF_CMD_RX_FILTER_1M     0x9211  /* 15 2C(125KHz), 12 1C(500KHz), 11 14(1MHz) for 32M */
 #define RF_CMD_RX_BW            0x9314  /* RX带宽配置 */
 
 /* TX频率命令 (默认值) */

@@ -1144,7 +1144,7 @@ int main(int argc, char* argv[])
     /* ========== 使用 HAL API 进行初始化 ========== */
     /* 1. 准备RF配置 */
     static ChiprfConfig rfConfig = {
-        .rftype = TK8710_RF_TYPE_1255_32M,//
+        .rftype = TK8710_RF_TYPE_1255_1M,//
         .Freq = 509100000,
         .rxgain = 0x7e,
         .txgain = 0x2a,
@@ -1156,10 +1156,18 @@ int main(int argc, char* argv[])
         //     {0x0450, 0x0450}, {0x0a00, 0x1080}, {0x0750, 0x1500}, {0x0400, 0x0b00},
         //     {0x08a0, 0x07a0}, {0x0990, 0xff00}, {0x0850, 0x08c8}, {0x0950, 0x0a00}
         // }
-        .txadc = {//2号板 Master (默认值，将被文件配置覆盖)
-            {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
-            {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        // .txadc = {//2号板 Master (默认值，将被文件配置覆盖)
+        //     {0x0c90, 0x1190}, {0xfe30, 0x0220}, {0x0210, 0x01a0}, {0x0b70, 0x07b0},
+        //     {0x03ae, 0x0980}, {0x0740, 0x0990}, {0x0930, 0x0680}, {0x0df0, 0x0190}
+        // }
+        .txadc = {//3号板 Master (默认值，将被文件配置覆盖)
+            {0x0400, 0x0350}, {0x01c0, 0x0600}, {0x0000, 0x0690}, {0x0400, 0x0290},
+            {0x0390, 0x0500}, {0x0390, 0x0400}, {0x0300, 0x0350}, {0x0490, 0x04a0}
         }
+        // .txadc = {//703：板（master）
+        //     {0x0450, 0x04a0}, {0x0500, 0x0500}, {0x0490, 0x0350}, {0x0490, 0x0420},
+        //     {0x0300, 0x0250}, {0x05c0, 0x0450}, {0x0200, 0x0250}, {0x0330, 0x0390}
+        // }
     };
     
     /* 尝试从TxDC目录加载txadc配置 */
@@ -1500,7 +1508,7 @@ int main(int argc, char* argv[])
                 
                 // printf("开始ACM校准 (校准次数: %d, SNR门限: %d)...\n", 
                 //        calibParams.calibCount, calibParams.snrThreshold);
-                calibParams.calibCount = 1;
+                calibParams.calibCount = 10;
                 calibParams.snrThreshold = 32;
                 int calibRet; 
                 ret = TK8710DebugCtrl(TK8710_DBG_TYPE_ACM_CALIBRATE, TK8710_DBG_OPT_EXE, 
